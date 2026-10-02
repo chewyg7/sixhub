@@ -1,0 +1,191 @@
+{
+  "gta-vi-trailer-1": {
+    "kind": "video",
+    "url": "https://cdn.invincible25.com/GTAVI_Trailer1.mp4",
+    "proxy": true,
+    "original": {
+      "url": "/api/video/gta-vi-trailer-1",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 115128012,
+      "mimeType": "video/mp4",
+      "filename": "gta-vi-trailer-1.mp4"
+    },
+    "video": {
+      "duration": 90.09,
+      "fps": 30,
+      "frameCount": 2703,
+      "videoCodec": "AV1 (Main)",
+      "audioCodec": "AAC-LC",
+      "audioChannels": 2,
+      "audioSampleRate": 44100,
+      "bitrate": 10222000
+    },
+    "poster": {
+      "url": "/media/gta-vi-trailer-1/poster.jpg",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 250766
+    },
+    "variants": [
+      {
+        "width": 480,
+        "height": 270,
+        "url": "/media/gta-vi-trailer-1/w480.webp",
+        "bytes": 20124,
+        "format": "webp"
+      },
+      {
+        "width": 960,
+        "height": 540,
+        "url": "/media/gta-vi-trailer-1/w960.webp",
+        "bytes": 65406,
+        "format": "webp"
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "url": "/media/gta-vi-trailer-1/w1920.webp",
+        "bytes": 141900,
+        "format": "webp"
+      }
+    ],
+    "blurDataUrl": "data:image/webp;base64,UklGRo4AAABXRUJQVlA4IIIAAAAwBACdASoYAA4APu1iqU2ppaOiMAgBMB2JQBOmUABoXFZTz1aKfQznlAAA/tcpLWzo22/f5rtiJIQFxS5CKxN7kJ+fv3HTTBWwsG1Um/CA01X0qxkEqvg7LnZSDS47QRAa8iy3umfhkiL9zLGkOj+6K48wwapZsxwqxDGGOmUBswAA",
+    "dominantColor": "#d8d8c8",
+    "storyboard": {
+      "url": "/media/gta-vi-trailer-1/storyboard.jpg",
+      "interval": 2,
+      "columns": 10,
+      "rows": 5,
+      "tileWidth": 192,
+      "tileHeight": 108,
+      "count": 46
+    }
+  },
+  "gta-vi-trailer-2": {
+    "kind": "video",
+    "url": "https://cdn.invincible25.com/GTAVI_Trailer2.mp4",
+    "proxy": true,
+    "original": {
+      "url": "/api/video/gta-vi-trailer-2",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 165219874,
+      "mimeType": "video/mp4",
+      "filename": "gta-vi-trailer-2.mp4"
+    },
+    "video": {
+      "duration": 166.79,
+      "fps": 30,
+      "frameCount": 5004,
+      "videoCodec": "AV1 (Main)",
+      "audioCodec": "AAC-LC",
+      "audioChannels": 2,
+      "audioSampleRate": 44100,
+      "bitrate": 7924000
+    },
+    "poster": {
+      "url": "/media/gta-vi-trailer-2/poster.jpg",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 95767
+    },
+    "variants": [
+      {
+        "width": 480,
+        "height": 270,
+        "url": "/media/gta-vi-trailer-2/w480.webp",
+        "bytes": 6402,
+        "format": "webp"
+      },
+      {
+        "width": 960,
+        "height": 540,
+        "url": "/media/gta-vi-trailer-2/w960.webp",
+        "bytes": 17548,
+        "format": "webp"
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "url": "/media/gta-vi-trailer-2/w1920.webp",
+        "bytes": 42490,
+        "format": "webp"
+      }
+    ],
+    "blurDataUrl": "data:image/webp;base64,UklGRqAAAABXRUJQVlA4IJQAAABwBACdASoYAA4APu1kq04ppaQiMAgBMB2JZQC7IMikSgfXccozLahKqEu2AAD+7Rg+C4WBplLQvHu/N+mmzNz3xQ/XkHi8Z57IAwoYECD9OM1+2Cp36oVRnL/Q9wK2PaxsSfldEaKpnhH97rpHfbVfdCYYyIV1mV4hCOcOF+VMb0DWtUSOY0oa9DIXsCsqxb5cUQAA",
+    "dominantColor": "#080808",
+    "storyboard": {
+      "url": "/media/gta-vi-trailer-2/storyboard.jpg",
+      "interval": 2,
+      "columns": 10,
+      "rows": 9,
+      "tileWidth": 192,
+      "tileHeight": 108,
+      "count": 84
+    }
+  },
+  "gta-vi-extended-look": {
+    "kind": "video",
+    "url": "https://videos-rockstargames-com.akamaized.net/v4/rk721912/flv/en-us-2160p.mp4",
+    "proxy": false,
+    "original": {
+      "url": "https://videos-rockstargames-com.akamaized.net/v4/rk721912/flv/en-us-2160p.mp4",
+      "width": 3840,
+      "height": 2160,
+      "bytes": 2494781433,
+      "mimeType": "video/mp4",
+      "filename": "gta-vi-extended-look.mp4"
+    },
+    "video": {
+      "duration": 1608.07,
+      "fps": 30,
+      "frameCount": 48242,
+      "videoCodec": "H.264 (High)",
+      "audioCodec": "AAC-LC",
+      "audioChannels": 2,
+      "audioSampleRate": 48000,
+      "bitrate": 12411000
+    },
+    "poster": {
+      "url": "/media/gta-vi-extended-look/poster.jpg",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 208728
+    },
+    "variants": [
+      {
+        "width": 480,
+        "height": 270,
+        "url": "/media/gta-vi-extended-look/w480.webp",
+        "bytes": 12210,
+        "format": "webp"
+      },
+      {
+        "width": 960,
+        "height": 540,
+        "url": "/media/gta-vi-extended-look/w960.webp",
+        "bytes": 44124,
+        "format": "webp"
+      },
+      {
+        "width": 1920,
+        "height": 1080,
+        "url": "/media/gta-vi-extended-look/w1920.webp",
+        "bytes": 115416,
+        "format": "webp"
+      }
+    ],
+    "blurDataUrl": "data:image/webp;base64,UklGRoAAAABXRUJQVlA4IHQAAAAQBACdASoYAA4APu1iqk4ppaQiMAgBMB2JZQCdABZ6En42BHmK8+D0QAD8U7QxXO+H6Cg2au6rNZm2krS6kw+hE3XTHhY/UfsUGQWgmYlr3lFlsHcZO6OxFOPA7EHaNxkhsmFgcNqgz4E+IQabBXJw95IAAA==",
+    "dominantColor": "#181818",
+    "storyboard": {
+      "url": "/media/gta-vi-extended-look/storyboard.jpg",
+      "interval": 30,
+      "columns": 10,
+      "rows": 6,
+      "tileWidth": 192,
+      "tileHeight": 108,
+      "count": 54
+    }
+  }
+}

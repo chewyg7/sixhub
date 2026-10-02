@@ -131,7 +131,12 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
     poke();
   };
 
-  const src = item.original.url;
+  // Everyday playback uses the lighter encodes when there are any: 1080p on
+  // wider screens, 720p on phones. Browsers that ignore `media` on <source>
+  // take the first entry. The original stays the Media Viewer's source.
+  const r1080 = item.renditions?.find((r) => r.height === 1080);
+  const r720 = item.renditions?.find((r) => r.height === 720);
+  const sources = r1080 && r720 ? [{ url: r1080.url, media: "(min-width: 768px)" }, { url: r720.url }] : [{ url: (r1080 ?? r720)?.url ?? item.original.url }];
   const poster = item.variants.find((v) => v.width >= 960)?.url ?? item.poster?.url;
   const VolumeIcon = muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
@@ -148,8 +153,8 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
       style={fill ? undefined : { aspectRatio: `${item.width ?? 16} / ${item.height ?? 9}` }}
     >
       <video
+        key={item.slug}
         ref={video}
-        src={src}
         poster={poster}
         preload="metadata"
         playsInline
@@ -181,8 +186,18 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
           setMuted(e.currentTarget.muted);
         }}
         onRateChange={(e) => setRate(e.currentTarget.playbackRate)}
-        onError={() => setError("This video couldn't be loaded.")}
-      />
+      >
+        {sources.map((x, i) => (
+          <source
+            key={x.url}
+            src={x.url}
+            type="video/mp4"
+            media={x.media}
+            // With <source> children, errors fire on the sources; the last one failing means nothing could play.
+            onError={i === sources.length - 1 ? () => setError("This video couldn't be loaded.") : undefined}
+          />
+        ))}
+      </video>
 
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">

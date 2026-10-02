@@ -107,6 +107,14 @@ export interface Storyboard {
   count: number;
 }
 
+/** A smaller encode of a video, for everyday playback. */
+export interface VideoRendition {
+  width: number;
+  height: number;
+  url: string;
+  bytes?: number;
+}
+
 export interface MediaItem {
   id: string;
   slug: string;
@@ -132,6 +140,8 @@ export interface MediaItem {
   video?: VideoTechnical;
   audio?: AudioTechnical;
   storyboard?: Storyboard;
+  /** Lighter encodes of `original` (videos), largest first. The original stays the analysis source. */
+  renditions?: VideoRendition[];
   tags: string[];
   /** Character entry slugs. */
   characters: string[];

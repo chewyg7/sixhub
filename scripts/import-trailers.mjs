@@ -30,7 +30,12 @@ const TILE_H = 108;
 const COLUMNS = 10;
 const CONCURRENCY = 6;
 
+/** Rockstar's CDN serves each video at several heights under one id. */
+const rockstar = (id, height) => `https://videos-rockstargames-com.akamaized.net/v4/${id}/flv/en-us-${height}p.mp4`;
+
 /**
+ * `url` is the highest quality file (used by the Media Viewer); `renditions`
+ * are smaller encodes of the same video for everyday playback.
  * `proxy`: the host sends no CORS headers, so the site streams the file
  * through /api/video/<slug> to keep frame capture and pixel tools working.
  */
@@ -44,14 +49,16 @@ const TRAILERS = [
   },
   {
     slug: "gta-vi-trailer-2",
-    url: "https://cdn.invincible25.com/GTAVI_Trailer2.mp4",
-    proxy: true,
+    url: rockstar("cpys7u2s", 2160),
+    renditions: [1080, 720].map((h) => ({ height: h, url: rockstar("cpys7u2s", h) })),
+    proxy: false,
     posterAt: 98,
     interval: 2,
   },
   {
     slug: "gta-vi-extended-look",
-    url: "https://videos-rockstargames-com.akamaized.net/v4/rk721912/flv/en-us-2160p.mp4",
+    url: rockstar("rk721912", 2160),
+    renditions: [1080, 720].map((h) => ({ height: h, url: rockstar("rk721912", h) })),
     proxy: false,
     posterAt: 750,
     interval: 30,
@@ -197,6 +204,14 @@ async function buildTrailer(t) {
   await rm(posterFull, { force: true });
 
   const storyboard = await buildStoryboard(t, dir, info.duration);
+  const renditions = await Promise.all(
+    (t.renditions ?? []).map(async (r) => ({
+      width: Math.round((r.height * info.width) / info.height),
+      height: r.height,
+      url: r.url,
+      bytes: await headBytes(r.url),
+    })),
+  );
   return {
     kind: "video",
     url: t.url,
@@ -224,6 +239,7 @@ async function buildTrailer(t) {
     blurDataUrl: v.blurDataUrl,
     dominantColor: v.dominantColor,
     storyboard,
+    ...(renditions.length ? { renditions } : {}),
   };
 }
 

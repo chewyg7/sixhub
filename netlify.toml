@@ -6,18 +6,12 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# Trailers 1 and 2 are hosted without CORS headers, so they have to be served
-# from this origin for frame capture and pixel tools to work. Locally that is
-# app/api/video/[slug]/route.ts; on Netlify the edge proxies the files
+# Trailer 1 is hosted without CORS headers, so it has to be served from this
+# origin for frame capture and pixel tools to work. Locally that is
+# app/api/video/[slug]/route.ts; on Netlify the edge proxies the file
 # directly instead, because functions cap response time and size.
 [[redirects]]
   from = "/api/video/gta-vi-trailer-1"
   to = "https://cdn.invincible25.com/GTAVI_Trailer1.mp4"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/video/gta-vi-trailer-2"
-  to = "https://cdn.invincible25.com/GTAVI_Trailer2.mp4"
   status = 200
   force = true

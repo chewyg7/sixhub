@@ -1,5 +1,5 @@
 import "server-only";
-import type { Collection, MediaCategorySlug, MediaFile, MediaItem, MediaKind, VideoTechnical, AudioTechnical, ImageVariant, Storyboard } from "@/types/content";
+import type { Collection, MediaCategorySlug, MediaFile, MediaItem, MediaKind, VideoTechnical, AudioTechnical, ImageVariant, Storyboard, VideoRendition } from "@/types/content";
 import type { ContentSource } from "./source";
 import { MEDIA_RECORDS } from "@/data/media";
 import { COLLECTIONS as SAMPLE_COLLECTIONS } from "@/data/collections";
@@ -24,6 +24,7 @@ interface SampleEntry {
   video?: VideoTechnical;
   audio?: AudioTechnical;
   storyboard?: Storyboard;
+  renditions?: VideoRendition[];
 }
 const samples = sampleJson as unknown as Record<string, SampleEntry>;
 
@@ -168,6 +169,7 @@ function buildMedia(collections: Collection[]): MediaItem[] {
       video: asset.video,
       audio: asset.audio,
       storyboard: asset.storyboard,
+      renditions: asset.renditions,
       tags: r.tags,
       characters: r.characters,
       locations: r.locations,

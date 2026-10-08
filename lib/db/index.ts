@@ -4,6 +4,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { MIGRATIONS } from "./schema";
 import { seedIfEmpty } from "./seed";
+import { runFixups } from "./fixups";
 
 /**
  * The site's database: a single SQLite file on the server's disk.
@@ -52,6 +53,7 @@ export function db(): DB {
     globalForDb.__gh_db = open();
     // Seed lazily on first use so a fresh server needs no manual step.
     seedIfEmpty(globalForDb.__gh_db);
+    runFixups(globalForDb.__gh_db);
   }
   return globalForDb.__gh_db;
 }

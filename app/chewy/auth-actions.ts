@@ -6,6 +6,7 @@ import { audit } from "@/lib/auth/audit";
 import { decrypt, sha256 } from "@/lib/auth/crypto";
 import { dummyHash, hashPassword, needsRehash, passwordProblem, verifyPassword } from "@/lib/auth/password";
 import { clientIp } from "@/lib/auth/request";
+import { isBlockedIp } from "@/lib/auth/security";
 import { createSession, currentUser, endSession, pendingMfa } from "@/lib/auth/session";
 import { clearKey, formatWait, ipKey, LIMITS, lockedFor, mfaKey, recordFailure, userKey, pruneThrottle } from "@/lib/auth/throttle";
 import { normalizeRecovery, verifyTotp } from "@/lib/auth/totp";
@@ -28,6 +29,11 @@ export async function login(_: FormState, form: FormData): Promise<FormState> {
 
   pruneThrottle();
   const ip = await clientIp();
+  if (isBlockedIp(ip)) {
+    await audit(null, "login.blocked_ip", username);
+    await jitter();
+    return { error: GENERIC };
+  }
   const wait = Math.max(lockedFor(ipKey(ip)), lockedFor(userKey(username)));
   if (wait) {
     await audit(null, "login.blocked", username);

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { Copy, Download, Expand, Link2, ScanSearch, Share2 } from "lucide-react";
 import type { MediaItem } from "@/types/content";
@@ -12,15 +13,19 @@ import { useToast } from "@/components/ui/toast";
 import { ZoomableImage, type ZoomHandle } from "./zoomable-image";
 import { VideoPlayer } from "./player/video-player";
 import { AudioPlayer } from "./player/audio-player";
+import { FontTester, familyStyles } from "./font-tester";
 import { FavoriteButton } from "./favorite-button";
 import { AddToCollection } from "./add-to-collection";
 import { useLightbox } from "./lightbox-context";
 import { viewerHref } from "./media-links";
 
 /** Media stage for the detail page: zoomable image, custom video player or audio player. */
-export function MediaStage({ item }: { item: MediaItem }) {
+export function MediaStage({ item, family = [] }: { item: MediaItem; family?: MediaItem[] }) {
   const zoom = useRef<ZoomHandle>(null);
+  const router = useRouter();
   useEffect(() => library.recordView(item.slug), [item.slug]);
+
+  if (item.kind === "font") return <FontTester item={item} styles={familyStyles(item, family)} onPickStyle={(m) => router.push(`/media/${m.slug}`, { scroll: false })} />;
 
   if (item.kind === "video") return <VideoPlayer item={item} />;
   if (item.kind === "audio")
@@ -77,9 +82,11 @@ export function MediaActions({ item }: { item: MediaItem }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Link href={viewerHref(item.slug)} className={buttonClass({ variant: "primary" })}>
-        <ScanSearch /> Open in Media Viewer
-      </Link>
+      {item.kind !== "font" && (
+        <Link href={viewerHref(item.slug)} className={buttonClass({ variant: "primary" })}>
+          <ScanSearch /> Open in Media Viewer
+        </Link>
+      )}
       {item.kind === "image" && (
         <button type="button" onClick={() => open([item], 0)} className={buttonClass({ variant: "secondary" })}>
           <Expand /> View full resolution

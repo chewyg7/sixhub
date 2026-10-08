@@ -1,5 +1,6 @@
+import { Fragment } from "react";
 import Link from "next/link";
-import type { MediaItem } from "@/types/content";
+import type { HomeSectionId, MediaItem } from "@/types/content";
 import type { NewsPage } from "@/types/news";
 import { Container, SectionHeading, UnderlineLink } from "@/components/layout/page";
 import { Hero } from "@/components/home/hero";
@@ -30,6 +31,7 @@ async function latestNews(): Promise<NewsPage | null> {
 export default async function HomePage() {
   const settings = await getSettings();
   const home = settings.home;
+  const sections = settings.site.sections.filter((x) => x.enabled);
   const [all, entries, timeline, picks, news, gallery, faq] = await Promise.all([
     getAllMedia(),
     getInfoEntries(),
@@ -66,44 +68,50 @@ export default async function HomePage() {
   const launchLabel = new Date(`${settings.release.date}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
   const events = [...timeline].reverse().slice(0, 4);
 
-  return (
-    <>
-      <Hero release={settings.release} launchMode={settings.launchMode} trailer={trailer} />
+  const heading = (id: HomeSectionId) => sections.find((x) => x.id === id) ?? { kicker: "", title: "" };
+  const marquee = settings.site.marquee.map((w) => w.replace("{date}", launchLabel));
 
+  // Each block knows its own spacing; the site editor decides which appear and in what order.
+  const blocks: Record<HomeSectionId, () => React.ReactNode> = {
+    news: () => (
       <Container wide className="mt-24 sm:mt-32">
-        <SectionHeading kicker="RockstarINTEL" title="Latest news" href="/news" linkLabel="All news" />
+        <SectionHeading kicker={heading("news").kicker} title={heading("news").title} href="/news" linkLabel="All news" />
         <NewsShowcase initial={news} />
       </Container>
-
+    ),
+    cast: () => (
       <Container wide className="mt-28 sm:mt-40">
-        <SectionHeading kicker="The cast" title="Meet the people" href="/info/characters" linkLabel="All characters" />
+        <SectionHeading kicker={heading("cast").kicker} title={heading("cast").title} href="/info/characters" linkLabel="All characters" />
         <CastGrid cast={characters} />
       </Container>
-
+    ),
+    regions: () => (
       <Container wide className="mt-28 sm:mt-40">
-        <SectionHeading kicker="Leonida" title="Explore the state" href="/info/locations" linkLabel="All locations" />
+        <SectionHeading kicker={heading("regions").kicker} title={heading("regions").title} href="/info/locations" linkLabel="All locations" />
         <RegionRow regions={regions} />
       </Container>
-
+    ),
+    trailers: () => (
       <Container wide className="mt-28 sm:mt-40">
-        <SectionHeading kicker="Official trailers" title="Watch it again" href="/media/videos" linkLabel="All videos" />
+        <SectionHeading kicker={heading("trailers").kicker} title={heading("trailers").title} href="/media/videos" linkLabel="All videos" />
         <Trailers trailers={trailers} />
       </Container>
-
-      {wall.length > 0 && (
+    ),
+    gallery: () =>
+      wall.length > 0 && (
         <div className="mt-20 sm:mt-28">
           <GalleryColumns items={wall} total={images.length} />
         </div>
-      )}
-
-      {still && (
+      ),
+    viewer: () =>
+      still && (
         <Container wide className="mt-20 sm:mt-28">
           <ViewerPromo still={still} picks={picks} />
         </Container>
-      )}
-
+      ),
+    timeline: () => (
       <Container wide className="mt-28 sm:mt-40">
-        <SectionHeading kicker="Milestones" title="The road to release" href="/timeline" linkLabel="Full timeline" />
+        <SectionHeading kicker={heading("timeline").kicker} title={heading("timeline").title} href="/timeline" linkLabel="Full timeline" />
         <Stagger as="ol" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {events.map((e) => (
             <li key={e.id}>
@@ -124,15 +132,23 @@ export default async function HomePage() {
           <UnderlineLink href="/timeline">Full timeline</UnderlineLink>
         </div>
       </Container>
-
-      {featuredFaq.length > 0 && (
+    ),
+    faq: () =>
+      featuredFaq.length > 0 && (
         <Container wide className="mt-28 sm:mt-40">
-          <SectionHeading kicker="Questions" title="Good to know" href="/faq" linkLabel="All questions" />
+          <SectionHeading kicker={heading("faq").kicker} title={heading("faq").title} href="/faq" linkLabel="All questions" />
           <FaqList items={featuredFaq} />
         </Container>
-      )}
+      ),
+    marquee: () => marquee.length > 0 && <Marquee words={marquee} reverse className="mt-28 sm:mt-40" />,
+  };
 
-      <Marquee words={["Coming", launchLabel]} reverse className="mt-28 sm:mt-40" />
+  return (
+    <>
+      <Hero release={settings.release} launchMode={settings.launchMode} trailer={trailer} />
+      {sections.map((sec) => (
+        <Fragment key={sec.id}>{blocks[sec.id]()}</Fragment>
+      ))}
     </>
   );
 }

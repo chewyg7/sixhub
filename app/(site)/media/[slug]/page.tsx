@@ -110,7 +110,7 @@ async function MediaDetail({ slug }: { slug: string }) {
         ]}
         className="mb-5"
       />
-      <MediaStage item={item} />
+      <MediaStage item={item} family={item.kind === "font" ? all.filter((m) => m.kind === "font" && m.font?.family === item.font?.family) : undefined} />
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="min-w-0">

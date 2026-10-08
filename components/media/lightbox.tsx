@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/controls";
 import { ZoomableImage, type ZoomHandle } from "./zoomable-image";
 import { VideoPlayer } from "./player/video-player";
 import { AudioPlayer } from "./player/audio-player";
+import { FontTester, familyStyles } from "./font-tester";
 import { FavoriteButton } from "./favorite-button";
 import { MediaThumb } from "./media-thumb";
 import { viewerHref } from "./media-links";
@@ -148,17 +149,21 @@ export function Lightbox({ items, index, onIndexChange, onClose }: Props) {
           <IconButton label={fullscreen ? "Exit fullscreen" : "Fullscreen"} shortcut="F" onClick={toggleFullscreen} className="hidden sm:inline-flex">
             {fullscreen ? <Minimize /> : <Maximize />}
           </IconButton>
-          <Link href={viewerHref(item.slug)} onClick={onClose} className={buttonClass({ variant: "ghost", size: "sm", className: "hidden hover:bg-white/10 md:inline-flex" })}>
-            <ScanSearch /> Open in Viewer
-          </Link>
-          <Link
-            href={viewerHref(item.slug)}
-            onClick={onClose}
-            aria-label="Open in Media Viewer"
-            className={buttonClass({ variant: "ghost", size: "icon", className: "md:hidden" })}
-          >
-            <ScanSearch />
-          </Link>
+          {item.kind !== "font" && (
+            <>
+              <Link href={viewerHref(item.slug)} onClick={onClose} className={buttonClass({ variant: "ghost", size: "sm", className: "hidden hover:bg-white/10 md:inline-flex" })}>
+                <ScanSearch /> Open in Viewer
+              </Link>
+              <Link
+                href={viewerHref(item.slug)}
+                onClick={onClose}
+                aria-label="Open in Media Viewer"
+                className={buttonClass({ variant: "ghost", size: "icon", className: "md:hidden" })}
+              >
+                <ScanSearch />
+              </Link>
+            </>
+          )}
           <IconButton label="Close" shortcut="Esc" onClick={onClose}>
             <X />
           </IconButton>
@@ -187,6 +192,11 @@ export function Lightbox({ items, index, onIndexChange, onClose }: Props) {
                 <div className="w-full max-w-[min(100%,calc((100dvh-220px)*16/9))]">
                   <VideoPlayer item={item} autoPlay />
                 </div>
+              </div>
+            )}
+            {item.kind === "font" && (
+              <div className="flex h-full justify-center p-2 sm:p-6">
+                <FontTester item={item} styles={familyStyles(item, items)} onPickStyle={(m) => onIndexChange(items.indexOf(m))} fill className="w-full max-w-6xl" />
               </div>
             )}
             {item.kind === "audio" && (

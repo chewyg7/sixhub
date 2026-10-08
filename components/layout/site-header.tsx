@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Bookmark, Search } from "lucide-react";
+import { ArrowRight, Bookmark, ChevronDown, Search, Settings2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { gsap, prefersReducedMotion } from "@/lib/motion";
 import { useFocusTrap, lockScroll } from "@/lib/hooks/use-focus-trap";
@@ -12,34 +12,34 @@ import { useCommandPalette } from "@/features/search/command-palette";
 import { LiquidGlass } from "@/components/glass/liquid-glass";
 import { Countdown } from "@/components/home/countdown";
 import { useSiteData } from "@/components/site-data";
+import { DEFAULT_SETTINGS } from "@/data/settings";
+import type { SiteLink } from "@/types/content";
+import { TOOLS } from "@/lib/tools";
 import { SocialLinks } from "./social-links";
+import { NavLogo } from "./nav-logo";
+import { QualitySwitch, SettingsPanel } from "./menu-settings";
 
 export interface MenuPreview {
   src: string;
   color: string | null;
 }
 
-const LINKS = [
-  { href: "/news", label: "News", match: ["/news"] },
-  { href: "/media", label: "Media", match: ["/media", "/collections"] },
-  { href: "/viewer", label: "Viewer", match: ["/viewer"] },
-  { href: "/info", label: "Leonida", match: ["/info"] },
-  { href: "/timeline", label: "Timeline", match: ["/timeline"] },
-];
-
-const MENU = [
-  { href: "/", label: "Home", preview: "home" },
-  { href: "/news", label: "News", preview: "news" },
-  { href: "/media", label: "Media", preview: "media" },
-  { href: "/viewer", label: "Media Viewer", preview: "viewer" },
-  { href: "/info/characters", label: "Characters", preview: "characters" },
-  { href: "/info/locations", label: "Leonida", preview: "locations" },
-  { href: "/timeline", label: "Timeline", preview: "timeline" },
-];
+/** Menu artwork is keyed by destination; links the editor adds fall back to the home art. */
+const PREVIEW_FOR: Record<string, string> = {
+  "/": "home",
+  "/news": "news",
+  "/media": "media",
+  "/viewer": "viewer",
+  "/info/characters": "characters",
+  "/info": "locations",
+  "/info/locations": "locations",
+  "/timeline": "timeline",
+};
+const matchFor = (href: string) => (href === "/media" ? ["/media", "/collections"] : href === "/" ? [] : [href]);
 
 const isActive = (match: string[], path: string) => match.some((m) => path === m || path.startsWith(`${m}/`));
 
-export function SiteHeader({ previews }: { previews: Record<string, MenuPreview> }) {
+export function SiteHeader({ previews, nav: navLinks = DEFAULT_SETTINGS.site.nav, menu = DEFAULT_SETTINGS.site.menu }: { previews: Record<string, MenuPreview>; nav?: SiteLink[]; menu?: SiteLink[] }) {
   const path = usePathname();
   const { open: openSearch } = useCommandPalette();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -97,28 +97,19 @@ export function SiteHeader({ previews }: { previews: Record<string, MenuPreview>
       <header className="pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
         <div ref={bar} className="pointer-events-auto mx-auto max-w-[1240px]">
           <LiquidGlass elevated radius={30} bezel={22} thickness={48} tint="rgb(16 10 20 / 0.2)" className="flex h-[68px] items-center gap-2 pr-2 pl-3 sm:pl-4">
-            <Link href="/" aria-label="GTA 6 Hub — home" className="group flex shrink-0 items-center" data-cursor="link">
-              {/* eslint-disable-next-line @next/next/no-img-element -- brand mark */}
-              <img
-                src="/brand/logo-480.webp"
-                alt="GTA 6 Hub"
-                width={480}
-                height={335}
-                className="h-[50px] w-auto transition-transform duration-500 ease-[var(--ease-out)] group-hover:scale-[1.06] group-hover:-rotate-3"
-              />
-            </Link>
+            <NavLogo />
 
             <nav ref={nav} aria-label="Primary" className="relative mx-auto hidden items-center lg:flex" onPointerLeave={() => toActive()}>
               <span
                 ref={pill}
                 aria-hidden
-                className="pointer-events-none absolute top-1/2 left-0 h-11 -translate-y-1/2 rounded-full bg-white/[0.09] opacity-0 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12),inset_1px_1px_0_rgb(255_255_255/0.25)]"
+                className="pointer-events-none absolute top-0 left-0 h-11 rounded-full bg-white/[0.09] opacity-0 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12),inset_1px_1px_0_rgb(255_255_255/0.25)]"
               />
-              {LINKS.map((l) => {
-                const active = isActive(l.match, path);
-                return (
+              {navLinks.map((l) => {
+                const active = isActive(matchFor(l.href), path) || (l.href === "/" && path === "/");
+                const link = (
                   <Link
-                    key={l.href}
+                    key={`${l.href}-${l.label}`}
                     href={l.href}
                     aria-current={active ? "page" : undefined}
                     onPointerEnter={(e) => moveTo(e.currentTarget)}
@@ -129,8 +120,16 @@ export function SiteHeader({ previews }: { previews: Record<string, MenuPreview>
                     )}
                   >
                     {l.label}
+                    {l.href === "/tools" && <ChevronDown aria-hidden className="ml-1 size-3.5 opacity-60 transition-transform duration-300 group-hover/tools:rotate-180" />}
                     {active && <span aria-hidden className="absolute bottom-1.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-accent" />}
                   </Link>
+                );
+                return l.href === "/tools" ? (
+                  <ToolsMenu key={`${l.href}-${l.label}`} path={path}>
+                    {link}
+                  </ToolsMenu>
+                ) : (
+                  link
                 );
               })}
             </nav>
@@ -179,15 +178,50 @@ export function SiteHeader({ previews }: { previews: Record<string, MenuPreview>
           </LiquidGlass>
         </div>
       </header>
-      <FullscreenMenu open={menuOpen} onClose={() => setMenuOpen(false)} previews={previews} />
+      <FullscreenMenu open={menuOpen} onClose={() => setMenuOpen(false)} previews={previews} links={menu} />
     </>
   );
 }
 
-function FullscreenMenu({ open, onClose, previews }: { open: boolean; onClose: () => void; previews: Record<string, MenuPreview> }) {
+/** The header's Tools item: hover or focus opens a small panel listing every tool. */
+function ToolsMenu({ children, path }: { children: React.ReactNode; path: string }) {
+  return (
+    <div className="group/tools relative">
+      {children}
+      <div className="invisible absolute top-full left-1/2 z-20 w-[360px] -translate-x-1/2 translate-y-1 pt-3 opacity-0 transition-[opacity,translate,visibility] duration-300 ease-[var(--ease-out)] group-focus-within/tools:visible group-focus-within/tools:translate-y-0 group-focus-within/tools:opacity-100 group-hover/tools:visible group-hover/tools:translate-y-0 group-hover/tools:opacity-100">
+        <div className="rounded-[24px] border border-white/10 bg-[rgb(20_14_26/0.96)] p-2 shadow-[0_30px_70px_-20px_rgb(0_0_0/0.8)]">
+          {TOOLS.map((t) => (
+            <Link
+              key={t.slug}
+              href={t.href}
+              aria-current={path === t.href ? "page" : undefined}
+              className="group/tool flex items-center gap-3 rounded-2xl p-2.5 transition-colors hover:bg-white/[0.07] aria-[current=page]:bg-white/[0.07]"
+            >
+              <span className="size-12 shrink-0 overflow-hidden rounded-xl bg-black/40">
+                {/* eslint-disable-next-line @next/next/no-img-element -- tool preview */}
+                <img src={t.image} alt="" className="size-full object-cover transition-transform duration-500 group-hover/tool:scale-110" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[14.5px] font-bold text-white">{t.name}</span>
+                <span className="block truncate text-[13px] text-white/50">{t.blurb}</span>
+              </span>
+            </Link>
+          ))}
+          <Link href="/tools" className="mt-1 flex items-center justify-between rounded-2xl px-3.5 py-2.5 text-[13.5px] font-bold text-white/60 transition-colors hover:bg-white/[0.07] hover:text-white">
+            All tools <ArrowRight className="size-4" />
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FullscreenMenu({ open, onClose, previews, links }: { open: boolean; onClose: () => void; previews: Record<string, MenuPreview>; links: SiteLink[] }) {
   const [mounted, setMounted] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const [preview, setPreview] = useState<string>("home");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
   const path = usePathname();
   const { release } = useSiteData().settings;
   const releaseLabel = new Date(`${release.date}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
@@ -196,6 +230,7 @@ function FullscreenMenu({ open, onClose, previews }: { open: boolean; onClose: (
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- portal target exists only after mount
     if (open) setMounted(true);
+    else setSettingsOpen(false);
   }, [open]);
 
   useEffect(() => {
@@ -247,13 +282,13 @@ function FullscreenMenu({ open, onClose, previews }: { open: boolean; onClose: (
       <div className="relative mx-auto flex h-full max-w-[1240px] flex-col px-5 pt-32 pb-10 sm:px-8 lg:flex-row lg:items-end lg:gap-16 lg:pb-16">
         <nav aria-label="Menu" className="flex-1">
           <ul>
-            {MENU.map((m, i) => (
-              <li key={m.href} className="overflow-hidden">
+            {links.map((m, i) => (
+              <li key={`${m.href}-${i}`} className="overflow-hidden">
                 <Link
                   href={m.href}
                   data-menu-link
-                  onPointerEnter={() => setPreview(m.preview)}
-                  onFocus={() => setPreview(m.preview)}
+                  onPointerEnter={() => setPreview(PREVIEW_FOR[m.href] ?? "home")}
+                  onFocus={() => setPreview(PREVIEW_FOR[m.href] ?? "home")}
                   onClick={onClose}
                   className={cn(
                     "group flex items-baseline gap-4 py-0.5 transition-[color,transform] duration-500 ease-[var(--ease-out)] hover:translate-x-4",
@@ -267,7 +302,18 @@ function FullscreenMenu({ open, onClose, previews }: { open: boolean; onClose: (
             ))}
           </ul>
         </nav>
-        <div className="mt-10 grid gap-8 lg:mt-0 lg:w-[340px]">
+        <div className="mt-10 grid gap-8 lg:mt-0 lg:w-[400px]">
+          <div data-menu-fade className="flex flex-wrap items-start justify-between gap-4">
+            <QualitySwitch />
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-haspopup="dialog"
+              className="group inline-flex h-12 items-center gap-2 rounded-full bg-white/[0.07] pr-5 pl-4 text-[14.5px] font-bold text-white/85 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)] transition-colors hover:bg-white/12 hover:text-white"
+            >
+              <Settings2 className="size-[18px] transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:rotate-90" /> Settings
+            </button>
+          </div>
           <div data-menu-fade>
             <p className="text-[14px] text-white/60">Grand Theft Auto VI arrives</p>
             <p className="display mt-1 text-[26px]">{releaseLabel}</p>
@@ -279,7 +325,9 @@ function FullscreenMenu({ open, onClose, previews }: { open: boolean; onClose: (
           <div data-menu-fade className="flex flex-wrap gap-x-6 gap-y-2 text-[15px] text-white/70">
             {[
               ["Collections", "/collections"],
+              ["Tools", "/tools"],
               ["FAQ", "/faq"],
+              ["Discord", "/discord"],
               ["Your library", "/library"],
               ["About", "/about"],
               ["Contact", "/contact"],
@@ -291,6 +339,7 @@ function FullscreenMenu({ open, onClose, previews }: { open: boolean; onClose: (
           </div>
         </div>
       </div>
+      <SettingsPanel open={settingsOpen} onClose={closeSettings} />
     </div>,
     document.body,
   );

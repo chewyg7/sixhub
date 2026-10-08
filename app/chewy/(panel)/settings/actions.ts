@@ -59,3 +59,17 @@ export async function saveHome(_: ActionState, f: FormData): Promise<ActionState
     return "Home page picks saved.";
   });
 }
+
+export async function saveMaintenance(_: ActionState, f: FormData): Promise<ActionState> {
+  return run(async () => {
+    const user = await requireOwner();
+    const m = {
+      enabled: bool(f, "enabled"),
+      title: z.string().trim().min(1, "Add a heading").max(60).parse(str(f, "title")),
+      message: z.string().trim().max(500).parse(str(f, "message")),
+    };
+    repo.saveSettings("maintenance", m);
+    await audit(user, "settings.maintenance", null, m);
+    return m.enabled ? "Maintenance mode is ON. Visitors now see your message; you still see the site." : "Maintenance mode is off. The site is open.";
+  });
+}

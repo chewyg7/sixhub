@@ -61,6 +61,8 @@ export async function createSession(userId: string, mfaPending: boolean) {
     .prepare("INSERT INTO sessions (id, user_id, created_at, last_seen_at, expires_at, mfa_pending, ip, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
     .run(sha256(token), userId, t, t, t + ttl, mfaPending ? 1 : 0, await clientIp(), await userAgent());
   await setCookie(token, ttl);
+  // Lets the public site know a staff member is browsing (shows the site through maintenance mode). Not a credential.
+  if (!mfaPending) (await cookies()).set("gh_staff", "1", { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: ABSOLUTE / 1000 });
 }
 
 async function currentRow(): Promise<{ row: Row; user: User } | null> {
@@ -102,6 +104,7 @@ export async function endSession() {
   const token = (await cookies()).get(COOKIE)?.value;
   if (token) db().prepare("DELETE FROM sessions WHERE id = ?").run(sha256(token));
   (await cookies()).delete(COOKIE);
+  (await cookies()).delete("gh_staff");
 }
 
 export function listSessions(userId: string): Session[] {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { prefersReducedMotion } from "@/lib/motion";
+import { prefersLofi } from "@/lib/preferences";
 
 /**
  * Full-screen confetti. Fire it from anywhere with
@@ -120,7 +121,7 @@ export function Confetti() {
       const k = Math.max(0.3, Math.min(2, (e as CustomEvent<{ intensity?: number }>).detail?.intensity ?? 1));
       const w = innerWidth;
       const h = innerHeight;
-      const n = Math.round((w < 640 ? 70 : 140) * k);
+      const n = Math.round((w < 640 ? 70 : 140) * k * (prefersLofi() ? 0.45 : 1));
       // Two side cannons and a burst from the top.
       spawn(n, -10, h * 0.78, -Math.PI / 3.2, 0.7, 26);
       spawn(n, w + 10, h * 0.78, -Math.PI + Math.PI / 3.2, 0.7, 26);

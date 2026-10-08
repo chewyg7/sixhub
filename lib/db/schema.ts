@@ -121,4 +121,24 @@ export const MIGRATIONS: string[] = [
   CREATE INDEX media_status ON media(status);
   ALTER TABLE users ADD COLUMN totp_last_step INTEGER NOT NULL DEFAULT 0; -- last accepted TOTP time step; codes can't be reused
   `,
+  /* 3: custom pages and short links */ `
+  CREATE TABLE pages (
+    slug TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    data TEXT NOT NULL,                  -- { description, body (Markdown) }
+    published INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    updated_by TEXT
+  );
+  CREATE TABLE short_links (
+    slug TEXT PRIMARY KEY,
+    url TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    clicks INTEGER NOT NULL DEFAULT 0,
+    last_click_at INTEGER,
+    created_at INTEGER NOT NULL,
+    created_by TEXT
+  );
+  `,
 ];

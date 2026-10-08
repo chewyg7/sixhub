@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 import { gsap, ScrollTrigger, prefersReducedMotion } from "@/lib/motion";
+import { usePreferences } from "@/lib/preferences";
 
 const Ctx = createContext<Lenis | null>(null);
 export const useLenis = () => useContext(Ctx);
@@ -16,7 +17,8 @@ export const useLenis = () => useContext(Ctx);
 export function SmoothScroll({ children }: { children: ReactNode }) {
   const path = usePathname();
   const [lenis, setLenis] = useState<Lenis | null>(null);
-  const enabled = !path.startsWith("/viewer") && !path.startsWith("/chewy");
+  const { smoothScroll, motion } = usePreferences();
+  const enabled = smoothScroll && !path.startsWith("/viewer") && !path.startsWith("/chewy");
 
   useEffect(() => {
     if (!enabled || prefersReducedMotion()) return;
@@ -34,7 +36,7 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
       document.documentElement.classList.remove("lenis-on");
       setLenis(null);
     };
-  }, [enabled]);
+  }, [enabled, motion]);
 
   // New route: start at the top and let ScrollTrigger re-measure.
   useEffect(() => {

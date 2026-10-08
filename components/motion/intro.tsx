@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { gsap, prefersReducedMotion } from "@/lib/motion";
+import { getPreferences, prefersLofi } from "@/lib/preferences";
 
 const KEY = "gh:intro-seen";
 
@@ -29,7 +30,7 @@ export function Intro() {
         return false;
       }
     })();
-    if (!el || seen || prefersReducedMotion() || path.startsWith("/viewer") || path.startsWith("/chewy")) {
+    if (!el || seen || prefersReducedMotion() || prefersLofi() || !getPreferences().intro || path.startsWith("/viewer") || path.startsWith("/chewy")) {
       if (el) el.style.display = "none";
       finish();
       return;

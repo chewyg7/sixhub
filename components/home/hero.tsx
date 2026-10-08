@@ -9,6 +9,7 @@ import { LaunchClock } from "@/components/launch/launch-clock";
 import { useLaunchState } from "@/components/launch/use-launch";
 import { fireConfetti } from "@/components/launch/confetti";
 import { cn } from "@/lib/cn";
+import { getPreferences, usePreferences } from "@/lib/preferences";
 
 const BG_BLUR =
   "data:image/webp;base64,UklGRnwAAABXRUJQVlA4IHAAAAAQBACdASoYAA0APu1iqU2ppaQiMAgBMB2JYgCdIExDAoOzjQ+E9kiwoAD+ozFAuu5gUCa3Kp+hJgE54r75zBQrqy0+jG0Vh/vJGAwfCqgiKZw0av/4kuCXyQcOZ/Hqa6RWgUZ0txdCZ2h9i3DEEAAA";
@@ -30,6 +31,8 @@ export function Hero({ release, launchMode, trailer }: { release: SiteSettings["
   const state = useLaunchState(release, launchMode, preview);
   const launched = !!state?.launched;
   const { open } = useLightbox();
+  const { quality, motion } = usePreferences();
+  const introPlayed = useRef(false);
 
   // Intro, cursor depth and scroll parallax.
   useGSAP(
@@ -42,14 +45,16 @@ export function Hero({ release, launchMode, trailer }: { release: SiteSettings["
       const fg = q("[data-layer=fg]");
       const ui = el.querySelectorAll("[data-hero-ui]");
       const reduce = prefersReducedMotion();
+      const lofi = quality === "lofi";
 
-      const intro = gsap.timeline({ paused: true });
+      // Re-runs when the visitor changes HiFi/LoFi or motion; the intro only ever plays once.
+      const intro = gsap.timeline({ paused: true, onStart: () => void (introPlayed.current = true) });
       intro
         .fromTo(bg, { scale: 1.28, filter: "blur(10px) brightness(0.6)" }, { scale: 1.06, filter: "blur(0px) brightness(1)", duration: reduce ? 0 : 2.2, ease: "expo.out" }, 0)
         .fromTo(mark, { scale: 0.55, rotate: -6, opacity: 0, filter: "blur(24px)" }, { scale: 1, rotate: 0, opacity: 1, filter: "blur(0px)", duration: reduce ? 0 : 1.8, ease: "expo.out" }, 0.2)
         .fromTo(fg, { yPercent: 22, opacity: 0, filter: "blur(12px)" }, { yPercent: 0, opacity: 1, filter: "blur(0px)", duration: reduce ? 0 : 1.7, ease: "expo.out" }, 0.38)
         .fromTo(ui, { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: reduce ? 0 : 1.3, stagger: 0.09, ease: "expo.out" }, 0.75);
-      const start = () => intro.play();
+      const start = () => (introPlayed.current ? intro.progress(1) : intro.play());
       if (document.documentElement.dataset.introDone) start();
       else window.addEventListener("gh:intro-done", start, { once: true });
       if (reduce) return () => window.removeEventListener("gh:intro-done", start);
@@ -57,9 +62,11 @@ export function Hero({ release, launchMode, trailer }: { release: SiteSettings["
       // Scroll: layers separate as the hero leaves.
       const st = { trigger: el, start: "top top", end: "bottom top", scrub: true } as const;
       gsap.to(bg, { yPercent: 14, ease: "none", scrollTrigger: st });
-      gsap.to(mark, { yPercent: -55, opacity: 0.15, ease: "none", scrollTrigger: st });
-      gsap.to(fg, { yPercent: 12, scale: 1.1, ease: "none", scrollTrigger: st });
+      gsap.to(q("[data-scroll=mark]"), { yPercent: -55, opacity: 0.15, ease: "none", scrollTrigger: st });
+      gsap.to(q("[data-scroll=fg]"), { yPercent: 12, scale: 1.1, ease: "none", scrollTrigger: st });
       gsap.to(q("[data-hero-dock]"), { yPercent: -30, opacity: 0, ease: "none", scrollTrigger: { ...st, end: "60% top" } });
+
+      if (lofi) return () => window.removeEventListener("gh:intro-done", start);
 
       // Idle breathing so the scene never sits still.
       gsap.to(q("[data-breathe]"), { y: -6, duration: 3.2, repeat: -1, yoyo: true, ease: "sine.inOut" });
@@ -97,12 +104,12 @@ export function Hero({ release, launchMode, trailer }: { release: SiteSettings["
         window.removeEventListener("gh:intro-done", start);
       };
     },
-    { scope: root },
+    { scope: root, dependencies: [quality, motion], revertOnUpdate: true },
   );
 
   // Celebrate the first time the page sees the game as launched (once per session, always in preview).
   useEffect(() => {
-    if (!launched) return;
+    if (!launched || !getPreferences().confetti) return;
     let seen = false;
     try {
       seen = sessionStorage.getItem("gh:celebrated") === "1";
@@ -160,34 +167,40 @@ export function Hero({ release, launchMode, trailer }: { release: SiteSettings["
         </div>
       )}
 
-      {/* The VI mark, sandwiched between the scene and the characters */}
+      {/* The VI mark, sandwiched between the scene and the characters.
+          Three wrappers so no two animations ever write the same property:
+          placement (CSS) > scroll parallax > intro + cursor depth. */}
       <div
-        data-layer="mark"
         aria-hidden
         className={cn(
-          "absolute left-1/2 w-[min(84vw,560px)] -translate-x-1/2 will-change-transform lg:left-[42%] lg:w-[min(44vw,760px)] lg:-translate-x-[68%]",
+          "absolute left-1/2 w-[min(84vw,560px)] -translate-x-1/2 lg:left-[42%] lg:w-[min(44vw,760px)] lg:-translate-x-[68%]",
           launched ? "top-[8%] lg:top-[6%]" : "top-[12%] lg:top-[12%]",
         )}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element -- official mark */}
-        <img src="/media/logos/gta-vi-mark/w960.webp" alt="" className="w-full drop-shadow-[0_30px_60px_rgb(40_10_60/0.45)]" />
+        <div data-scroll="mark" className="will-change-transform">
+          <div data-layer="mark" className="will-change-transform">
+            {/* eslint-disable-next-line @next/next/no-img-element -- official mark */}
+            <img src="/media/logos/gta-vi-mark/w960.webp" alt="" className="w-full drop-shadow-[0_30px_60px_rgb(40_10_60/0.45)]" />
+          </div>
+        </div>
       </div>
 
-      {/* Jason & Lucia */}
-      <div
-        data-layer="fg"
-        className="absolute bottom-0 left-1/2 h-[64svh] -translate-x-1/2 will-change-transform [transform-style:preserve-3d] sm:h-[70svh] lg:right-[8%] lg:left-auto lg:h-[94svh] lg:translate-x-0 xl:right-[11%]"
-      >
-        <div data-breathe className="h-full">
-          {/* eslint-disable-next-line @next/next/no-img-element -- layered artwork needs the exact files */}
-          <img
-            src="/hero/fg-1336.webp"
-            srcSet="/hero/fg-900.webp 900w, /hero/fg-1336.webp 1336w"
-            sizes="(min-width: 1024px) 64vh, 46vh"
-            alt="Lucia and Jason, bandanas up, walking towards the camera"
-            fetchPriority="high"
-            className="h-full w-auto max-w-none drop-shadow-[0_40px_60px_rgb(20_8_30/0.55)]"
-          />
+      {/* Jason & Lucia (same layering as the mark) */}
+      <div className="absolute bottom-0 left-1/2 h-[64svh] -translate-x-1/2 [transform-style:preserve-3d] sm:h-[70svh] lg:right-[8%] lg:left-auto lg:h-[94svh] lg:translate-x-0 xl:right-[11%]">
+        <div data-scroll="fg" className="h-full will-change-transform [transform-style:preserve-3d]">
+          <div data-layer="fg" className="h-full will-change-transform [transform-style:preserve-3d]">
+            <div data-breathe className="h-full">
+              {/* eslint-disable-next-line @next/next/no-img-element -- layered artwork needs the exact files */}
+              <img
+                src="/hero/fg-1336.webp"
+                srcSet="/hero/fg-900.webp 900w, /hero/fg-1336.webp 1336w"
+                sizes="(min-width: 1024px) 64vh, 46vh"
+                alt="Lucia and Jason, bandanas up, walking towards the camera"
+                fetchPriority="high"
+                className="h-full w-auto max-w-none drop-shadow-[0_40px_60px_rgb(20_8_30/0.55)]"
+              />
+            </div>
+          </div>
         </div>
       </div>
 

@@ -1,26 +1,10 @@
 "use client";
 
-import { useActionState, type ReactNode } from "react";
-import { saveAnnouncement, saveHome, saveRelease, saveSocials } from "@/app/chewy/(panel)/settings/actions";
-import type { ActionState } from "@/lib/admin/action";
+import { saveAnnouncement, saveHome, saveMaintenance, saveRelease, saveSocials } from "@/app/chewy/(panel)/settings/actions";
 import type { SiteSettings } from "@/types/content";
-import { Card, Field, Input, Notice, Select, SubmitButton, Textarea, Toggle } from "./ui";
+import { ActionForm, Field, Input, Select, Textarea, Toggle } from "./ui";
 
-function Form({ action, title, description, children, submit = "Save" }: { action: (s: ActionState, f: FormData) => Promise<ActionState>; title: string; description?: ReactNode; children: ReactNode; submit?: string }) {
-  const [state, run] = useActionState<ActionState, FormData>(action, {});
-  return (
-    <Card title={title} description={description}>
-      <form action={run} className="grid gap-4">
-        <Notice tone="success">{state.ok}</Notice>
-        <Notice tone="error">{state.error}</Notice>
-        {children}
-        <div>
-          <SubmitButton pendingLabel="Saving…">{submit}</SubmitButton>
-        </div>
-      </form>
-    </Card>
-  );
-}
+const Form = ActionForm;
 
 export function SettingsForms({ settings: s, videos, collections }: { settings: SiteSettings; videos: { value: string; label: string }[]; collections: { value: string; label: string }[] }) {
   return (
@@ -64,6 +48,20 @@ export function SettingsForms({ settings: s, videos, collections }: { settings: 
         </Field>
         <Field label="Instagram">
           <Input name="instagram" type="url" defaultValue={s.socials.instagram} placeholder="https://www.instagram.com/…" />
+        </Field>
+      </Form>
+
+      <Form
+        action={saveMaintenance}
+        title="Maintenance mode"
+        description="Covers the public site with a message, e.g. while you reorganise things. You (and anyone signed in here) still see the site normally."
+      >
+        <Toggle name="enabled" defaultChecked={s.maintenance.enabled} label="Turn maintenance mode on" hint="The admin panel always stays available." />
+        <Field label="Heading">
+          <Input name="title" defaultValue={s.maintenance.title} maxLength={60} required />
+        </Field>
+        <Field label="Message">
+          <Textarea name="message" defaultValue={s.maintenance.message} maxLength={500} />
         </Field>
       </Form>
 

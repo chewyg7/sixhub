@@ -57,10 +57,21 @@ export async function saveMedia(slug: string, _: ActionState, form: FormData): P
     if (!repo.listCategories().some((c) => c.slug === f.category)) throw new Error("Unknown category.");
     if (!repo.listSources().some((s) => s.slug === f.sourceSlug)) throw new Error("Unknown source.");
     if (f.folderId && !repo.getFolder(f.folderId)) throw new Error("Unknown folder.");
+    // Fonts: a new family name moves the font into that family's folder (if it was in its old one).
+    let fontPatch: Partial<repo.StoredMedia> = {};
+    const oldFolder = row.item.folderId ?? "";
+    if (row.item.kind === "font" && row.item.font) {
+      const family = z.string().trim().min(1, "Add a font family").max(80).parse(str(form, "fontFamily") || row.item.font.family);
+      const style = z.string().trim().min(1, "Add a style").max(60).parse(str(form, "fontStyle") || row.item.font.style);
+      const inFamilyFolder = f.folderId === oldFolder && (oldFolder === repo.FONTS_FOLDER || oldFolder.startsWith(`${repo.FONTS_FOLDER}/`));
+      fontPatch = { font: { ...row.item.font, family, style }, ...(family !== row.item.font.family && inFamilyFolder ? { folderId: repo.ensureFontFamilyFolder(family) } : {}) };
+    }
     repo.upsertMedia(
-      { ...row.item, ...f, officialUrl: f.officialUrl || undefined, credit: f.credit || undefined, alt: f.alt || f.title },
+      { ...row.item, ...f, ...fontPatch, officialUrl: f.officialUrl || undefined, credit: f.credit || undefined, alt: f.alt || f.title },
       user.role === "owner" ? { hidden: bool(form, "hidden") } : {},
     );
+    // Tidy up a font family folder the last style just left.
+    if (fontPatch.folderId && oldFolder.startsWith(`${repo.FONTS_FOLDER}/`) && repo.folderIsEmpty(oldFolder)) repo.deleteFolder(oldFolder);
     await audit(user, "media.edit", slug);
     // Slug changes last, so a failed rename can't lose the other edits.
     const nextSlug = str(form, "slug");

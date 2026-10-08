@@ -12,7 +12,7 @@ import { assertSameOrigin, errorResponse } from "@/lib/auth/csrf";
 import { audit } from "@/lib/auth/audit";
 import { getUserById, updateProfile } from "@/lib/auth/users";
 import { UPLOAD_DIR } from "@/lib/db";
-import { getFolder, listCategories, listSources, mediaSlugExists, upsertMedia, type StoredMedia } from "@/lib/db/content";
+import { fileFont, getFolder, listCategories, listSources, mediaSlugExists, upsertMedia, type StoredMedia } from "@/lib/db/content";
 import { ingestFile } from "@/lib/media/ingest";
 import { MAX_BYTES, sniff } from "@/lib/media/sniff";
 import { titleFromFilename, uniqueSlug } from "@/lib/slug";
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     const dir = `${slug}-${randomBytes(3).toString("hex")}`;
     const ingested = await ingestFile(tmp, kind, dir, meta.filename);
     const today = new Date().toISOString().slice(0, 10);
-    const item: StoredMedia = {
+    const item: StoredMedia = fileFont({
       id: slug,
       slug,
       title,
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
       downloadable: meta.downloadable,
       credit: meta.credit,
       verification: meta.verification,
-    };
+    });
     const status = user.role === "owner" ? "published" : "pending";
     upsertMedia(item, { createdBy: user.id, status, hidden: user.role === "owner" ? meta.hidden : false });
     await audit(user, "media.upload", slug, { kind: item.kind, status, folder: meta.folderId, bytes: received.size });

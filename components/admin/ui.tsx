@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { useActionState, useState, useTransition, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { useFormStatus } from "react-dom";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import type { ActionState } from "@/lib/admin/action";
 
 /* Building blocks for the admin panel. */
 
@@ -183,6 +184,47 @@ export function ConfirmButton({ children, confirmLabel = "Yes, do it", onConfirm
       </Button>
     </span>
   );
+}
+
+/** A card holding one form bound to a server action, with its result shown above the fields. */
+export function ActionForm({
+  action,
+  title,
+  description,
+  children,
+  submit = "Save",
+  footer,
+  className,
+}: {
+  action: (s: ActionState, f: FormData) => Promise<ActionState>;
+  title: ReactNode;
+  description?: ReactNode;
+  children: ReactNode;
+  submit?: string;
+  footer?: ReactNode;
+  className?: string;
+}) {
+  const [state, run] = useActionState<ActionState, FormData>(action, {});
+  return (
+    <Card title={title} description={description} className={className}>
+      <form action={run} className="grid gap-4">
+        <Notice tone="success">{state.ok}</Notice>
+        <Notice tone="error">{state.error}</Notice>
+        {children}
+        <div className="flex flex-wrap items-center gap-2">
+          <SubmitButton pendingLabel="Saving…">{submit}</SubmitButton>
+          {footer}
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+/** Runs a server action from a button and keeps its latest result for a notice. */
+export function useAction(): [boolean, ActionState, (fn: () => Promise<ActionState>) => void] {
+  const [pending, start] = useTransition();
+  const [result, setResult] = useState<ActionState>({});
+  return [pending, result, (fn) => start(async () => setResult(await fn()))];
 }
 
 export { formatTime } from "./format";

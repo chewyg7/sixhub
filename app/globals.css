@@ -127,6 +127,7 @@
   --font-sans: var(--font-deco), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-deco), ui-sans-serif, sans-serif;
   --font-condensed: var(--font-deco-condensed), var(--font-deco), sans-serif;
+  --font-heavy: var(--font-deco-heavy), var(--font-deco-condensed), var(--font-deco), sans-serif;
   --font-mono: var(--font-deco), ui-sans-serif, sans-serif;
 
   --radius-xs: 4px;
@@ -277,18 +278,15 @@
   /* Prefixed first: the CSS compiler keeps the last of the pair, and Chromium only reads the standard property. */
   .glass-1 {
     background: var(--glass-1);
-    -webkit-backdrop-filter: blur(18px) saturate(1.6);
     backdrop-filter: blur(18px) saturate(1.6);
   }
   .glass-2 {
     background: var(--glass-2);
-    -webkit-backdrop-filter: blur(28px) saturate(1.5);
     backdrop-filter: blur(28px) saturate(1.5);
     box-shadow: inset 0 1px 0 var(--glass-highlight), var(--elev-md);
   }
   .glass-3 {
     background: var(--glass-3);
-    -webkit-backdrop-filter: blur(40px) saturate(1.4);
     backdrop-filter: blur(40px) saturate(1.4);
     box-shadow: inset 0 1px 0 var(--glass-highlight), var(--elev-lg);
   }
@@ -432,6 +430,89 @@
   .prose-gh a {
     color: var(--text);
   }
+
+  /* Pages written in the admin panel (Markdown) */
+  .prose-page {
+    font-size: 17px;
+    line-height: 1.75;
+    color: var(--text-muted);
+  }
+  .prose-page > * + * {
+    margin-top: 1em;
+  }
+  .prose-page h2,
+  .prose-page h3,
+  .prose-page h4 {
+    color: var(--text);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-top: 1.8em;
+  }
+  .prose-page h2 {
+    font-size: 30px;
+  }
+  .prose-page h3 {
+    font-size: 23px;
+  }
+  .prose-page h4 {
+    font-size: 19px;
+  }
+  .prose-page strong {
+    color: var(--text);
+  }
+  .prose-page a {
+    color: var(--accent-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .prose-page ul,
+  .prose-page ol {
+    padding-left: 1.3em;
+  }
+  .prose-page ul {
+    list-style: disc;
+  }
+  .prose-page ol {
+    list-style: decimal;
+  }
+  .prose-page li + li {
+    margin-top: 0.35em;
+  }
+  .prose-page blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 1em;
+    color: var(--text);
+    font-style: italic;
+  }
+  .prose-page code {
+    border-radius: 6px;
+    background: rgb(255 255 255 / 0.08);
+    padding: 0.1em 0.35em;
+    font-size: 0.9em;
+  }
+  .prose-page pre {
+    overflow-x: auto;
+    border-radius: 16px;
+    background: rgb(0 0 0 / 0.35);
+    padding: 1em 1.2em;
+  }
+  .prose-page pre code {
+    background: none;
+    padding: 0;
+  }
+  .prose-page hr {
+    border-color: rgb(255 255 255 / 0.1);
+    margin-block: 2em;
+  }
+  .prose-page figure img {
+    width: 100%;
+    border-radius: 20px;
+  }
+  .prose-page figcaption {
+    margin-top: 0.5em;
+    font-size: 14px;
+    color: var(--text-faint, rgb(255 255 255 / 0.45));
+  }
 }
 
 @keyframes shimmer {
@@ -515,6 +596,71 @@ html[data-motion="reduced"] *::after {
 html.has-cursor,
 html.has-cursor * {
   cursor: none !important;
+}
+
+/* Custom cursor: a small lens of liquid glass with a dark halo, so it reads
+   on bright artwork as well as dark pages. */
+.cursor-ring {
+  border: 1px solid rgb(255 255 255 / 0.55);
+  background: rgb(255 255 255 / 0.06);
+  backdrop-filter: blur(3px) saturate(1.8) brightness(1.08);
+  box-shadow:
+    inset 0 1px 1px rgb(255 255 255 / 0.55),
+    inset 0 -2px 6px rgb(255 79 163 / 0.25),
+    0 0 0 1px rgb(20 8 30 / 0.28),
+    0 6px 18px -4px rgb(10 4 16 / 0.55);
+}
+.cursor-dot {
+  box-shadow:
+    0 0 0 1.5px rgb(255 255 255 / 0.95),
+    0 1px 6px rgb(10 4 16 / 0.6);
+}
+html[data-quality="lofi"] .cursor-ring {
+  backdrop-filter: none;
+}
+
+/* Header logo: lift, glow and a sheen across the mark. */
+.nav-logo-art {
+  transition: transform 700ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.nav-logo:hover .nav-logo-art {
+  transform: translateY(-1px) scale(1.045);
+}
+.nav-logo:active .nav-logo-art {
+  transform: scale(0.96);
+  transition-duration: 160ms;
+}
+.nav-logo-glow {
+  position: absolute;
+  inset: -30% -18%;
+  border-radius: 999px;
+  background: radial-gradient(closest-side, rgb(255 79 163 / 0.38), transparent);
+  opacity: 0;
+  transform: scale(0.7);
+  filter: blur(6px);
+  transition:
+    opacity 600ms var(--ease-out),
+    transform 900ms var(--ease-out);
+  pointer-events: none;
+}
+.nav-logo:hover .nav-logo-glow {
+  opacity: 1;
+  transform: scale(1);
+}
+.nav-logo-sheen {
+  position: absolute;
+  inset: 0;
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.85) 50%, transparent 65%) no-repeat;
+  background-size: 250% 100%;
+  background-position: 130% 0;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+.nav-logo:hover .nav-logo-sheen {
+  background-position: -30% 0;
+  transition: background-position 900ms cubic-bezier(0.3, 0.7, 0.2, 1);
 }
 html.lenis-on {
   scroll-behavior: auto;
@@ -621,14 +767,20 @@ html:not(.motion-ready) .intro {
     opacity: 0;
   }
 }
+/* Reduced motion (the OS setting unless the site's own setting says "full"): digits just swap. */
 @media (prefers-reduced-motion: reduce) {
-  .roll-in,
-  .roll-out {
+  html:not([data-motion="full"]) .roll-digit > .roll-in {
     animation: none;
   }
-  .roll-out {
+  html:not([data-motion="full"]) .roll-digit > .roll-out {
     display: none;
   }
+}
+html[data-motion="reduced"] .roll-digit > .roll-in {
+  animation: none;
+}
+html[data-motion="reduced"] .roll-digit > .roll-out {
+  display: none;
 }
 
 /* Countdown heartbeat: a light sweep across the dock every second */
@@ -683,4 +835,102 @@ html:not(.motion-ready) .intro {
   .hero-band {
     animation: none;
   }
+}
+
+/* Font tester ---------------------------------------------------------- */
+.sunset-text {
+  background: var(--sunset);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  caret-color: #ff7cbc;
+}
+.font-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--accent) var(--pct), rgb(255 255 255 / 0.14) var(--pct));
+}
+.font-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--accent) var(--pct), rgb(255 255 255 / 0.14) var(--pct));
+}
+.font-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  margin-top: -7px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.4);
+  transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.font-range:active::-webkit-slider-thumb {
+  transform: scale(1.25);
+}
+.font-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.4);
+}
+
+/* VI text generator: lettering faces drawn on its canvas (only downloaded on that page). */
+@font-face {
+  font-family: brother-1816;
+  src: url(/vi-text/fonts/Brother-1816-Black.woff2) format("woff2");
+  font-weight: 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: pricedown;
+  src: url(/vi-text/fonts/Pricedown.woff2) format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: pricedown-black;
+  src: url(/vi-text/fonts/Pricedown-Black.woff2) format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: pricedown-ss01;
+  src: url(/vi-text/fonts/Pricedown-ss01.woff2) format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: damion;
+  src: url(/vi-text/fonts/Damion.woff2) format("woff2");
+  font-display: swap;
+}
+
+/* Hue picker (wallpaper overlay effects) */
+.hue-range::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, hsl(0 100% 60%), hsl(60 100% 60%), hsl(120 100% 60%), hsl(180 100% 60%), hsl(240 100% 60%), hsl(300 100% 60%), hsl(360 100% 60%));
+}
+.hue-range::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, hsl(0 100% 60%), hsl(60 100% 60%), hsl(120 100% 60%), hsl(180 100% 60%), hsl(240 100% 60%), hsl(300 100% 60%), hsl(360 100% 60%));
+}
+.hue-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  margin-top: -6px;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: var(--thumb);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
+}
+.hue-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: var(--thumb);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
 }

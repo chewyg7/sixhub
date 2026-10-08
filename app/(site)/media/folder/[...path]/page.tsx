@@ -5,6 +5,7 @@ import { Container, PageHeader } from "@/components/layout/page";
 import { ArchiveFallback } from "@/features/archive/archive-fallback";
 import { FolderGrid } from "@/components/media/folder-grid";
 import { FolderContents } from "@/features/archive/folder-contents";
+import { FontFamilySection } from "@/features/archive/font-family-section";
 import { flattenTree, getFolderByPath, getFolderMedia, getFolderTree, getLabelLookups, getSources, toFolderCards } from "@/lib/content";
 import { pluralize } from "@/lib/format";
 
@@ -40,6 +41,8 @@ export default async function FolderPage({ params }: PageProps<"/media/folder/[.
     toFolderCards(folder.children),
   ]);
   const labels = { characters: lookups.characters, locations: lookups.locations, sources: Object.fromEntries(sources.map((s) => [s.slug, s.label])) };
+  // A folder of fonts (a family) gets a type tester instead of a grid of specimens.
+  const fontsOnly = direct.length > 0 && direct.every((m) => m.kind === "font");
   const eyebrow = [folder.children.length ? pluralize(folder.children.length, "folder") : null, pluralize(folder.total, "item")].filter(Boolean).join(" · ");
 
   return (
@@ -51,7 +54,11 @@ export default async function FolderPage({ params }: PageProps<"/media/folder/[.
         lede={folder.description || undefined}
       />
       {subfolders.length > 0 && <FolderGrid folders={subfolders} />}
-      {(direct.length > 0 || deep.length > 0) && (
+      {fontsOnly ? (
+        <section aria-label="Styles" className={subfolders.length ? "mt-20" : undefined}>
+          <FontFamilySection fonts={direct} />
+        </section>
+      ) : (direct.length > 0 || deep.length > 0) && (
         <section aria-label="Items" className={subfolders.length ? "mt-20" : undefined}>
           <Suspense fallback={<ArchiveFallback />}>
             <FolderContents direct={direct} deep={deep} labels={labels} />

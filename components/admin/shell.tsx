@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import {
   ClipboardCheck,
   FolderTree,
@@ -20,6 +20,11 @@ import {
   X,
   DownloadCloud,
   ExternalLink,
+  LayoutTemplate,
+  FileText,
+  Link2,
+  ShieldCheck,
+  Server,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { logout } from "@/app/chewy/auth-actions";
@@ -31,7 +36,7 @@ export interface ShellUser {
   avatarUrl: string | null;
 }
 
-const NAV: { href: string; label: string; icon: typeof Gauge; owner?: boolean; badge?: "pending" }[] = [
+const NAV: { href: string; label: string; icon: typeof Gauge; owner?: boolean; badge?: "pending"; group?: string }[] = [
   { href: "/chewy", label: "Dashboard", icon: Gauge },
   { href: "/chewy/media", label: "Media", icon: Images },
   { href: "/chewy/media/upload", label: "Upload", icon: UploadCloud },
@@ -40,8 +45,13 @@ const NAV: { href: string; label: string; icon: typeof Gauge; owner?: boolean; b
   { href: "/chewy/grabber", label: "GTAVice grabber", icon: DownloadCloud, owner: true },
   { href: "/chewy/taxonomy", label: "Tags & categories", icon: Shapes, owner: true },
   { href: "/chewy/content", label: "Content", icon: BookOpenText, owner: true },
+  { href: "/chewy/site", label: "Site editor", icon: LayoutTemplate, owner: true, group: "Site" },
+  { href: "/chewy/pages", label: "Pages", icon: FileText, owner: true },
+  { href: "/chewy/links", label: "Short links", icon: Link2, owner: true },
   { href: "/chewy/settings", label: "Site settings", icon: Settings2, owner: true },
-  { href: "/chewy/users", label: "Team", icon: Users, owner: true },
+  { href: "/chewy/users", label: "Team", icon: Users, owner: true, group: "Admin" },
+  { href: "/chewy/security", label: "Security", icon: ShieldCheck, owner: true },
+  { href: "/chewy/system", label: "System & backups", icon: Server, owner: true },
   { href: "/chewy/audit", label: "Audit log", icon: ScrollText, owner: true },
 ];
 
@@ -50,7 +60,10 @@ export function Avatar({ user, size = 36 }: { user: Pick<ShellUser, "displayName
     // eslint-disable-next-line @next/next/no-img-element -- uploaded avatar
     <img src={user.avatarUrl} alt="" width={size} height={size} className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
   ) : (
-    <span className="flex shrink-0 items-center justify-center rounded-full bg-[image:var(--sunset)] font-bold text-white" style={{ width: size, height: size, fontSize: size * 0.4 }}>
+    <span
+      className="flex shrink-0 items-center justify-center rounded-full bg-[image:var(--sunset)] font-bold text-white"
+      style={{ width: size, height: size, fontSize: size * 0.4 }}
+    >
       {user.displayName.slice(0, 1).toUpperCase()}
     </span>
   );
@@ -60,25 +73,28 @@ export function AdminShell({ user, pending, children }: { user: ShellUser; pendi
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const items = NAV.filter((n) => !n.owner || user.role === "owner");
-  const active = (href: string) => (href === "/chewy" ? path === href : path === href || (path.startsWith(href + "/") && !items.some((i) => i.href !== href && i.href.startsWith(href) && path.startsWith(i.href))));
+  const active = (href: string) =>
+    href === "/chewy" ? path === href : path === href || (path.startsWith(href + "/") && !items.some((i) => i.href !== href && i.href.startsWith(href) && path.startsWith(i.href)));
 
   const nav = (
     <nav aria-label="Admin" className="flex flex-col gap-1">
-      {items.map(({ href, label, icon: Icon, badge }) => (
-        <Link
-          key={href}
-          href={href}
-          onClick={() => setOpen(false)}
-          aria-current={active(href) ? "page" : undefined}
-          className={cn(
-            "group flex h-11 items-center gap-3 rounded-2xl px-3.5 text-[14.5px] font-bold transition-colors",
-            active(href) ? "bg-white text-[#140c18]" : "text-white/65 hover:bg-white/8 hover:text-white",
-          )}
-        >
-          <Icon className="size-[18px]" />
-          <span className="flex-1">{label}</span>
-          {badge === "pending" && pending > 0 && <span className="rounded-full bg-accent px-2 py-0.5 text-[11.5px] text-white">{pending}</span>}
-        </Link>
+      {items.map(({ href, label, icon: Icon, badge, group }) => (
+        <Fragment key={href}>
+          {group && <p className="mt-4 mb-1 px-3.5 text-[11.5px] font-bold tracking-wider text-white/35 uppercase">{group}</p>}
+          <Link
+            href={href}
+            onClick={() => setOpen(false)}
+            aria-current={active(href) ? "page" : undefined}
+            className={cn(
+              "group flex h-11 items-center gap-3 rounded-2xl px-3.5 text-[14.5px] font-bold transition-colors",
+              active(href) ? "bg-white text-[#140c18]" : "text-white/65 hover:bg-white/8 hover:text-white",
+            )}
+          >
+            <Icon className="size-[18px]" />
+            <span className="flex-1">{label}</span>
+            {badge === "pending" && pending > 0 && <span className="rounded-full bg-accent px-2 py-0.5 text-[11.5px] text-white">{pending}</span>}
+          </Link>
+        </Fragment>
       ))}
     </nav>
   );
@@ -96,11 +112,18 @@ export function AdminShell({ user, pending, children }: { user: ShellUser; pendi
         <UserCircle2 className="size-4 text-white/40" />
       </Link>
       <div className="mt-2 flex gap-2">
-        <Link href="/" target="_blank" className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-white/6 text-[13px] font-bold text-white/70 hover:bg-white/10 hover:text-white">
+        <Link
+          href="/"
+          target="_blank"
+          className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-white/6 text-[13px] font-bold text-white/70 hover:bg-white/10 hover:text-white"
+        >
           <ExternalLink className="size-4" /> View site
         </Link>
         <form action={logout} className="flex-1">
-          <button type="submit" className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-white/6 text-[13px] font-bold text-white/70 hover:bg-[#ff4d6d]/20 hover:text-[#ff8a9a]">
+          <button
+            type="submit"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-white/6 text-[13px] font-bold text-white/70 hover:bg-[#ff4d6d]/20 hover:text-[#ff8a9a]"
+          >
             <LogOut className="size-4" /> Sign out
           </button>
         </form>

@@ -2,6 +2,8 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { Collection, FaqEntry, InfoEntry, InfoSection, MediaCategory, MediaFolder, MediaItem, MediaSource, SiteSettings, TimelineEvent } from "@/types/content";
 import { DEFAULT_SETTINGS } from "@/data/settings";
+import { slugify } from "@/lib/slug";
+import { splitFontName } from "@/lib/media/font-family";
 import { bumpContentVersion, db, fromJson, now, toJson } from "./index";
 
 /**
@@ -205,6 +207,50 @@ export function saveFolder(f: Omit<MediaFolder, "id"> & { id?: string }): MediaF
   return { ...f, id, parentId: parent || null };
 }
 
+/** The top-level folder fonts are filed under (one sub-folder per family). */
+export const FONTS_FOLDER = "fonts";
+
+/** Finds or creates Fonts / <family> and returns its id. */
+export function ensureFontFamilyFolder(family: string): string {
+  const d = db();
+  const slug = slugify(family);
+  const found = d.prepare("SELECT id FROM folders WHERE parent_id = ? AND slug = ?").get(FONTS_FOLDER, slug) as { id: string } | undefined;
+  if (found) return found.id;
+  const sort = (d.prepare("SELECT COUNT(*) AS n FROM folders WHERE parent_id = ?").get(FONTS_FOLDER) as { n: number }).n;
+  const id = `${FONTS_FOLDER}/${slug}`;
+  const t = now();
+  d.prepare("INSERT INTO folders (id, parent_id, slug, name, description, cover_slug, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?)").run(
+    id,
+    FONTS_FOLDER,
+    slug,
+    family,
+    `Every style of ${family}. Try them with your own text.`,
+    sort,
+    t,
+    t,
+  );
+  bumpContentVersion();
+  return id;
+}
+
+/**
+ * Normalises a font's family/style names and files it into its family's
+ * folder when it was put in the top-level Fonts folder (or nowhere).
+ */
+export function fileFont(item: StoredMedia): StoredMedia {
+  if (item.kind !== "font" || !item.font) return item;
+  const split = splitFontName(/^regular$/i.test(item.font.style) ? item.font.family : `${item.font.family} ${item.font.style}`);
+  const font = { ...item.font, family: split.family, style: split.style };
+  const hasFontsFolder = !!db().prepare("SELECT 1 FROM folders WHERE id = ?").get(FONTS_FOLDER);
+  const folderId = hasFontsFolder && (!item.folderId || item.folderId === FONTS_FOLDER) ? ensureFontFamilyFolder(font.family) : item.folderId;
+  return { ...item, font, folderId };
+}
+
+export function folderIsEmpty(id: string): boolean {
+  const d = db();
+  return !d.prepare("SELECT 1 FROM media WHERE folder_id = ? LIMIT 1").get(id) && !d.prepare("SELECT 1 FROM folders WHERE parent_id = ? LIMIT 1").get(id);
+}
+
 /** Deletes a folder. Its media and sub-folders move up to the parent folder. */
 export function deleteFolder(id: string) {
   const d = db();
@@ -360,7 +406,25 @@ export function getSettings(): SiteSettings {
     socials: { ...DEFAULT_SETTINGS.socials, ...(stored.socials as object) },
     announcement: { ...DEFAULT_SETTINGS.announcement, ...(stored.announcement as object) },
     home: { ...DEFAULT_SETTINGS.home, ...(stored.home as object) },
+    site: normalizeSite(stored.site as Partial<SiteSettings["site"]> | null),
+    maintenance: { ...DEFAULT_SETTINGS.maintenance, ...(stored.maintenance as object) },
   } as SiteSettings;
+}
+
+/** Fills gaps in stored site content and keeps every home section exactly once. */
+function normalizeSite(s: Partial<SiteSettings["site"]> | null): SiteSettings["site"] {
+  const d = DEFAULT_SETTINGS.site;
+  const stored = (s?.sections ?? []).filter((x) => d.sections.some((y) => y.id === x.id));
+  const seen = new Set(stored.map((x) => x.id));
+  return {
+    ...d,
+    ...s,
+    footer: { ...d.footer, ...s?.footer },
+    sections: [...stored, ...d.sections.filter((x) => !seen.has(x.id))],
+    nav: s?.nav?.length ? s.nav : d.nav,
+    menu: s?.menu?.length ? s.menu : d.menu,
+    marquee: s?.marquee?.length ? s.marquee : d.marquee,
+  };
 }
 
 export function saveSettings<K extends keyof SiteSettings>(key: K, value: SiteSettings[K]) {

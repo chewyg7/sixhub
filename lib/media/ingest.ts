@@ -223,9 +223,11 @@ export async function ingestFile(tmpFile: string, sniffed: Sniffed, dir: string,
       // opentype.js reads TTF/OTF/WOFF; WOFF2 gets a plain cover.
       if (sniffed.ext === "woff2") throw new Error("woff2");
       const parsed = opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer);
+      // Typographic family/style (name IDs 16/17) group weights properly when present.
+      const names = parsed.names as unknown as Record<string, { en?: string } | undefined>;
       font = {
-        family: parsed.names.fontFamily?.en ?? font.family,
-        style: parsed.names.fontSubfamily?.en ?? font.style,
+        family: names.typographicFamily?.en ?? names.preferredFamily?.en ?? parsed.names.fontFamily?.en ?? font.family,
+        style: names.typographicSubfamily?.en ?? names.preferredSubfamily?.en ?? parsed.names.fontSubfamily?.en ?? font.style,
         glyphs: parsed.glyphs.length,
         format: { ttf: "TrueType", otf: "OpenType", woff: "WOFF", woff2: "WOFF2" }[sniffed.ext],
       };

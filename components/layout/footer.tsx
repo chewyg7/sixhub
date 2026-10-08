@@ -11,6 +11,7 @@ const COLUMNS = [
       { href: "/news", label: "News" },
       { href: "/media", label: "Media" },
       { href: "/viewer", label: "Media Viewer" },
+      { href: "/tools", label: "Tools" },
       { href: "/collections", label: "Collections" },
     ],
   },
@@ -27,6 +28,7 @@ const COLUMNS = [
     title: "Site",
     links: [
       { href: "/faq", label: "FAQ" },
+      { href: "/discord", label: "Discord" },
       { href: "/about", label: "About" },
       { href: "/contact", label: "Contact" },
       { href: "/privacy", label: "Privacy" },
@@ -36,7 +38,8 @@ const COLUMNS = [
 ];
 
 export async function Footer() {
-  const { release } = await getSettings();
+  const { release, site } = await getSettings();
+  const { footer } = site;
   const label = new Date(`${release.date}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
   return (
     <footer className="relative mt-36 overflow-hidden rounded-t-[40px] border-t border-white/10 bg-white/[0.02]">
@@ -48,18 +51,16 @@ export async function Footer() {
         <div>
           <p className="kicker mb-4">Out {label}</p>
           <SplitReveal by="chars" className="display-xl text-[17vw] sm:text-[120px] lg:text-[150px]">
-            See you in Leonida
+            {footer.headline}
           </SplitReveal>
         </div>
         <Magnetic>
           <Link
-            href="/media"
+            href={footer.ctaHref}
             data-cursor="view"
             className="flex size-40 items-center justify-center rounded-full bg-[image:var(--sunset)] text-center text-[17px] font-bold text-white shadow-[0_20px_60px_-15px_rgb(255_79_163/0.8)] transition-transform duration-500 hover:scale-105 sm:size-48"
           >
-            Explore
-            <br />
-            the archive
+            <span className="max-w-[7.5em] text-balance">{footer.ctaLabel}</span>
           </Link>
         </Magnetic>
       </div>
@@ -69,7 +70,7 @@ export async function Footer() {
             {/* eslint-disable-next-line @next/next/no-img-element -- brand mark */}
             <img src="/brand/logo-480.webp" alt="" width={480} height={335} className="h-16 w-auto" />
           </Link>
-          <p className="mt-5 max-w-xs text-[15px] leading-relaxed text-muted">Every GTA VI screenshot, trailer and headline in one place, and the tools to study them.</p>
+          <p className="mt-5 max-w-xs text-[15px] leading-relaxed text-muted">{footer.tagline}</p>
           <SocialLinks className="mt-6" size="sm" />
         </div>
         {COLUMNS.map((col) => (

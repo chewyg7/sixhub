@@ -75,6 +75,7 @@ export default async function EditMediaPage({ params, searchParams }: PageProps<
             verification: item.verification,
             downloadable: item.downloadable,
             hidden: row.hidden,
+            font: item.kind === "font" && item.font ? { family: item.font.family, style: item.font.style } : undefined,
           }}
           folders={folderOptions(listFolders())}
           categories={listCategories().map((c) => ({ slug: c.slug, label: c.label }))}

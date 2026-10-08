@@ -15,6 +15,7 @@ import {
 } from "react";
 import { buildGlassMaps, supportsLiquidGlass, type GlassMaps } from "@/lib/liquid-glass";
 import { cn } from "@/lib/cn";
+import { usePreferences } from "@/lib/preferences";
 
 interface GlassOptions {
   children?: ReactNode;
@@ -75,7 +76,9 @@ export const LiquidGlass = forwardRef<HTMLElement, LiquidGlassProps>(function Li
   useImperativeHandle(ref, () => el.current!);
   const id = useId().replace(/:/g, "");
   const filterId = `lg-${id}`;
-  const liquid = useSyncExternalStore(subscribe, supportsLiquidGlass, () => false);
+  const lofi = usePreferences().quality === "lofi";
+  // LoFi swaps the refraction filter for a plain frosted blur.
+  const liquid = useSyncExternalStore(subscribe, supportsLiquidGlass, () => false) && !lofi;
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const [maps, setMaps] = useState<GlassMaps | null>(null);
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { gsap, prefersReducedMotion } from "@/lib/motion";
+import { usePreferences } from "@/lib/preferences";
 
 /**
  * Living background: soft Vice-sunset light that drifts on its own and
@@ -12,10 +13,11 @@ export function AmbientBackground() {
   const path = usePathname();
   const root = useRef<HTMLDivElement>(null);
   const hidden = path.startsWith("/viewer") || path.startsWith("/chewy");
+  const { quality, motion } = usePreferences();
 
   useEffect(() => {
     const el = root.current;
-    if (!el || hidden || prefersReducedMotion()) return;
+    if (!el || hidden || quality === "lofi" || prefersReducedMotion()) return;
     const orbs = Array.from(el.querySelectorAll<HTMLElement>("[data-orb]"));
     const movers = orbs.map((o) => ({
       x: gsap.quickTo(o, "x", { duration: 2.4 + Number(o.dataset.depth) * 1.6, ease: "power3.out" }),
@@ -37,8 +39,9 @@ export function AmbientBackground() {
     return () => {
       window.removeEventListener("pointermove", onMove);
       idle.forEach((t) => t.kill());
+      gsap.set([...orbs, ...orbs.map((o) => o.firstElementChild)], { clearProps: "transform" });
     };
-  }, [hidden]);
+  }, [hidden, quality, motion]);
 
   if (hidden) return null;
   return (

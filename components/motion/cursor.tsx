@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { gsap, prefersReducedMotion } from "@/lib/motion";
+import { usePreferences } from "@/lib/preferences";
 
 type Mode = "default" | "link" | "view" | "play" | "drag" | "text" | "hidden";
 
@@ -18,16 +19,18 @@ export function Cursor() {
   const label = useRef<HTMLSpanElement>(null);
   const [enabled, setEnabled] = useState(false);
   const disabledRoute = path.startsWith("/viewer") || path.startsWith("/chewy");
+  const { cursor: wanted, motion } = usePreferences();
 
   useEffect(() => {
     const fine = window.matchMedia("(pointer: fine)").matches;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- capability is only known in the browser
-    setEnabled(fine && !prefersReducedMotion() && !disabledRoute);
-  }, [disabledRoute]);
+    setEnabled(fine && wanted && !prefersReducedMotion() && !disabledRoute);
+  }, [disabledRoute, wanted, motion]);
 
   useEffect(() => {
     if (!enabled || !dot.current || !ring.current) return;
     document.documentElement.classList.add("has-cursor");
+    gsap.set([dot.current, ring.current], { xPercent: -50, yPercent: -50 });
     const dx = gsap.quickTo(dot.current, "x", { duration: 0.12, ease: "power3.out" });
     const dy = gsap.quickTo(dot.current, "y", { duration: 0.12, ease: "power3.out" });
     const rx = gsap.quickTo(ring.current, "x", { duration: 0.55, ease: "power3.out" });
@@ -42,8 +45,8 @@ export function Cursor() {
       gsap.to(ring.current, {
         width: big ? 96 : next === "link" ? 58 : next === "text" ? 4 : 36,
         height: big ? 96 : next === "link" ? 58 : next === "text" ? 30 : 36,
-        backgroundColor: big ? "rgba(255,79,163,0.92)" : next === "link" ? "rgba(255,79,163,0.14)" : "rgba(255,79,163,0)",
-        borderColor: big ? "rgba(255,79,163,0)" : "rgba(255,124,188,0.75)",
+        backgroundColor: big ? "rgba(255,79,163,0.88)" : next === "link" ? "rgba(255,79,163,0.16)" : "rgba(255,255,255,0.06)",
+        borderColor: big ? "rgba(255,255,255,0.35)" : next === "link" ? "rgba(255,170,210,0.85)" : "rgba(255,255,255,0.55)",
         borderRadius: next === "text" ? 2 : 999,
         duration: 0.45,
         ease: "expo.out",
@@ -102,11 +105,11 @@ export function Cursor() {
     <div aria-hidden className="pointer-events-none fixed inset-0 z-[3000]">
       <div
         ref={ring}
-        className="absolute top-0 left-0 flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[rgba(255,124,188,0.75)] opacity-0"
+        className="cursor-ring absolute top-0 left-0 flex size-9 items-center justify-center rounded-full opacity-0"
       >
         <span ref={label} className="text-[13px] font-bold text-white opacity-0" />
       </div>
-      <div ref={dot} className="absolute top-0 left-0 size-[6px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent opacity-0" />
+      <div ref={dot} className="cursor-dot absolute top-0 left-0 size-[6px] rounded-full bg-accent opacity-0" />
     </div>
   );
 }

@@ -8,6 +8,7 @@
  *   npm run admin -- reset-password <username>
  *   npm run admin -- disable-2fa <username>
  *   npm run admin -- unlock <username>
+ *   npm run admin -- unblock-ips          (clears the panel's blocked-IP list)
  *   npm run admin -- list
  *
  * Run it after the app has started (or been built) once, so the database exists.
@@ -140,6 +141,12 @@ switch (cmd) {
     console.log(r.changes ? `✔ Unlocked ${name}.` : `${name} wasn't locked.`);
     break;
   }
+  case "unblock-ips": {
+    const r = db.prepare("DELETE FROM meta WHERE key = 'security:blocked_ips'").run();
+    audit("security.unblock_all", null);
+    console.log(r.changes ? "✔ Cleared the blocked IP list." : "No IPs were blocked.");
+    break;
+  }
   case "list": {
     const rows = db.prepare("SELECT username, role, disabled, totp_enabled, last_login_at FROM users ORDER BY role DESC, username").all();
     if (!rows.length) console.log("No users yet. Create one with: npm run admin -- create <username>");
@@ -150,7 +157,7 @@ switch (cmd) {
     break;
   }
   default:
-    console.log("Usage: npm run admin -- <create|reset-password|disable-2fa|unlock|list> [username] [--role owner|admin]");
+    console.log("Usage: npm run admin -- <create|reset-password|disable-2fa|unlock|unblock-ips|list> [username] [--role owner|admin]");
 }
 rl?.close();
 db.close();

@@ -73,3 +73,22 @@ export const httpsUrl = z
       return false;
     }
   }, "Enter a full http(s) link");
+
+/** A link target: a path on this site ("/media/…") or a full http(s) URL. Never javascript: or data:. */
+export const hrefField = z
+  .string()
+  .trim()
+  .min(1, "Add a link")
+  .max(500)
+  .refine((v) => /^\/(?!\/)[A-Za-z0-9\-._~/?#=&%+]*$/.test(v) || httpsUrl.safeParse(v).success, "Use a path like /media or a full https link");
+
+/** Parses a JSON form field (from client-side list editors) with a schema. */
+export function jsonField<T extends z.ZodTypeAny>(f: FormData, k: string, schema: T): z.infer<T> {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(str(f, k) || "null");
+  } catch {
+    throw new Error("The form was sent incorrectly. Reload the page and try again.");
+  }
+  return schema.parse(raw);
+}

@@ -24,6 +24,8 @@ interface Values {
   verification: string;
   downloadable: boolean;
   hidden: boolean;
+  /** Fonts only. */
+  font?: { family: string; style: string };
 }
 
 /** Tap-to-toggle chips that submit as repeated form values. */
@@ -103,6 +105,16 @@ export function MediaEditForm({
             <Field label="Description" className="sm:col-span-2">
               <Textarea name="description" defaultValue={v.description} maxLength={4000} />
             </Field>
+            {v.font && (
+              <>
+                <Field label="Font family" hint="Styles with the same family are grouped in one folder with a shared type tester.">
+                  <Input name="fontFamily" defaultValue={v.font.family} required maxLength={80} />
+                </Field>
+                <Field label="Style" hint="e.g. Regular, Bold, Condensed Bold.">
+                  <Input name="fontStyle" defaultValue={v.font.style} required maxLength={60} />
+                </Field>
+              </>
+            )}
             <Field label="Alt text" hint="Describe what's visible, for screen readers." className="sm:col-span-2">
               <Input name="alt" defaultValue={v.alt} maxLength={400} />
             </Field>

@@ -1,7 +1,8 @@
 import { SiteHeader, type MenuPreview } from "@/components/layout/site-header";
 import { Footer } from "@/components/layout/footer";
 import { Announcement } from "@/components/layout/announcement";
-import { getMediaBySlugs } from "@/lib/content";
+import { Maintenance } from "@/components/layout/maintenance";
+import { getMediaBySlugs, getSettings } from "@/lib/content";
 import { smallestVariant } from "@/lib/media/variants";
 
 /** Artwork shown behind each destination in the full-screen menu. */
@@ -17,7 +18,7 @@ const MENU_ART: Record<string, string> = {
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const keys = Object.keys(MENU_ART);
-  const items = await getMediaBySlugs(keys.map((k) => MENU_ART[k]));
+  const [items, settings] = await Promise.all([getMediaBySlugs(keys.map((k) => MENU_ART[k])), getSettings()]);
   const previews: Record<string, MenuPreview> = {};
   for (const k of keys) {
     const m = items.find((i) => i.slug === MENU_ART[k]);
@@ -25,12 +26,13 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   }
   return (
     <>
-      <SiteHeader previews={previews} />
+      <SiteHeader previews={previews} nav={settings.site.nav} menu={settings.site.menu} />
       <Announcement />
       <main id="main" className="min-h-[70vh] pt-24 sm:pt-28">
         {children}
       </main>
       <Footer />
+      {settings.maintenance.enabled && <Maintenance title={settings.maintenance.title} message={settings.maintenance.message} />}
     </>
   );
 }

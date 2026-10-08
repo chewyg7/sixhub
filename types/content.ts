@@ -302,6 +302,36 @@ export interface FaqEntry {
 /* Site settings (editable by owners)                                  */
 /* ------------------------------------------------------------------ */
 
+export interface SiteLink {
+  label: string;
+  href: string;
+}
+
+/** Home page blocks, in the order owners arrange them in the site editor. */
+export type HomeSectionId = "news" | "cast" | "regions" | "trailers" | "gallery" | "viewer" | "timeline" | "faq" | "marquee";
+export interface HomeSection {
+  id: HomeSectionId;
+  enabled: boolean;
+  /** Small label above the heading (sections with a heading only). */
+  kicker: string;
+  title: string;
+}
+
+/** Everything the site editor controls. */
+export interface SiteContent {
+  /** Default page title and description for search engines and link previews. */
+  title: string;
+  description: string;
+  sections: HomeSection[];
+  /** Words in the scrolling band at the bottom of the home page; {date} becomes the release date. */
+  marquee: string[];
+  /** Links in the header bar. */
+  nav: SiteLink[];
+  /** Big links in the full-screen menu. */
+  menu: SiteLink[];
+  footer: { headline: string; tagline: string; ctaLabel: string; ctaHref: string };
+}
+
 export interface SiteSettings {
   release: {
     /** Calendar date (YYYY-MM-DD). The game unlocks at midnight local time in each time zone. */
@@ -318,4 +348,7 @@ export interface SiteSettings {
     viewerStill: string;
     viewerPicks: string[];
   };
+  site: SiteContent;
+  /** Covers the public site with a message (signed-in staff still see the site). */
+  maintenance: { enabled: boolean; title: string; message: string };
 }

@@ -9,9 +9,9 @@ import "./globals.css";
 /** GTA Art Deco — the site's single typeface. */
 const deco = localFont({
   src: [
-    { path: "./fonts/GTAArtDeco-Regular.ttf", weight: "400", style: "normal" },
-    { path: "./fonts/GTAArtDeco-Medium.ttf", weight: "500", style: "normal" },
-    { path: "./fonts/GTAArtDeco-Bold.ttf", weight: "700", style: "normal" },
+    { path: "./fonts/GTAArtDeco-Regular.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/GTAArtDeco-Medium.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/GTAArtDeco-Bold.woff2", weight: "700", style: "normal" },
   ],
   variable: "--font-deco",
   display: "swap",
@@ -19,20 +19,32 @@ const deco = localFont({
 
 /** Condensed cut for giant display headlines. */
 const decoCondensed = localFont({
-  src: [{ path: "./fonts/GTAArtDeco-Condensed-Bold.ttf", weight: "700", style: "normal" }],
+  src: [{ path: "./fonts/GTAArtDeco-Condensed-Bold.woff2", weight: "700", style: "normal" }],
   variable: "--font-deco-condensed",
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE.url),
-  title: { default: `${SITE.name} — GTA VI news, media archive & Media Viewer`, template: `%s · ${SITE.name}` },
-  description: SITE.description,
-  applicationName: SITE.name,
-  openGraph: { type: "website", siteName: SITE.name, url: SITE.url, title: SITE.name, description: SITE.description },
-  twitter: { card: "summary_large_image", title: SITE.name, description: SITE.description },
-  alternates: { canonical: "/" },
-};
+/** Heaviest condensed cut, available as `font-heavy`. Not preloaded: it only downloads where it's used. */
+const decoHeavy = localFont({
+  src: [{ path: "./fonts/GTAArtDeco-Condensed-Heavy.woff2", weight: "900", style: "normal" }],
+  variable: "--font-deco-heavy",
+  display: "swap",
+  preload: false,
+});
+
+/** Title and description come from the site editor, so owners can change them without a deploy. */
+export async function generateMetadata(): Promise<Metadata> {
+  const { site } = await getSettings();
+  return {
+    metadataBase: new URL(SITE.url),
+    title: { default: site.title, template: `%s · ${SITE.name}` },
+    description: site.description,
+    applicationName: SITE.name,
+    openGraph: { type: "website", siteName: SITE.name, url: SITE.url, title: site.title, description: site.description },
+    twitter: { card: "summary_large_image", title: site.title, description: site.description },
+    alternates: { canonical: "/" },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [
@@ -46,7 +58,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const [categories, settings] = await Promise.all([getCategories(), getSettings()]);
   const siteData = { categories, settings: { release: settings.release, launchMode: settings.launchMode, socials: settings.socials, announcement: settings.announcement } };
   return (
-    <html lang="en" data-theme="dark" className={`${deco.variable} ${decoCondensed.variable}`} suppressHydrationWarning>
+    <html lang="en" data-theme="dark" className={`${deco.variable} ${decoCondensed.variable} ${decoHeavy.variable}`} suppressHydrationWarning>
       <head>
         {/* Apply saved theme/motion before first paint (no flash). */}
         <script dangerouslySetInnerHTML={{ __html: PREFS_BOOT_SCRIPT }} />

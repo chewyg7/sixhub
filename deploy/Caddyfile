@@ -20,7 +20,7 @@ gtasixhub.com {
 
 	# Caddy appends the real client address to X-Forwarded-For, which the
 	# app reads for login rate limiting (TRUSTED_PROXY_HOPS=1).
-	reverse_proxy 127.0.0.1:3000 {
+	reverse_proxy 127.0.0.1:3100 {
 		transport http {
 			read_timeout 15m
 			write_timeout 15m

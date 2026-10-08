@@ -11,8 +11,9 @@ User=gtasixhub
 Group=gtasixhub
 WorkingDirectory=/srv/gtasixhub
 EnvironmentFile=/etc/gtasixhub.env
-# Listen on localhost only; Caddy is the only thing that talks to it.
-ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3000
+# Listen on localhost only; the web server (nginx or Caddy) is the only thing that talks to it.
+# Port 3100 (3000 is often taken by other apps).
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3100
 Restart=always
 RestartSec=3
 

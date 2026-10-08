@@ -42,6 +42,8 @@ useradd --system --create-home --shell /bin/bash gtasixhub
 mkdir -p /srv/gtasixhub /var/lib/gtasixhub
 chown gtasixhub:gtasixhub /srv/gtasixhub /var/lib/gtasixhub
 chmod 700 /var/lib/gtasixhub
+# The site listens on 127.0.0.1:3100 (see deploy/gtasixhub.service); check nothing else uses it:
+#   ss -tlnp | grep ':3100\s'   (no output = free)
 # Let the deploy script restart the site (and nothing else) without a password.
 echo 'gtasixhub ALL=(root) NOPASSWD: /usr/bin/systemctl restart gtasixhub' > /etc/sudoers.d/gtasixhub
 chmod 440 /etc/sudoers.d/gtasixhub
@@ -100,6 +102,24 @@ ufw allow OpenSSH && ufw allow 80,443/tcp && ufw --force enable
 
 Once DNS has updated (minutes to a few hours), `https://gtasixhub.com` serves
 the site with a certificate Caddy renews by itself.
+
+### 5b. If nginx already runs other sites on the server (use instead of Caddy)
+
+Caddy and nginx can't both own ports 80/443. If `ss -tlnp | grep -E ':(80|443)\s'`
+shows nginx, leave it in charge, remove Caddy and add the hub as another nginx site:
+
+```bash
+systemctl disable --now caddy; apt-get remove -y caddy
+cp /srv/gtasixhub/deploy/nginx-gtasixhub.conf /etc/nginx/sites-available/gtasixhub
+ln -s /etc/nginx/sites-available/gtasixhub /etc/nginx/sites-enabled/gtasixhub
+nginx -t && systemctl reload nginx
+apt-get install -y certbot python3-certbot-nginx
+certbot --nginx -d gtasixhub.com -d www.gtasixhub.com --redirect
+```
+
+Run the Certbot line once the DNS records point at the server. It adds the
+HTTPS certificate to that site only (other sites are untouched) and renews it
+automatically.
 
 ## 6. Create the owner accounts
 

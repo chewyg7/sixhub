@@ -29,7 +29,7 @@ async function serve(request: NextRequest, ctx: RouteContext<"/files/[...path]">
   const ext = parts.at(-1)?.split(".").pop()?.toLowerCase() ?? "";
   const type = SERVE_TYPES[ext];
   if (!file || !type) return new Response("Not found", { status: 404 });
-  const info = await stat(file).catch(() => null);
+  const info = await stat(/*turbopackIgnore: true*/ file).catch(() => null);
   if (!info?.isFile()) return new Response("Not found", { status: 404 });
 
   const headers = new Headers({
@@ -57,11 +57,11 @@ async function serve(request: NextRequest, ctx: RouteContext<"/files/[...path]">
     }
     headers.set("Content-Range", `bytes ${start}-${end}/${info.size}`);
     headers.set("Content-Length", String(end - start + 1));
-    const body = head ? null : (Readable.toWeb(createReadStream(file, { start, end })) as ReadableStream);
+    const body = head ? null : (Readable.toWeb(createReadStream(/*turbopackIgnore: true*/ file, { start, end })) as ReadableStream);
     return new Response(body, { status: 206, headers });
   }
   headers.set("Content-Length", String(info.size));
-  return new Response(head ? null : (Readable.toWeb(createReadStream(file)) as ReadableStream), { status: 200, headers });
+  return new Response(head ? null : (Readable.toWeb(createReadStream(/*turbopackIgnore: true*/ file)) as ReadableStream), { status: 200, headers });
 }
 
 export function GET(request: NextRequest, ctx: RouteContext<"/files/[...path]">) {

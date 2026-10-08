@@ -1,0 +1,29 @@
+# Caddy gets and renews the HTTPS certificate automatically.
+# Install: sudo cp deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+
+www.gtasixhub.com {
+	redir https://gtasixhub.com{uri} permanent
+}
+
+gtasixhub.com {
+	encode zstd gzip
+
+	# Large enough for video uploads from the admin panel (6 GB).
+	request_body {
+		max_size 6GB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		-Server
+	}
+
+	# Caddy appends the real client address to X-Forwarded-For, which the
+	# app reads for login rate limiting (TRUSTED_PROXY_HOPS=1).
+	reverse_proxy 127.0.0.1:3000 {
+		transport http {
+			read_timeout 15m
+			write_timeout 15m
+		}
+	}
+}

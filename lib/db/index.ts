@@ -13,7 +13,8 @@ import { seedIfEmpty } from "./seed";
  * DATA_DIR in production to a directory outside the app (e.g.
  * /var/lib/gtasixhub) so deploys never touch it.
  */
-export const DATA_DIR = path.resolve(process.env.DATA_DIR ?? path.join(process.cwd(), "storage"));
+// Resolved at runtime; the bundler must not try to trace it.
+export const DATA_DIR = path.resolve(/*turbopackIgnore: true*/ process.env.DATA_DIR ?? path.join(/*turbopackIgnore: true*/ process.cwd(), "storage"));
 export const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 
 type DB = Database.Database;

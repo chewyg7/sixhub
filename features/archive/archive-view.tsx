@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { LayoutGrid, Grid3x3, List, Search, SlidersHorizontal, X } from "lucide-react";
 import type { MediaCategorySlug, MediaItem } from "@/types/content";
-import { MEDIA_CATEGORIES } from "@/data/categories";
+import { useCategories } from "@/components/site-data";
 import { cn } from "@/lib/cn";
 import { formatDate, pluralize } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -48,11 +48,12 @@ export function ArchiveView({ items, labels, category }: Props) {
   const index = useMemo(() => indexMedia(items, labels), [items, labels]);
   const results = useMemo(() => runQuery(index, query), [index, query]);
   const counts = useMemo(() => facetCounts(index, query), [index, query]);
+  const categories = useCategories();
 
   const options = useMemo<Record<FacetKey, FacetOption[]>>(() => {
     const uniq = (vals: string[]) => [...new Set(vals)];
     return {
-      category: MEDIA_CATEGORIES.map((c) => ({ value: c.slug, label: c.label })),
+      category: categories.map((c) => ({ value: c.slug, label: c.label })),
       type: [
         { value: "image", label: "Images" },
         { value: "video", label: "Videos" },
@@ -73,7 +74,7 @@ export function ArchiveView({ items, labels, category }: Props) {
       ],
       tag: uniq(items.flatMap((m) => m.tags)).map((v) => ({ value: v, label: v })),
     };
-  }, [items, labels]);
+  }, [items, labels, categories]);
 
   const labelFor = useCallback((key: FacetKey, value: string) => options[key].find((o) => o.value === value)?.label ?? value, [options]);
 
@@ -151,7 +152,7 @@ export function ArchiveView({ items, labels, category }: Props) {
                 type="search"
                 value={query.q}
                 onChange={(e) => update({ q: e.target.value })}
-                placeholder={category ? `Search ${MEDIA_CATEGORIES.find((c) => c.slug === category)?.label.toLowerCase()}…` : "Search titles, characters, locations, tags…"}
+                placeholder={category ? `Search ${categories.find((c) => c.slug === category)?.label.toLowerCase()}…` : "Search titles, characters, locations, tags…"}
                 className="h-9 w-full rounded-md border border-border bg-surface pr-8 pl-8 text-[14px] text-text transition-colors outline-none placeholder:text-faint hover:border-border-strong focus:border-border-strong"
               />
               {query.q && (

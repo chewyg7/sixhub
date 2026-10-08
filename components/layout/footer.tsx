@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { RELEASE, SITE } from "@/lib/site";
+import { SITE } from "@/lib/site";
+import { getSettings } from "@/lib/content";
+import { SocialLinks } from "./social-links";
 import { Magnetic, SplitReveal } from "@/components/motion/reveal";
 
 const COLUMNS = [
@@ -24,6 +26,7 @@ const COLUMNS = [
   {
     title: "Site",
     links: [
+      { href: "/faq", label: "FAQ" },
       { href: "/about", label: "About" },
       { href: "/contact", label: "Contact" },
       { href: "/privacy", label: "Privacy" },
@@ -32,7 +35,9 @@ const COLUMNS = [
   },
 ];
 
-export function Footer() {
+export async function Footer() {
+  const { release } = await getSettings();
+  const label = new Date(`${release.date}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
   return (
     <footer className="relative mt-36 overflow-hidden rounded-t-[40px] border-t border-white/10 bg-white/[0.02]">
       <div
@@ -41,7 +46,7 @@ export function Footer() {
       />
       <div className="relative mx-auto flex max-w-[1600px] flex-col gap-8 px-5 pt-20 sm:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-12">
         <div>
-          <p className="kicker mb-4">Out {RELEASE.label}</p>
+          <p className="kicker mb-4">Out {label}</p>
           <SplitReveal by="chars" className="display-xl text-[17vw] sm:text-[120px] lg:text-[150px]">
             See you in Leonida
           </SplitReveal>
@@ -65,6 +70,7 @@ export function Footer() {
             <img src="/brand/logo-480.webp" alt="" width={480} height={335} className="h-16 w-auto" />
           </Link>
           <p className="mt-5 max-w-xs text-[15px] leading-relaxed text-muted">Every GTA VI screenshot, trailer and headline in one place, and the tools to study them.</p>
+          <SocialLinks className="mt-6" size="sm" />
         </div>
         {COLUMNS.map((col) => (
           <nav key={col.title} aria-label={col.title}>

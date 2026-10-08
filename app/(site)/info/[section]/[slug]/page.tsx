@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps<"/info/[section]/[s
   return e ? { title: e.name, description: e.summary, alternates: { canonical: `/info/${section}/${slug}` } } : {};
 }
 
-const VERIFY_LABEL = { official: "Official", reported: "Reported", sample: "Sample" } as const;
+const VERIFY_LABEL = { official: "Official", reported: "Reported", community: "Community" } as const;
 
 export default async function InfoEntryPage({ params }: PageProps<"/info/[section]/[slug]">) {
   const { section: sectionSlug, slug } = await params;

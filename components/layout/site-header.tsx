@@ -11,7 +11,8 @@ import { useFocusTrap, lockScroll } from "@/lib/hooks/use-focus-trap";
 import { useCommandPalette } from "@/features/search/command-palette";
 import { LiquidGlass } from "@/components/glass/liquid-glass";
 import { Countdown } from "@/components/home/countdown";
-import { RELEASE } from "@/lib/site";
+import { useSiteData } from "@/components/site-data";
+import { SocialLinks } from "./social-links";
 
 export interface MenuPreview {
   src: string;
@@ -188,6 +189,8 @@ function FullscreenMenu({ open, onClose, previews }: { open: boolean; onClose: (
   const root = useRef<HTMLDivElement>(null);
   const [preview, setPreview] = useState<string>("home");
   const path = usePathname();
+  const { release } = useSiteData().settings;
+  const releaseLabel = new Date(`${release.date}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
   useFocusTrap(root, open);
 
   useEffect(() => {
@@ -267,14 +270,16 @@ function FullscreenMenu({ open, onClose, previews }: { open: boolean; onClose: (
         <div className="mt-10 grid gap-8 lg:mt-0 lg:w-[340px]">
           <div data-menu-fade>
             <p className="text-[14px] text-white/60">Grand Theft Auto VI arrives</p>
-            <p className="display mt-1 text-[26px]">{RELEASE.label}</p>
+            <p className="display mt-1 text-[26px]">{releaseLabel}</p>
             <div className="mt-4 -ml-3">
-              <Countdown date={RELEASE.date} size="sm" />
+              <Countdown date={release.date} size="sm" />
             </div>
           </div>
+          <SocialLinks className="-mt-2" size="sm" />
           <div data-menu-fade className="flex flex-wrap gap-x-6 gap-y-2 text-[15px] text-white/70">
             {[
               ["Collections", "/collections"],
+              ["FAQ", "/faq"],
               ["Your library", "/library"],
               ["About", "/about"],
               ["Contact", "/contact"],

@@ -1,4 +1,22 @@
-import type { MediaRecord } from "./media";
+import type { ISODate, Verification } from "@/types/content";
+
+export interface MediaRecord {
+  slug: string;
+  title: string;
+  category: string;
+  description: string;
+  alt: string;
+  datePublished: ISODate;
+  dateAdded: ISODate;
+  source: string;
+  officialUrl?: string;
+  tags: string[];
+  characters: string[];
+  locations: string[];
+  downloadable: boolean;
+  credit?: string;
+  verification: Verification;
+}
 
 const VI = "https://www.rockstargames.com/VI";
 

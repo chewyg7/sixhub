@@ -11,11 +11,9 @@ import { TagList } from "@/components/media/tag-list";
 import { MediaGrid } from "@/components/media/media-grid";
 import { ArchiveView } from "@/features/archive/archive-view";
 import { ArchiveFallback } from "@/features/archive/archive-fallback";
-import { getAllMedia, getCollections, getLabelLookups, getMediaByCategory, getMediaBySlug } from "@/lib/content";
+import { folderHref, getAllMedia, getCategories, getCollections, getLabelLookups, getMediaByCategory, getMediaBySlug, getSources } from "@/lib/content";
 import { mediaTags, relatedMedia } from "@/lib/content/relations";
 import { smallestVariant } from "@/lib/media/variants";
-import { CATEGORY_BY_SLUG, isCategorySlug, MEDIA_CATEGORIES } from "@/data/categories";
-import { MEDIA_SOURCES } from "@/data/sources";
 import { formatDate, pluralize, resolutionTier } from "@/lib/format";
 
 /**
@@ -23,16 +21,21 @@ import { formatDate, pluralize, resolutionTier } from "@/lib/format";
  * /media/<item-slug> renders the item's detail page.
  */
 export async function generateStaticParams() {
-  const items = await getAllMedia();
-  return [...MEDIA_CATEGORIES.map((c) => ({ slug: c.slug })), ...items.map((m) => ({ slug: m.slug }))];
+  const [items, categories] = await Promise.all([getAllMedia(), getCategories()]);
+  return [...categories.map((c) => ({ slug: c.slug })), ...items.map((m) => ({ slug: m.slug }))];
 }
 
-export const dynamicParams = false;
+// Media added from the admin panel after the build renders on first visit.
+export const dynamicParams = true;
+
+async function categoryBySlug(slug: string) {
+  return (await getCategories()).find((c) => c.slug === slug) ?? null;
+}
 
 export async function generateMetadata({ params }: PageProps<"/media/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  if (isCategorySlug(slug)) {
-    const c = CATEGORY_BY_SLUG[slug];
+  const c = await categoryBySlug(slug);
+  if (c) {
     return { title: c.label, description: c.description, alternates: { canonical: `/media/${slug}` } };
   }
   const item = await getMediaBySlug(slug);
@@ -48,16 +51,16 @@ export async function generateMetadata({ params }: PageProps<"/media/[slug]">): 
 
 export default async function MediaSlugPage({ params }: PageProps<"/media/[slug]">) {
   const { slug } = await params;
-  if (isCategorySlug(slug)) return <CategoryArchive category={slug} />;
+  if (await categoryBySlug(slug)) return <CategoryArchive category={slug} />;
   const item = await getMediaBySlug(slug);
   if (!item) notFound();
   return <MediaDetail slug={slug} />;
 }
 
-async function CategoryArchive({ category }: { category: keyof typeof CATEGORY_BY_SLUG }) {
-  const [items, lookups] = await Promise.all([getMediaByCategory(category), getLabelLookups()]);
-  const c = CATEGORY_BY_SLUG[category];
-  const labels = { characters: lookups.characters, locations: lookups.locations, sources: Object.fromEntries(MEDIA_SOURCES.map((s) => [s.slug, s.label])) };
+async function CategoryArchive({ category }: { category: string }) {
+  const [items, lookups, categories, sources] = await Promise.all([getMediaByCategory(category), getLabelLookups(), getCategories(), getSources()]);
+  const c = categories.find((x) => x.slug === category)!;
+  const labels = { characters: lookups.characters, locations: lookups.locations, sources: Object.fromEntries(sources.map((s) => [s.slug, s.label])) };
   return (
     <Container>
       <PageHeader crumbs={[{ href: "/media", label: "Media" }, { label: c.label }]} eyebrow={pluralize(items.length, "item")} title={c.label} lede={c.description} />
@@ -65,7 +68,7 @@ async function CategoryArchive({ category }: { category: keyof typeof CATEGORY_B
         <Link href="/media" className="inline-flex h-8 shrink-0 items-center rounded-md border border-border px-3 text-[13px] text-muted hover:text-text">
           All
         </Link>
-        {MEDIA_CATEGORIES.map((x) => (
+        {categories.map((x) => (
           <Link
             key={x.slug}
             href={`/media/${x.slug}`}
@@ -88,9 +91,10 @@ async function CategoryArchive({ category }: { category: keyof typeof CATEGORY_B
 }
 
 async function MediaDetail({ slug }: { slug: string }) {
-  const [item, all, labels, collections] = await Promise.all([getMediaBySlug(slug), getAllMedia(), getLabelLookups(), getCollections()]);
+  const [item, all, labels, collections, categories] = await Promise.all([getMediaBySlug(slug), getAllMedia(), getLabelLookups(), getCollections(), getCategories()]);
   if (!item) notFound();
-  const category = CATEGORY_BY_SLUG[item.category];
+  const category = categories.find((c) => c.slug === item.category) ?? { slug: item.category, label: item.category, singular: item.category, description: "", order: 0 };
+  const folder = await folderHref(item.folderId);
   const related = relatedMedia(item, all, 8);
   const tags = mediaTags(item, labels);
   const inCollections = collections.filter((c) => item.collections.includes(c.slug));
@@ -98,7 +102,14 @@ async function MediaDetail({ slug }: { slug: string }) {
 
   return (
     <Container className="pt-6">
-      <Breadcrumbs items={[{ href: "/media", label: "Media" }, { href: `/media/${item.category}`, label: category.label }, { label: item.title }]} className="mb-5" />
+      <Breadcrumbs
+        items={[
+          { href: "/media", label: "Media" },
+          ...(folder ? folder.trail.map((t) => ({ href: t.href, label: t.name })) : [{ href: `/media/${item.category}`, label: category.label }]),
+          { label: item.title },
+        ]}
+        className="mb-5"
+      />
       <MediaStage item={item} />
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -106,7 +117,7 @@ async function MediaDetail({ slug }: { slug: string }) {
           <div className="flex flex-wrap items-center gap-2">
             <Badge>{category.singular}</Badge>
             {tier && <Badge tone="outline">{tier}</Badge>}
-            {item.verification === "sample" && <Badge tone="sample">Sample asset</Badge>}
+            {item.verification === "community" && <Badge tone="sample">Community made</Badge>}
           </div>
           <h1 className="display mt-3 text-[40px] sm:text-[54px]">{item.title}</h1>
           <p className="mt-2 text-[14px] text-muted">
@@ -147,7 +158,7 @@ async function MediaDetail({ slug }: { slug: string }) {
           <h2 id="meta-h" className="eyebrow mb-2">
             Metadata
           </h2>
-          <MetadataTable item={item} />
+          <MetadataTable item={item} categoryLabel={category.singular} />
           {item.officialUrl && (
             <a href={item.officialUrl} target="_blank" rel="noopener" className="mt-4 inline-flex items-center gap-1 text-[13px] text-muted hover:text-text">
               Related Rockstar page <ArrowUpRight className="size-3.5" />

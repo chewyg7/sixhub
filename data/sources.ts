@@ -2,7 +2,7 @@ import type { MediaSource } from "@/types/content";
 
 const ROCKSTAR_VI = "https://www.rockstargames.com/VI";
 
-/** Where media originates. Referenced by slug from media records. */
+/** Sources the database starts with; owners manage them in the admin panel afterwards. */
 export const MEDIA_SOURCES: MediaSource[] = [
   { slug: "trailer-1", label: "Trailer 1", origin: "trailer", url: ROCKSTAR_VI, date: "2023-12-04" },
   { slug: "trailer-2", label: "Trailer 2", origin: "trailer", url: ROCKSTAR_VI, date: "2025-05-06" },
@@ -13,7 +13,5 @@ export const MEDIA_SOURCES: MediaSource[] = [
   { slug: "press", label: "Official previews", origin: "press" },
   { slug: "music", label: "Soundtrack partners", origin: "social" },
   { slug: "rockstar-store", label: "Rockstar Store", origin: "website", url: "https://store.rockstargames.com" },
-  { slug: "gta6hub-sample", label: "GTA 6 Hub sample set", origin: "other" },
+  { slug: "community", label: "Community", origin: "other" },
 ];
-
-export const SOURCE_BY_SLUG = Object.fromEntries(MEDIA_SOURCES.map((s) => [s.slug, s])) as Record<string, MediaSource>;

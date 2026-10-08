@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, ExternalLink, Info, Maximize, Minimize, ScanSearch, X } from "lucide-react";
 import type { MediaItem } from "@/types/content";
-import { CATEGORY_BY_SLUG } from "@/data/categories";
+import { useCategory } from "@/components/site-data";
 import { cn } from "@/lib/cn";
 import { aspectRatioLabel, formatBytes, formatDate, formatDuration, formatFps, formatResolution } from "@/lib/format";
 import { lockScroll, useFocusTrap } from "@/lib/hooks/use-focus-trap";
@@ -118,7 +118,7 @@ export function Lightbox({ items, index, onIndexChange, onClose }: Props) {
   // Horizontal swipe to navigate on touch (only when not zoomed).
   const swipe = useRef<{ x: number; y: number } | null>(null);
 
-  const category = CATEGORY_BY_SLUG[item.category];
+  const category = useCategory(item.category);
   const duration = item.video?.duration ?? item.audio?.duration;
 
   return createPortal(
@@ -231,7 +231,7 @@ export function Lightbox({ items, index, onIndexChange, onClose }: Props) {
           >
             <div className="flex flex-wrap gap-1.5">
               <Badge className="bg-white/10 text-white/80">{category?.singular}</Badge>
-              {item.verification === "sample" && <Badge tone="sample">Sample asset</Badge>}
+              {item.verification === "community" && <Badge tone="sample">Community made</Badge>}
             </div>
             <p className="mt-3 text-[13px] leading-relaxed text-white/70">{item.description}</p>
             <dl className="mt-5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[12.5px]">

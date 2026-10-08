@@ -24,10 +24,11 @@ export const PRIMARY_NAV: NavItem[] = [
     children: [
       { href: "/media", label: "All media" },
       { href: "/media/screenshots", label: "Screenshots" },
+      { href: "/media/screengrabs", label: "Screengrabs" },
       { href: "/media/artwork", label: "Official Artwork" },
       { href: "/media/videos", label: "Videos" },
-      { href: "/media/audio", label: "Audio" },
-      { href: "/media/logos", label: "Logos & Branding" },
+      { href: "/media/logos", label: "Logos" },
+      { href: "/media/fonts", label: "Fonts" },
       { href: "/media/promotional", label: "Promotional" },
       { href: "/collections", label: "Collections" },
     ],
@@ -49,8 +50,4 @@ export const PRIMARY_NAV: NavItem[] = [
 ];
 
 /** Official release (Rockstar Newswire, Nov 6 2025). Countdown targets local midnight. */
-export const RELEASE = {
-  date: "2026-11-19",
-  label: "November 19, 2026",
-  platforms: ["PlayStation 5", "Xbox Series X|S"],
-} as const;
+

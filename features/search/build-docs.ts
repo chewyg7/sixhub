@@ -1,6 +1,5 @@
 import "server-only";
-import { getAllMedia, getCollections, getInfoEntries, getInfoSections, getLabelLookups, getTimeline } from "@/lib/content";
-import { CATEGORY_BY_SLUG, MEDIA_CATEGORIES } from "@/data/categories";
+import { flattenTree, getAllMedia, getCategories, getCollections, getFaq, getFolderTree, getInfoEntries, getInfoSections, getLabelLookups, getTimeline } from "@/lib/content";
 import { smallestVariant } from "@/lib/media/variants";
 import { formatDate } from "@/lib/format";
 import type { SearchDoc } from "./engine";
@@ -14,35 +13,43 @@ const PAGES: SearchDoc[] = [
   { id: "page:timeline", type: "page", title: "Timeline", href: "/timeline", text: "history events announcements dates" },
   { id: "page:collections", type: "page", title: "Collections", href: "/collections", text: "releases sets batches" },
   { id: "page:library", type: "page", title: "Your Library", href: "/library", text: "favorites saved collections recently viewed history" },
-  ...MEDIA_CATEGORIES.map((c) => ({
-    id: `page:media:${c.slug}`,
-    type: "page" as const,
-    title: c.label,
-    subtitle: "Media category",
-    href: `/media/${c.slug}`,
-    text: c.description,
-  })),
+  { id: "page:faq", type: "page", title: "FAQ", href: "/faq", text: "questions answers help release date time zones launch" },
 ];
 
 /** Every searchable non-news document on the site. News is searched live. */
 export async function buildSearchDocs(): Promise<SearchDoc[]> {
-  const [media, collections, entries, sections, timeline, labels] = await Promise.all([
+  const [media, collections, entries, sections, timeline, labels, categories, folders, faq] = await Promise.all([
     getAllMedia(),
     getCollections(),
     getInfoEntries(),
     getInfoSections(),
     getTimeline(),
     getLabelLookups(),
+    getCategories(),
+    getFolderTree(),
+    getFaq(),
   ]);
   const sectionTitle = Object.fromEntries(sections.map((s) => [s.slug, s.title]));
 
-  const docs: SearchDoc[] = [...PAGES];
+  const docs: SearchDoc[] = [
+    ...PAGES,
+    ...categories.map((c) => ({ id: `page:media:${c.slug}`, type: "page" as const, title: c.label, subtitle: "Media category", href: `/media/${c.slug}`, text: c.description })),
+    ...flattenTree(folders).map((f) => ({
+      id: `folder:${f.id}`,
+      type: "page" as const,
+      title: f.name,
+      subtitle: `Folder · ${f.total} items`,
+      href: `/media/folder/${f.path.join("/")}`,
+      text: [f.description, ...f.path].join(" "),
+    })),
+    ...faq.map((f) => ({ id: `faq:${f.id}`, type: "page" as const, title: f.question, subtitle: "FAQ", href: `/faq#${f.id}`, text: f.answer })),
+  ];
   for (const m of media) {
     docs.push({
       id: `media:${m.slug}`,
       type: "media",
       title: m.title,
-      subtitle: `${CATEGORY_BY_SLUG[m.category]?.singular} · ${m.source.label} · ${formatDate(m.datePublished, "short")}`,
+      subtitle: `${labels.categories[m.category] ?? m.category} · ${m.source.label} · ${formatDate(m.datePublished, "short")}`,
       href: `/media/${m.slug}`,
       text: [
         m.kind,

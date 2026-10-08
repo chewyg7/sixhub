@@ -8,12 +8,15 @@ import { SmoothScroll } from "@/components/motion/smooth-scroll";
 import { Cursor } from "@/components/motion/cursor";
 import { AmbientBackground } from "@/components/motion/ambient";
 import { Intro } from "@/components/motion/intro";
+import { SiteDataProvider, type SiteData } from "@/components/site-data";
+import { Confetti } from "@/components/launch/confetti";
 
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({ children, siteData }: { children: ReactNode; siteData: SiteData }) {
   useEffect(() => {
     (window as unknown as { __ghHydrated?: boolean }).__ghHydrated = true;
   }, []);
   return (
+    <SiteDataProvider value={siteData}>
     <ToastProvider>
       <SmoothScroll>
         <LightboxProvider>
@@ -22,9 +25,11 @@ export function Providers({ children }: { children: ReactNode }) {
             {children}
             <Cursor />
             <Intro />
+            <Confetti />
           </CommandPaletteProvider>
         </LightboxProvider>
       </SmoothScroll>
     </ToastProvider>
+    </SiteDataProvider>
   );
 }

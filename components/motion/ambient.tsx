@@ -11,7 +11,7 @@ import { gsap, prefersReducedMotion } from "@/lib/motion";
 export function AmbientBackground() {
   const path = usePathname();
   const root = useRef<HTMLDivElement>(null);
-  const hidden = path.startsWith("/viewer");
+  const hidden = path.startsWith("/viewer") || path.startsWith("/chewy");
 
   useEffect(() => {
     const el = root.current;

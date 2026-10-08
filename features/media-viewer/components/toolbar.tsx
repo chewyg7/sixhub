@@ -137,9 +137,9 @@ export function Toolbar({ onOpenFile, onOpenSheet, fullscreen }: Props) {
             <span className="tabular hidden shrink-0 font-mono text-[11.5px] text-faint xl:inline">
               {media.meta.width ? formatResolution(media.meta.width, media.meta.height) : media.kind}
             </span>
-            {media.item?.verification === "sample" && (
+            {media.item?.verification === "community" && (
               <Badge tone="sample" className="hidden shrink-0 sm:inline-flex">
-                Sample
+                Community
               </Badge>
             )}
             {media.origin === "local" && (

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Columns2, FolderOpen, Link2, Search, X } from "lucide-react";
 import type { MediaCategorySlug, MediaItem } from "@/types/content";
-import { MEDIA_CATEGORIES } from "@/data/categories";
+import { useCategories } from "@/components/site-data";
 import { normalize } from "@/features/search/engine";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
@@ -24,6 +24,7 @@ interface Props {
 export function BrowserPanel({ items, onOpenFile, onPicked }: Props) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<MediaCategorySlug | "all">("all");
+  const categories = useCategories().filter((c) => items.some((m) => m.category === c.slug));
   const [urlOpen, setUrlOpen] = useState(false);
   const [url, setUrl] = useState("");
   const activeA = useViewer((s) => s.a?.slug);
@@ -101,7 +102,7 @@ export function BrowserPanel({ items, onOpenFile, onPicked }: Props) {
           )}
         </label>
         <div className="no-scrollbar -mx-3 flex gap-1 overflow-x-auto px-3" role="tablist" aria-label="Category">
-          {(["all", ...MEDIA_CATEGORIES.map((c) => c.slug)] as const).map((c) => (
+          {["all", ...categories.map((c) => c.slug)].map((c) => (
             <button
               key={c}
               type="button"
@@ -115,10 +116,7 @@ export function BrowserPanel({ items, onOpenFile, onPicked }: Props) {
             >
               {c === "all"
                 ? "All"
-                : MEDIA_CATEGORIES.find((x) => x.slug === c)
-                    ?.label.replace("Official ", "")
-                    .replace(" Material", "")
-                    .replace(" & Branding", "")}
+                : categories.find((x) => x.slug === c)?.label.replace("Official ", "")}
             </button>
           ))}
         </div>

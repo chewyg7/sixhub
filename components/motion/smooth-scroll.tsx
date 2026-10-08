@@ -16,7 +16,7 @@ export const useLenis = () => useContext(Ctx);
 export function SmoothScroll({ children }: { children: ReactNode }) {
   const path = usePathname();
   const [lenis, setLenis] = useState<Lenis | null>(null);
-  const enabled = !path.startsWith("/viewer");
+  const enabled = !path.startsWith("/viewer") && !path.startsWith("/chewy");
 
   useEffect(() => {
     if (!enabled || prefersReducedMotion()) return;

@@ -1,10 +1,9 @@
 import type { MediaItem } from "@/types/content";
-import { CATEGORY_BY_SLUG } from "@/data/categories";
 import { aspectRatioLabel, formatBitrate, formatBytes, formatDate, formatDuration, formatFps, formatMegapixels, formatResolution } from "@/lib/format";
 
-export function mediaMetadataRows(item: MediaItem): [string, string][] {
+export function mediaMetadataRows(item: MediaItem, categoryLabel: string): [string, string][] {
   const rows: [string, string | undefined | false][] = [
-    ["Type", `${CATEGORY_BY_SLUG[item.category]?.singular} (${item.kind})`],
+    ["Type", `${categoryLabel} (${item.kind})`],
     ["Published", formatDate(item.datePublished)],
     ["Added", formatDate(item.dateAdded)],
     ["Source", item.source.label],
@@ -24,17 +23,20 @@ export function mediaMetadataRows(item: MediaItem): [string, string][] {
     ["File size", formatBytes(item.original.bytes)],
     ["Filename", item.original.filename],
     item.original.hasAlpha ? ["Transparency", "Yes (alpha channel)"] : ["Transparency", false],
+    item.font ? ["Family", item.font.family] : ["Family", false],
+    item.font ? ["Style", item.font.style] : ["Style", false],
+    item.font?.glyphs ? ["Glyphs", item.font.glyphs.toLocaleString("en-US")] : ["Glyphs", false],
   ];
   return rows.filter((r): r is [string, string] => Boolean(r[1]));
 }
 
-export function MetadataTable({ item }: { item: MediaItem }) {
+export function MetadataTable({ item, categoryLabel }: { item: MediaItem; categoryLabel: string }) {
   return (
     <dl className="divide-y divide-divider text-[13px]">
-      {mediaMetadataRows(item).map(([k, v]) => (
+      {mediaMetadataRows(item, categoryLabel).map(([k, v]) => (
         <div key={k} className="grid grid-cols-[120px_1fr] gap-4 py-2">
           <dt className="text-muted">{k}</dt>
-          <dd className="tabular font-mono text-[12.5px] break-words text-text">{v}</dd>
+          <dd className="tabular text-[13px] break-words text-text">{v}</dd>
         </div>
       ))}
     </dl>

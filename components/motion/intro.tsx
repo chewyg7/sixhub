@@ -29,7 +29,7 @@ export function Intro() {
         return false;
       }
     })();
-    if (!el || seen || prefersReducedMotion() || path.startsWith("/viewer")) {
+    if (!el || seen || prefersReducedMotion() || path.startsWith("/viewer") || path.startsWith("/chewy")) {
       if (el) el.style.display = "none";
       finish();
       return;

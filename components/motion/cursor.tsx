@@ -17,7 +17,7 @@ export function Cursor() {
   const ring = useRef<HTMLDivElement>(null);
   const label = useRef<HTMLSpanElement>(null);
   const [enabled, setEnabled] = useState(false);
-  const disabledRoute = path.startsWith("/viewer");
+  const disabledRoute = path.startsWith("/viewer") || path.startsWith("/chewy");
 
   useEffect(() => {
     const fine = window.matchMedia("(pointer: fine)").matches;

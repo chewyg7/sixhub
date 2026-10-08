@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { MediaItem } from "@/types/content";
 import type { NewsPage } from "@/types/news";
 import { Container, SectionHeading, UnderlineLink } from "@/components/layout/page";
-import { Hero, type HeroSlide } from "@/components/home/hero";
+import { Hero } from "@/components/home/hero";
+import { FaqList } from "@/components/faq/faq-list";
 import { Marquee } from "@/components/home/marquee";
 import { NewsShowcase } from "@/components/home/news-showcase";
 import { CastGrid } from "@/components/home/cast-grid";
@@ -11,12 +12,10 @@ import { Trailers } from "@/components/home/trailers";
 import { GalleryColumns } from "@/components/home/gallery-columns";
 import { ViewerPromo } from "@/components/home/viewer-promo";
 import { Stagger } from "@/components/motion/reveal";
-import { getAllMedia, getCollection, getInfoEntries, getMediaBySlugs, getTimeline } from "@/lib/content";
+import { getAllMedia, getCollection, getFaq, getInfoEntries, getMediaBySlugs, getSettings, getTimeline } from "@/lib/content";
 import { byNewest } from "@/lib/content/relations";
 import { fetchRockstarIntel } from "@/lib/news/rockstarintel";
-import { HOME_FEATURE, VIEWER_PICKS } from "@/data/featured";
 import { formatDate } from "@/lib/format";
-import { RELEASE } from "@/lib/site";
 
 export const revalidate = 600;
 
@@ -29,22 +28,20 @@ async function latestNews(): Promise<NewsPage | null> {
 }
 
 export default async function HomePage() {
-  const [all, entries, timeline, picks, news, gallery] = await Promise.all([
+  const settings = await getSettings();
+  const home = settings.home;
+  const [all, entries, timeline, picks, news, gallery, faq] = await Promise.all([
     getAllMedia(),
     getInfoEntries(),
     getTimeline(),
-    getMediaBySlugs(VIEWER_PICKS),
+    getMediaBySlugs(home.viewerPicks),
     latestNews(),
-    getCollection(HOME_FEATURE.galleryCollection),
+    getCollection(home.galleryCollection),
+    getFaq(),
   ]);
   const bySlug = new Map(all.map((m) => [m.slug, m]));
   const images = all.filter((m) => m.kind === "image" && !m.original.hasAlpha);
   const tagged = (key: "characters" | "locations", slug: string) => all.filter((m) => m[key].includes(slug));
-
-  const slides: HeroSlide[] = HOME_FEATURE.heroSlides.flatMap((s) => {
-    const image = bySlug.get(s.slug);
-    return image ? [{ title: s.title, image }] : [];
-  });
 
   const characters = entries
     .filter((e) => e.section === "characters")
@@ -62,14 +59,16 @@ export default async function HomePage() {
     }));
 
   const trailers = all.filter((m) => m.kind === "video" && m.source.origin === "trailer").sort(byNewest);
-  const trailer = bySlug.get(HOME_FEATURE.playSlug) ?? trailers[0];
+  const trailer = bySlug.get(home.playSlug) ?? trailers[0];
   const wall = (gallery?.mediaSlugs ?? []).flatMap((s) => bySlug.get(s) ?? []).slice(0, 24);
-  const still = bySlug.get(HOME_FEATURE.viewerStill);
+  const still = bySlug.get(home.viewerStill);
+  const featuredFaq = faq.filter((f) => f.featured).slice(0, 6);
+  const launchLabel = new Date(`${settings.release.date}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
   const events = [...timeline].reverse().slice(0, 4);
 
   return (
     <>
-      <Hero slides={slides} trailer={trailer} />
+      <Hero release={settings.release} launchMode={settings.launchMode} trailer={trailer} />
 
       <Container wide className="mt-24 sm:mt-32">
         <SectionHeading kicker="RockstarINTEL" title="Latest news" href="/news" linkLabel="All news" />
@@ -126,7 +125,14 @@ export default async function HomePage() {
         </div>
       </Container>
 
-      <Marquee words={["Coming", RELEASE.label.replace(",", "")]} reverse className="mt-28 sm:mt-40" />
+      {featuredFaq.length > 0 && (
+        <Container wide className="mt-28 sm:mt-40">
+          <SectionHeading kicker="Questions" title="Good to know" href="/faq" linkLabel="All questions" />
+          <FaqList items={featuredFaq} />
+        </Container>
+      )}
+
+      <Marquee words={["Coming", launchLabel]} reverse className="mt-28 sm:mt-40" />
     </>
   );
 }

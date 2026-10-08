@@ -3,17 +3,18 @@
  * run on the server (pages) and in the browser (lightbox, viewer).
  */
 import type { MediaItem, TagRef } from "@/types/content";
-import { CATEGORY_BY_SLUG } from "@/data/categories";
 
 export interface LabelLookups {
   characters: Record<string, string>;
   locations: Record<string, string>;
   collections: Record<string, string>;
+  /** Category slug → singular label. */
+  categories: Record<string, string>;
 }
 
 export const byNewest = (a: MediaItem, b: MediaItem) => b.datePublished.localeCompare(a.datePublished) || b.dateAdded.localeCompare(a.dateAdded);
 
-const KIND_LABEL = { image: "Image", video: "Video", audio: "Audio" } as const;
+const KIND_LABEL = { image: "Image", video: "Video", audio: "Audio", font: "Font" } as const;
 
 export function mediaTags(item: MediaItem, labels: LabelLookups): TagRef[] {
   return [
@@ -21,7 +22,7 @@ export function mediaTags(item: MediaItem, labels: LabelLookups): TagRef[] {
     ...item.locations.map((v) => ({ type: "location" as const, value: v, label: labels.locations[v] ?? v })),
     { type: "source", value: item.source.slug, label: item.source.label },
     ...item.collections.map((v) => ({ type: "collection" as const, value: v, label: labels.collections[v] ?? v })),
-    { type: "category", value: item.category, label: CATEGORY_BY_SLUG[item.category]?.singular ?? item.category },
+    { type: "category", value: item.category, label: labels.categories[item.category] ?? item.category },
     { type: "kind", value: item.kind, label: KIND_LABEL[item.kind] },
     ...item.tags.map((v) => ({ type: "tag" as const, value: v, label: v })),
   ];

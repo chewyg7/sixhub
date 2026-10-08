@@ -1,247 +1,222 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { Play } from "lucide-react";
-import type { MediaItem } from "@/types/content";
-import { gsap, ScrollTrigger, SplitText, useGSAP, prefersReducedMotion } from "@/lib/motion";
-import { smallestVariant, srcSetFor } from "@/lib/media/variants";
-import { cn } from "@/lib/cn";
-import { LiquidGlass } from "@/components/glass/liquid-glass";
+import type { MediaItem, SiteSettings } from "@/types/content";
+import { gsap, useGSAP, prefersReducedMotion } from "@/lib/motion";
 import { useLightbox } from "@/components/media/lightbox-context";
-import { viewerHref } from "@/components/media/media-links";
+import { LaunchClock } from "@/components/launch/launch-clock";
+import { useLaunchState } from "@/components/launch/use-launch";
+import { fireConfetti } from "@/components/launch/confetti";
+import { cn } from "@/lib/cn";
 
-export interface HeroSlide {
-  title: string;
-  image: MediaItem;
-}
+const BG_BLUR =
+  "data:image/webp;base64,UklGRnwAAABXRUJQVlA4IHAAAAAQBACdASoYAA0APu1iqU2ppaQiMAgBMB2JYgCdIExDAoOzjQ+E9kiwoAD+ozFAuu5gUCa3Kp+hJgE54r75zBQrqy0+jG0Vh/vJGAwfCqgiKZw0av/4kuCXyQcOZ/Hqa6RWgUZ0txdCZ2h9i3DEEAAA";
 
-const DURATION = 7;
+/** Format a YYYY-MM-DD date for display without time zone drift. */
+const longDate = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 
 /**
- * Cinematic opener: official artwork in wipe transitions with Ken Burns
- * drift, per-character title swaps, cursor depth parallax, and a scroll
- * push-in. Liquid glass holds the controls.
+ * The opener: Jason and Lucia stand in front of the VI mark, in front of a
+ * Leonida gas station at dusk. Each layer moves at its own depth with the
+ * cursor and on scroll; the live countdown sits in liquid glass in front.
  */
-export function Hero({ slides, trailer }: { slides: HeroSlide[]; trailer?: MediaItem }) {
+const noop = () => () => {};
+
+export function Hero({ release, launchMode, trailer }: { release: SiteSettings["release"]; launchMode: SiteSettings["launchMode"]; trailer?: MediaItem }) {
   const root = useRef<HTMLElement>(null);
-  const [index, setIndex] = useState(0);
-  const current = useRef(0);
-  const busy = useRef(false);
-  const progress = useRef<gsap.core.Tween | null>(null);
-  const splits = useRef<SplitText[]>([]);
-  // Autoplay advances through this ref so `go` never references itself.
-  const advance = useRef<(next: number) => void>(() => {});
+  // `?launch=preview` shows the launch celebration early (read in the browser so the page stays static).
+  const preview = useSyncExternalStore(noop, () => new URLSearchParams(location.search).get("launch") === "preview", () => false);
+  const state = useLaunchState(release, launchMode, preview);
+  const launched = !!state?.launched;
   const { open } = useLightbox();
 
-  const go = useCallback(
-    (next: number) => {
-      const el = root.current;
-      if (!el || busy.current || next === current.current) return;
-      const reduce = prefersReducedMotion();
-      const prev = current.current;
-      current.current = next;
-      setIndex(next);
-      busy.current = true;
-      const slidesEls = el.querySelectorAll<HTMLElement>("[data-slide]");
-      const titles = splits.current;
-      const inEl = slidesEls[next];
-      const outEl = slidesEls[prev];
-      slidesEls.forEach((s, i) => (s.style.zIndex = i === next ? "3" : i === prev ? "2" : "1"));
-      const tl = gsap.timeline({ onComplete: () => (busy.current = false) });
-      tl.fromTo(inEl, { clipPath: "inset(0% 0% 0% 100%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: reduce ? 0 : 1.45, ease: "expo.inOut" }, 0)
-        .fromTo(inEl.querySelector("img"), { scale: 1.3, xPercent: 6 }, { scale: 1.08, xPercent: 0, duration: reduce ? 0 : 2.2, ease: "expo.out" }, 0)
-        .to(outEl.querySelector("img"), { scale: 1.16, xPercent: -8, duration: reduce ? 0 : 1.45, ease: "expo.inOut" }, 0)
-        .to(titles[prev]?.chars ?? [], { yPercent: -120, rotate: -6, duration: reduce ? 0 : 0.7, stagger: 0.018, ease: "expo.in" }, 0)
-        .fromTo(
-          titles[next]?.chars ?? [],
-          { yPercent: 120, rotate: 8 },
-          { yPercent: 0, rotate: 0, duration: reduce ? 0 : 1.2, stagger: 0.028, ease: "expo.out" },
-          reduce ? 0 : 0.75,
-        )
-        .add(() => {
-          gsap.to(inEl.querySelector("img"), { scale: 1, duration: DURATION + 2, ease: "none" });
-        });
-      progress.current?.kill();
-      const bars = el.querySelectorAll<HTMLElement>("[data-progress]");
-      bars.forEach((b, i) => gsap.set(b, { scaleX: i < next ? 1 : 0 }));
-      progress.current = gsap.fromTo(bars[next], { scaleX: 0 }, { scaleX: 1, duration: DURATION, ease: "none", onComplete: () => advance.current((next + 1) % slides.length) });
-    },
-    [slides.length],
-  );
-
+  // Intro, cursor depth and scroll parallax.
   useGSAP(
     () => {
       const el = root.current;
       if (!el) return;
+      const q = (s: string) => el.querySelector<HTMLElement>(s);
+      const bg = q("[data-layer=bg]");
+      const mark = q("[data-layer=mark]");
+      const fg = q("[data-layer=fg]");
+      const ui = el.querySelectorAll("[data-hero-ui]");
       const reduce = prefersReducedMotion();
-      splits.current = Array.from(el.querySelectorAll<HTMLElement>("[data-title]")).map((t) => SplitText.create(t, { type: "chars", mask: "chars" }));
-      splits.current.forEach((s) => gsap.set(s.chars, { yPercent: 120 }));
-      el.querySelectorAll<HTMLElement>("[data-title]").forEach((t) => (t.style.visibility = "visible"));
 
       const intro = gsap.timeline({ paused: true });
       intro
-        .fromTo(el.querySelector("[data-slide] img"), { scale: 1.35 }, { scale: 1.08, duration: reduce ? 0 : 2.4, ease: "expo.out" }, 0)
-        .to(splits.current[0]?.chars ?? [], { yPercent: 0, rotate: 0, duration: reduce ? 0 : 1.3, stagger: 0.035, ease: "expo.out" }, 0.25)
-        .fromTo(el.querySelectorAll("[data-hero-ui]"), { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: reduce ? 0 : 1.2, stagger: 0.08, ease: "expo.out" }, 0.55)
-        .add(() => {
-          gsap.to(el.querySelector("[data-slide] img"), { scale: 1, duration: DURATION + 2, ease: "none" });
-          const bar = el.querySelector<HTMLElement>("[data-progress]");
-          if (bar && slides.length > 1) progress.current = gsap.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: DURATION, ease: "none", onComplete: () => advance.current(1) });
-        });
+        .fromTo(bg, { scale: 1.28, filter: "blur(10px) brightness(0.6)" }, { scale: 1.06, filter: "blur(0px) brightness(1)", duration: reduce ? 0 : 2.2, ease: "expo.out" }, 0)
+        .fromTo(mark, { scale: 0.55, rotate: -6, opacity: 0, filter: "blur(24px)" }, { scale: 1, rotate: 0, opacity: 1, filter: "blur(0px)", duration: reduce ? 0 : 1.8, ease: "expo.out" }, 0.2)
+        .fromTo(fg, { yPercent: 22, opacity: 0, filter: "blur(12px)" }, { yPercent: 0, opacity: 1, filter: "blur(0px)", duration: reduce ? 0 : 1.7, ease: "expo.out" }, 0.38)
+        .fromTo(ui, { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: reduce ? 0 : 1.3, stagger: 0.09, ease: "expo.out" }, 0.75);
       const start = () => intro.play();
       if (document.documentElement.dataset.introDone) start();
       else window.addEventListener("gh:intro-done", start, { once: true });
+      if (reduce) return () => window.removeEventListener("gh:intro-done", start);
 
-      const cleanup = () => {
-        window.removeEventListener("gh:intro-done", start);
-        progress.current?.kill();
-        splits.current.forEach((s) => s.revert());
-      };
-      if (reduce) return cleanup;
+      // Scroll: layers separate as the hero leaves.
+      const st = { trigger: el, start: "top top", end: "bottom top", scrub: true } as const;
+      gsap.to(bg, { yPercent: 14, ease: "none", scrollTrigger: st });
+      gsap.to(mark, { yPercent: -55, opacity: 0.15, ease: "none", scrollTrigger: st });
+      gsap.to(fg, { yPercent: 12, scale: 1.1, ease: "none", scrollTrigger: st });
+      gsap.to(q("[data-hero-dock]"), { yPercent: -30, opacity: 0, ease: "none", scrollTrigger: { ...st, end: "60% top" } });
 
-      gsap.to(el.querySelector("[data-hero-media]"), { scale: 1.12, yPercent: 12, ease: "none", scrollTrigger: { trigger: el, start: "top top", end: "bottom top", scrub: true } });
-      gsap.to(el.querySelector("[data-hero-shade]"), { opacity: 0.85, ease: "none", scrollTrigger: { trigger: el, start: "top top", end: "bottom top", scrub: true } });
-      gsap.to(el.querySelector("[data-hero-content]"), { yPercent: -35, opacity: 0, ease: "none", scrollTrigger: { trigger: el, start: "top top", end: "70% top", scrub: true } });
+      // Idle breathing so the scene never sits still.
+      gsap.to(q("[data-breathe]"), { y: -6, duration: 3.2, repeat: -1, yoyo: true, ease: "sine.inOut" });
 
-      const media = el.querySelector("[data-parallax]");
-      const content = el.querySelector("[data-hero-titles]");
-      const mx = gsap.quickTo(media, "x", { duration: 1.4, ease: "power3.out" });
-      const my = gsap.quickTo(media, "y", { duration: 1.4, ease: "power3.out" });
-      const tx = gsap.quickTo(content, "x", { duration: 1.1, ease: "power3.out" });
-      const ty = gsap.quickTo(content, "y", { duration: 1.1, ease: "power3.out" });
+      // Cursor depth: far layers drift a little, near layers more; the cutout also tilts.
+      const to = (t: Element | null, p: string, d = 1.3) => gsap.quickTo(t, p, { duration: d, ease: "power3.out" });
+      const bx = to(bg, "x");
+      const by = to(bg, "y");
+      const mx = to(mark, "x");
+      const my = to(mark, "y");
+      const fx = to(fg, "x", 1);
+      const fy = to(fg, "y", 1);
+      const ry = to(fg, "rotateY", 1.2);
+      const rx = to(fg, "rotateX", 1.2);
+      const glow = q("[data-glow]");
       const onMove = (e: PointerEvent) => {
-        const nx = e.clientX / window.innerWidth - 0.5;
-        const ny = e.clientY / window.innerHeight - 0.5;
-        mx(nx * -34);
-        my(ny * -22);
-        tx(nx * 18);
-        ty(ny * 10);
+        const r = el.getBoundingClientRect();
+        if (e.clientY > r.bottom) return;
+        const nx = (e.clientX - r.left) / r.width - 0.5;
+        const ny = (e.clientY - r.top) / r.height - 0.5;
+        bx(nx * -18);
+        by(ny * -12);
+        mx(nx * 26);
+        my(ny * 14);
+        fx(nx * 46);
+        fy(ny * 16);
+        ry(nx * 7);
+        rx(ny * -4);
+        glow?.style.setProperty("--gx", `${(nx + 0.5) * 100}%`);
+        glow?.style.setProperty("--gy", `${(ny + 0.5) * 100}%`);
       };
       window.addEventListener("pointermove", onMove, { passive: true });
       return () => {
         window.removeEventListener("pointermove", onMove);
-        cleanup();
+        window.removeEventListener("gh:intro-done", start);
       };
     },
     { scope: root },
   );
 
+  // Celebrate the first time the page sees the game as launched (once per session, always in preview).
   useEffect(() => {
-    advance.current = go;
-  }, [go]);
-
-  useEffect(() => {
-    const onVis = () => (document.hidden ? progress.current?.pause() : progress.current?.resume());
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, []);
-
-  useEffect(() => {
-    ScrollTrigger.refresh();
-  }, []);
+    if (!launched) return;
+    let seen = false;
+    try {
+      seen = sessionStorage.getItem("gh:celebrated") === "1";
+      sessionStorage.setItem("gh:celebrated", "1");
+    } catch {}
+    if (seen && !preview) return;
+    let timer = 0;
+    const go = () => (timer = window.setTimeout(() => fireConfetti(1.4), 700));
+    if (document.documentElement.dataset.introDone) go();
+    else window.addEventListener("gh:intro-done", go, { once: true });
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("gh:intro-done", go);
+    };
+  }, [launched, preview]);
 
   return (
-    <section
-      ref={root}
-      aria-roledescription="carousel"
-      aria-label="Featured artwork"
-      className="relative -mt-24 h-[100svh] min-h-[640px] overflow-hidden bg-canvas text-white sm:-mt-28"
-    >
-      <div data-hero-media className="absolute inset-0 origin-top will-change-transform">
-        <div data-parallax className="absolute -inset-[5%]">
-          {slides.map((s, i) => {
-            const v = smallestVariant(s.image, 1920);
-            return (
-              <div
-                key={s.image.slug}
-                data-slide
-                className="absolute inset-0 overflow-hidden"
-                style={{ zIndex: i === 0 ? 3 : 1, clipPath: i === 0 ? "inset(0% 0% 0% 0%)" : "inset(0% 0% 0% 100%)", backgroundColor: s.image.dominantColor ?? undefined }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element -- responsive variants via srcset */}
-                <img
-                  src={v?.url}
-                  srcSet={srcSetFor(s.image)}
-                  sizes="110vw"
-                  alt={i === index ? s.image.alt : ""}
-                  fetchPriority={i === 0 ? "high" : "low"}
-                  loading={i === 0 ? "eager" : "lazy"}
-                  className="size-full scale-[1.08] object-cover will-change-transform"
-                />
-              </div>
-            );
-          })}
-        </div>
-        <div data-hero-shade className="pointer-events-none absolute inset-0 z-[5] bg-bg opacity-0" />
-        <div className="pointer-events-none absolute inset-0 z-[5] bg-[linear-gradient(to_top,rgb(11_9_16)_2%,rgb(11_9_16/0.55)_28%,transparent_58%),linear-gradient(to_right,rgb(11_9_16/0.55),transparent_45%)]" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-48 bg-gradient-to-b from-black/50 to-transparent" />
+    <section ref={root} aria-label="Grand Theft Auto VI" className="relative -mt-24 h-[100svh] min-h-[700px] overflow-hidden bg-[#2a1d4a] text-white [perspective:1400px] sm:-mt-28">
+      {/* Background scene */}
+      <div data-layer="bg" className="absolute -inset-[5%] will-change-transform" style={{ backgroundImage: `url(${BG_BLUR})`, backgroundSize: "cover", backgroundPosition: "center" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- layered artwork needs the exact files */}
+        <img
+          src="/hero/bg-2000.webp"
+          srcSet="/hero/bg-1280.webp 1280w, /hero/bg-2000.webp 2000w"
+          sizes="110vw"
+          alt=""
+          fetchPriority="high"
+          className={cn("size-full object-cover object-[50%_62%] transition-[filter] duration-1000", launched && "saturate-[1.25]")}
+        />
       </div>
 
-      <div data-hero-content className="absolute inset-0 z-10 mx-auto flex max-w-[1600px] flex-col justify-end px-5 pb-8 sm:px-8 sm:pb-10 lg:px-12">
-        <div data-hero-titles className="relative">
-          <div className="relative h-[17vw] min-h-[72px] sm:h-[11vw] lg:h-[144px]">
-            {slides.map((s, i) => (
-              <h1
-                key={s.title + i}
-                data-title
-                aria-hidden={i !== index}
-                className="display-xl absolute inset-x-0 bottom-0 text-[17vw] whitespace-nowrap text-white drop-shadow-[0_10px_40px_rgb(0_0_0/0.35)] sm:text-[11vw] lg:text-[142px]"
-                style={{ visibility: "hidden" }}
-              >
-                {s.title}
-              </h1>
+      {/* Light that follows the cursor across the sky */}
+      <div
+        data-glow
+        aria-hidden
+        className="pointer-events-none absolute inset-0 mix-blend-soft-light"
+        style={{ background: "radial-gradient(38rem 26rem at var(--gx, 60%) var(--gy, 40%), rgb(255 190 225 / 0.65), transparent 70%)" }}
+      />
+      <div aria-hidden className="hero-haze pointer-events-none absolute inset-x-0 bottom-[18%] h-[38%]" />
+
+      {/* OUT NOW band behind the characters once the game is out */}
+      {launched && (
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-[36%] -rotate-3 overflow-hidden">
+          <div className="hero-band flex w-max">
+            {[0, 1].map((k) => (
+              <span key={k} className="display-xl flex shrink-0 text-[24vw] leading-[0.82] whitespace-nowrap sm:text-[18vw]">
+                {["Out now", "Out now", "Out now"].map((w, i) => (
+                  <span key={i} className={cn("px-[3vw]", i % 2 ? "text-stroke" : "text-white/90")}>
+                    {w}
+                  </span>
+                ))}
+              </span>
             ))}
           </div>
         </div>
+      )}
 
-        <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div data-hero-ui className="flex flex-wrap items-center gap-3">
-            {trailer && (
-              <button
-                type="button"
-                onClick={() => open([trailer], 0)}
-                data-cursor="play"
-                className="group flex h-12 items-center gap-3 rounded-full bg-[image:var(--sunset)] pr-6 pl-1.5 text-[15px] font-bold shadow-[0_14px_44px_-12px_rgb(255_79_163/0.9)] transition-transform duration-500 ease-[var(--ease-out)] hover:scale-[1.04] active:scale-[0.97]"
-              >
-                <span className="flex size-9 items-center justify-center rounded-full bg-white text-[#0b0910] transition-transform duration-500 group-hover:rotate-[360deg]">
-                  <Play className="ml-0.5 size-4 fill-current" />
-                </span>
-                Watch {trailer.title}
-              </button>
-            )}
-            {trailer && (
-              <LiquidGlass
-                as={Link}
-                href={viewerHref(trailer.slug)}
-                radius={24}
-                bezel={14}
-                thickness={26}
-                className="flex h-12 items-center px-6 text-[15px] font-bold text-white transition-transform duration-500 hover:scale-[1.03]"
-              >
-                Frame by frame
-              </LiquidGlass>
-            )}
-          </div>
+      {/* The VI mark, sandwiched between the scene and the characters */}
+      <div
+        data-layer="mark"
+        aria-hidden
+        className={cn(
+          "absolute left-1/2 w-[min(84vw,560px)] -translate-x-1/2 will-change-transform lg:left-[42%] lg:w-[min(44vw,760px)] lg:-translate-x-[68%]",
+          launched ? "top-[8%] lg:top-[6%]" : "top-[12%] lg:top-[12%]",
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- official mark */}
+        <img src="/media/logos/gta-vi-mark/w960.webp" alt="" className="w-full drop-shadow-[0_30px_60px_rgb(40_10_60/0.45)]" />
+      </div>
 
-          <div data-hero-ui className="self-start sm:self-auto">
-            <LiquidGlass elevated radius={20} bezel={14} thickness={28} className="flex items-center px-2 py-1">
-              {slides.map((s, i) => (
-                <button
-                  key={s.image.slug}
-                  type="button"
-                  onClick={() => go(i)}
-                  aria-label={`Show ${s.title}`}
-                  aria-current={i === index}
-                  className="group flex h-10 w-11 items-center px-1.5 sm:w-14"
-                >
-                  <span className={cn("h-[3px] w-full overflow-hidden rounded-full transition-colors", i === index ? "bg-white/30" : "bg-white/15 group-hover:bg-white/30")}>
-                    <span data-progress className="block h-full origin-left scale-x-0 rounded-full bg-white" />
-                  </span>
-                </button>
-              ))}
-            </LiquidGlass>
-          </div>
+      {/* Jason & Lucia */}
+      <div
+        data-layer="fg"
+        className="absolute bottom-0 left-1/2 h-[64svh] -translate-x-1/2 will-change-transform [transform-style:preserve-3d] sm:h-[70svh] lg:right-[8%] lg:left-auto lg:h-[94svh] lg:translate-x-0 xl:right-[11%]"
+      >
+        <div data-breathe className="h-full">
+          {/* eslint-disable-next-line @next/next/no-img-element -- layered artwork needs the exact files */}
+          <img
+            src="/hero/fg-1336.webp"
+            srcSet="/hero/fg-900.webp 900w, /hero/fg-1336.webp 1336w"
+            sizes="(min-width: 1024px) 64vh, 46vh"
+            alt="Lucia and Jason, bandanas up, walking towards the camera"
+            fetchPriority="high"
+            className="h-full w-auto max-w-none drop-shadow-[0_40px_60px_rgb(20_8_30/0.55)]"
+          />
+        </div>
+      </div>
+
+      {/* Ground fade into the page */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[34%] bg-[linear-gradient(to_top,var(--bg)_4%,rgb(11_9_16/0.6)_42%,transparent)]" />
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/35 to-transparent" />
+
+      {/* Countdown dock */}
+      <div data-hero-dock className="absolute inset-x-0 bottom-0 z-10 mx-auto flex max-w-[1600px] flex-col items-stretch px-4 pb-5 sm:px-8 sm:pb-9 lg:items-start lg:px-12">
+        <div data-hero-ui className="mb-3 flex flex-wrap items-center gap-3">
+          <p className="text-[14px] text-white/85 sm:text-[15px]">
+            {longDate(release.date)} · {release.platforms.join(" & ")}
+          </p>
+          {trailer && (
+            <button
+              type="button"
+              onClick={() => open([trailer], 0)}
+              data-cursor="play"
+              className="group inline-flex h-9 items-center gap-2 rounded-full bg-white/12 pr-4 pl-1 text-[13.5px] font-bold text-white backdrop-blur-md transition-colors hover:bg-white/20"
+            >
+              <span className="flex size-7 items-center justify-center rounded-full bg-white text-[#140c18] transition-transform duration-500 group-hover:scale-110">
+                <Play className="ml-0.5 size-3 fill-current" />
+              </span>
+              Watch {trailer.title}
+            </button>
+          )}
+        </div>
+        <div data-hero-ui className="w-full lg:w-auto">
+          {state ? <LaunchClock state={state} className="w-full lg:w-auto" /> : <div className="h-[178px] w-full rounded-[30px] bg-white/5 lg:w-[560px]" />}
         </div>
       </div>
     </section>

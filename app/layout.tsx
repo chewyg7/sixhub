@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { SITE } from "@/lib/site";
 import { PREFS_BOOT_SCRIPT } from "@/lib/preferences-script";
+import { getCategories, getSettings } from "@/lib/content";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -41,7 +42,9 @@ export const viewport: Viewport = {
   colorScheme: "dark light",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const [categories, settings] = await Promise.all([getCategories(), getSettings()]);
+  const siteData = { categories, settings: { release: settings.release, launchMode: settings.launchMode, socials: settings.socials, announcement: settings.announcement } };
   return (
     <html lang="en" data-theme="dark" className={`${deco.variable} ${decoCondensed.variable}`} suppressHydrationWarning>
       <head>
@@ -55,7 +58,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         >
           Skip to content
         </a>
-        <Providers>{children}</Providers>
+        <Providers siteData={siteData}>{children}</Providers>
       </body>
     </html>
   );

@@ -2,9 +2,8 @@
  * Core content model for GTA 6 Hub.
  *
  * These types describe content independently of where it is stored. The
- * current build reads them from the local dataset in `data/`, but every
- * shape here maps cleanly onto a CMS document or relational table
- * (see lib/content/source.ts for the adapter boundary).
+ * site reads them from the SQLite database (lib/db), which owners and admins
+ * edit live from the admin panel; the files in `data/` only seed it.
  */
 
 /* ------------------------------------------------------------------ */
@@ -23,17 +22,18 @@ export interface SourceLink {
  * How much trust the site places in a record.
  * - `official`: stated by Rockstar Games / Take-Two in a linked source
  * - `reported`: reported by press, not confirmed by Rockstar
- * - `sample`:   development placeholder, not real GTA VI content
+ * - `community`: made by the community (fan fonts, fan art), not Rockstar
  */
-export type Verification = "official" | "reported" | "sample";
+export type Verification = "official" | "reported" | "community";
 
 /* ------------------------------------------------------------------ */
 /* Media                                                               */
 /* ------------------------------------------------------------------ */
 
-export type MediaKind = "image" | "video" | "audio";
+export type MediaKind = "image" | "video" | "audio" | "font";
 
-export type MediaCategorySlug = "artwork" | "screenshots" | "videos" | "audio" | "logos" | "promotional";
+/** Category slugs are open-ended: owners create new ones from the admin panel. */
+export type MediaCategorySlug = string;
 
 export interface MediaCategory {
   slug: MediaCategorySlug;
@@ -95,6 +95,13 @@ export interface AudioTechnical {
   channels?: number;
 }
 
+export interface FontTechnical {
+  family: string;
+  style: string;
+  glyphs?: number;
+  format: string;
+}
+
 /** Sprite sheet of evenly spaced frames used for scrubber previews. */
 export interface Storyboard {
   url: string;
@@ -142,6 +149,9 @@ export interface MediaItem {
   storyboard?: Storyboard;
   /** Lighter encodes of `original` (videos), largest first. The original stays the analysis source. */
   renditions?: VideoRendition[];
+  font?: FontTechnical;
+  /** Folder the item is filed in (see MediaFolder). */
+  folderId?: string;
   tags: string[];
   /** Character entry slugs. */
   characters: string[];
@@ -176,7 +186,8 @@ export interface Collection {
 /* Information database                                                */
 /* ------------------------------------------------------------------ */
 
-export type InfoSectionSlug = "overview" | "characters" | "locations" | "vehicles" | "businesses" | "weapons" | "trailers" | "release" | "platforms" | "editions";
+/** Section slugs are open-ended: owners can add sections from the admin panel. */
+export type InfoSectionSlug = string;
 
 export interface InfoSection {
   slug: InfoSectionSlug;
@@ -252,4 +263,59 @@ export interface TagRef {
   type: TagType;
   value: string;
   label: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* Folders                                                             */
+/* ------------------------------------------------------------------ */
+
+/** A folder in the media archive. Items live in exactly one folder. */
+export interface MediaFolder {
+  id: string;
+  /** `null` for top-level folders. */
+  parentId: string | null;
+  slug: string;
+  name: string;
+  description: string;
+  /** Media slug used as the folder's cover image. */
+  coverSlug?: string;
+  sort: number;
+}
+
+/* ------------------------------------------------------------------ */
+/* FAQ                                                                 */
+/* ------------------------------------------------------------------ */
+
+export interface FaqEntry {
+  id: string;
+  question: string;
+  /** Plain text; blank lines separate paragraphs. */
+  answer: string;
+  group: string;
+  sort: number;
+  published: boolean;
+  /** Also shown in the short FAQ at the bottom of the home page. */
+  featured: boolean;
+}
+
+/* ------------------------------------------------------------------ */
+/* Site settings (editable by owners)                                  */
+/* ------------------------------------------------------------------ */
+
+export interface SiteSettings {
+  release: {
+    /** Calendar date (YYYY-MM-DD). The game unlocks at midnight local time in each time zone. */
+    date: ISODate;
+    platforms: string[];
+  };
+  /** Override for previewing or holding the launch celebration. */
+  launchMode: "auto" | "launched" | "countdown";
+  socials: { discord: string; x: string; instagram: string };
+  announcement: { enabled: boolean; text: string; href: string };
+  home: {
+    playSlug: string;
+    galleryCollection: string;
+    viewerStill: string;
+    viewerPicks: string[];
+  };
 }

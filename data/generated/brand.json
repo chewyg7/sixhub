@@ -1,0 +1,370 @@
+{
+  "items": [
+    {
+      "slug": "gta-vi-logo",
+      "title": "Grand Theft Auto VI Logo",
+      "kind": "image",
+      "category": "logos",
+      "tags": [
+        "logo",
+        "lockup"
+      ],
+      "width": 1210,
+      "height": 936,
+      "original": {
+        "url": "/media/logos/gta-vi-logo/original.png",
+        "width": 1210,
+        "height": 936,
+        "bytes": 76901,
+        "mimeType": "image/png",
+        "filename": "gta-vi-logo.png",
+        "hasAlpha": true
+      },
+      "variants": [
+        {
+          "width": 480,
+          "height": 371,
+          "url": "/media/logos/gta-vi-logo/w480.webp",
+          "bytes": 16202,
+          "format": "webp"
+        },
+        {
+          "width": 960,
+          "height": 743,
+          "url": "/media/logos/gta-vi-logo/w960.webp",
+          "bytes": 42128,
+          "format": "webp"
+        },
+        {
+          "width": 1210,
+          "height": 936,
+          "url": "/media/logos/gta-vi-logo/w1210.webp",
+          "bytes": 56390,
+          "format": "webp"
+        }
+      ],
+      "blurDataUrl": "data:image/webp;base64,UklGRiQCAABXRUJQVlA4WAoAAAAQAAAAFwAAEgAAQUxQSOMAAAABkGNr2xpEb/Lj7u6uNezIHSoOnbt0bICWwwpoKd3d3R3y/987kmRmCRExAcs0pMM2oIuansKHGmrScFGFrNH4itigoZA9/RSSdBw3NFGTFFL4t4hH7C4NScfh3yJ0U+ik5j8LHywkHtF4fV1cGjcodFN7GefTy0LqOcXD8y8o9FD7EnGzkHVD8UO6QWGY+r/YKHikUIzR2mg/UJiiptCnh43SF/J9aXVuYWle+4HCNDmBACjkfFJ82Kj8fi2CbdnIeRNHO7xzgY3ZGSgLNnI+KRQ+ulmoqoYNWIhqaG1paWmrBQBWUDggGgEAAJAFAJ0BKhgAEwA+7WqtUKmlpCKoCqkwHYlsAKkUGbrsU8YX+8pItcRN0lllYpy83vEpA/ZQAP7Bm27UBXXJt94uDwml4RKnqUBtNYYXlgr9WBtOGpFb9d71wS5ehN7NH55CGQqSuaLcTXGWk75N1WuNTIS/kapOXsHxpYht3Uc7zQ5CTF5I99LwsKv7c0jenFHAcgWQpE5MgZwYMoPD2ACupONJCBM6Gf1e4Ane+VxWjD1PtcuWVSlhqZuydz5avTWSPJGklY+YiNPyP4imMjiPUtouWBLBXswlzH66DB+4CqdgmKzCGJBFkv1OY6DuASGBpMYJSU6J1hm+U5q2bnfDYj1kUGG/aObcareEsw5gK8gR2zgDutAAAA==",
+      "dominantColor": null,
+      "officialUrl": "https://www.rockstargames.com/VI"
+    },
+    {
+      "slug": "gta-vi-mark",
+      "title": "VI Mark",
+      "kind": "image",
+      "category": "logos",
+      "tags": [
+        "logo",
+        "mark"
+      ],
+      "width": 1210,
+      "height": 935,
+      "original": {
+        "url": "/media/logos/gta-vi-mark/original.png",
+        "width": 1210,
+        "height": 935,
+        "bytes": 97144,
+        "mimeType": "image/png",
+        "filename": "gta-vi-mark.png",
+        "hasAlpha": true
+      },
+      "variants": [
+        {
+          "width": 480,
+          "height": 371,
+          "url": "/media/logos/gta-vi-mark/w480.webp",
+          "bytes": 14464,
+          "format": "webp"
+        },
+        {
+          "width": 960,
+          "height": 742,
+          "url": "/media/logos/gta-vi-mark/w960.webp",
+          "bytes": 40842,
+          "format": "webp"
+        },
+        {
+          "width": 1210,
+          "height": 935,
+          "url": "/media/logos/gta-vi-mark/w1210.webp",
+          "bytes": 56186,
+          "format": "webp"
+        }
+      ],
+      "blurDataUrl": "data:image/webp;base64,UklGRhoCAABXRUJQVlA4WAoAAAAQAAAAFwAAEgAAQUxQSPgAAAABkJtt27In9/e9cXd39zbZIF2mSHB39woqDjoGoGYCDiZwd3d3e9/nKj5bISIm4Bre7B9bpX38NzPDzAKf1+AhcKmk8joBMADjc+1tAhZYXCKA8e5XmjbjIXDhYtqJt1hK0wMCWAhA4NLMzzSnnXjADPAsN/9Li9T6FCM18LCi90+anA7i0zy7NPw7I1LXKywReNKuwSw5ncAnPPulgRyR+t9jYLzsyienU3jwHFNpvlgjnzHjbZ9cPjmdwf/npFxcINbUd/g4rLiInM7CaTkVijX37/uE4sQP++//8yFFsc6fU6zEbwzjS1qk+YVEpLoNW7ds2bJtLVZQOCD8AAAAMAYAnQEqGAATAD7tbq9SKaYkIqgIATAdiWwAsRvCnO4rvVVD0MkHZTAgkTnZ6qUWcX2VSg1qluM4AAD+waK3rgCBNqSMTpj+j/AaYhBEIVGcTIP5hHGtZY4qXcb/Klg75krk8U8sNalM/rgvG1nbW6nkrC8YnQT4z4qRf8ZeP8tQ0yqX+sdXVh4YmNxMIzn9bYey/7i4iPPpvz0hi0cMK4iIOkjnpIQtcrYhQ/qnyqqW+5SqQ6in54v/6o1MRdmGP7co2a+lRbTDciFcwMWivLdB+cdhlyII83vNbPYvfW1kaiXtm0Mb/LU0DIsD1q802wFb1hgtGC7QyrAA",
+      "dominantColor": null,
+      "officialUrl": "https://www.rockstargames.com/VI"
+    },
+    {
+      "slug": "grand-theft-auto-wordmark",
+      "title": "Grand Theft Auto Wordmark",
+      "kind": "image",
+      "category": "logos",
+      "tags": [
+        "logo",
+        "wordmark"
+      ],
+      "width": 839,
+      "height": 662,
+      "original": {
+        "url": "/media/logos/grand-theft-auto-wordmark/original.png",
+        "width": 839,
+        "height": 662,
+        "bytes": 16866,
+        "mimeType": "image/png",
+        "filename": "grand-theft-auto-wordmark.png",
+        "hasAlpha": true
+      },
+      "variants": [
+        {
+          "width": 480,
+          "height": 379,
+          "url": "/media/logos/grand-theft-auto-wordmark/w480.webp",
+          "bytes": 12726,
+          "format": "webp"
+        },
+        {
+          "width": 839,
+          "height": 662,
+          "url": "/media/logos/grand-theft-auto-wordmark/w839.webp",
+          "bytes": 21672,
+          "format": "webp"
+        }
+      ],
+      "blurDataUrl": "data:image/webp;base64,UklGRjwCAABXRUJQVlA4WAoAAAAQAAAAFwAAEgAAQUxQSOsAAAABgFvbtmrlvO+WUYB7xvgxITWQUQKDiJRB5ISkFPC9ASRyd3eHyOHe+87ZwdMSImICKGiEZnEZJ4v6a4VisVCbHqsWisViZWTmHk+ODwgCCp4dynY1xnY1xnYzCCwhiAAigud0JGIpYfFwFzzHySID7/fa3NVFcenyfG9iuD57cHr0AnGI0szKMDP4/jCVoyHYDm8W28Y/RakX4g8CwbcVpS74Fai+ChT/UYTyAXR2ABpXFtUdQXyAsd46ODraE6E8/Al+WilCFMZXEyViET/MALNLhChC3R7ugu8Gh0XpOShjNBaXgc1zQZGcAFZQOCAqAQAAMAYAnQEqGAATAD7tcLBSqaYkoqgIATAdiWgAnTKDL+0wF235QDHyDhbvRni0Ovmh5oA5xYKcZjgGAAD+mEI5Ge/xkc87KE4BoWJhguxlVb/c+kcDZuxqCqBCtpVU0b0yO3NCQle4dv5/1kE9z3JO4Ofct2I+iSPzKE2AW8iHNsDcE5mBoGxDaDrbYpBl+ndy3G/+VaC4yeZbq/b9S+Z2njp9pW0AV94FxXZRaOW1VAUBrqzaapdhdKwDdPrWYswaSP9uF5rYUpJghfA1ZHD+ZKlHl3r+Ki7WwVOywhpHtmUHeOH/Y2CPPJnCj5fGjtjmurYli1/MIX91hhE8awi0FkkOWkud/aEQvSnD1llYGuPtj4ViFWAR5vzMhsqidvS0ISX3o5gGZ7AAAA==",
+      "dominantColor": null,
+      "officialUrl": "https://www.rockstargames.com/VI"
+    },
+    {
+      "slug": "gta-art-deco-regular",
+      "title": "GTA Art Deco Regular",
+      "kind": "font",
+      "category": "fonts",
+      "tags": [
+        "font",
+        "typeface",
+        "art deco"
+      ],
+      "width": 1920,
+      "height": 1080,
+      "original": {
+        "url": "/media/fonts/gta-art-deco-regular/GTAArtDeco-Regular.ttf",
+        "bytes": 123052,
+        "mimeType": "font/ttf",
+        "filename": "GTAArtDeco-Regular.ttf"
+      },
+      "poster": {
+        "url": "/media/fonts/gta-art-deco-regular/specimen.png",
+        "width": 1920,
+        "height": 1080,
+        "bytes": 122658,
+        "mimeType": "image/png",
+        "filename": "specimen.png"
+      },
+      "font": {
+        "family": "GTA Art Deco Regular",
+        "style": "Regular",
+        "glyphs": 553,
+        "format": "TrueType"
+      },
+      "variants": [
+        {
+          "width": 480,
+          "height": 270,
+          "url": "/media/fonts/gta-art-deco-regular/w480.webp",
+          "bytes": 6670,
+          "format": "webp"
+        },
+        {
+          "width": 960,
+          "height": 540,
+          "url": "/media/fonts/gta-art-deco-regular/w960.webp",
+          "bytes": 17984,
+          "format": "webp"
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "url": "/media/fonts/gta-art-deco-regular/w1920.webp",
+          "bytes": 37386,
+          "format": "webp"
+        }
+      ],
+      "blurDataUrl": "data:image/webp;base64,UklGRlwAAABXRUJQVlA4IFAAAACwAwCdASoYAA4APu1iqU2ppaOiMAgBMB2JZQCw7CHOTaeJd+yAAAD+6/KHeJSNn+7KAzdnar6kRvmC5Kuwa0/u85S4ndOjAlcB3xyNl/bAAA==",
+      "dominantColor": "#281828"
+    },
+    {
+      "slug": "gta-art-deco-medium",
+      "title": "GTA Art Deco Medium",
+      "kind": "font",
+      "category": "fonts",
+      "tags": [
+        "font",
+        "typeface",
+        "art deco"
+      ],
+      "width": 1920,
+      "height": 1080,
+      "original": {
+        "url": "/media/fonts/gta-art-deco-medium/GTAArtDeco-Medium.ttf",
+        "bytes": 123748,
+        "mimeType": "font/ttf",
+        "filename": "GTAArtDeco-Medium.ttf"
+      },
+      "poster": {
+        "url": "/media/fonts/gta-art-deco-medium/specimen.png",
+        "width": 1920,
+        "height": 1080,
+        "bytes": 107287,
+        "mimeType": "image/png",
+        "filename": "specimen.png"
+      },
+      "font": {
+        "family": "GTA Art Deco Medium",
+        "style": "Regular",
+        "glyphs": 553,
+        "format": "TrueType"
+      },
+      "variants": [
+        {
+          "width": 480,
+          "height": 270,
+          "url": "/media/fonts/gta-art-deco-medium/w480.webp",
+          "bytes": 6032,
+          "format": "webp"
+        },
+        {
+          "width": 960,
+          "height": 540,
+          "url": "/media/fonts/gta-art-deco-medium/w960.webp",
+          "bytes": 16066,
+          "format": "webp"
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "url": "/media/fonts/gta-art-deco-medium/w1920.webp",
+          "bytes": 32062,
+          "format": "webp"
+        }
+      ],
+      "blurDataUrl": "data:image/webp;base64,UklGRmIAAABXRUJQVlA4IFYAAABwAwCdASoYAA4APu1iqU2ppaOiMAgBMB2JYwCw7B6vHXbWBoAA/uwH8kcioJyyrx205va/HHVrQgUxi1kQXHvkvM7QyVAd5zHqrtGvSYpQSqmWUwAAAA==",
+      "dominantColor": "#281828"
+    },
+    {
+      "slug": "gta-art-deco-bold",
+      "title": "GTA Art Deco Bold",
+      "kind": "font",
+      "category": "fonts",
+      "tags": [
+        "font",
+        "typeface",
+        "art deco"
+      ],
+      "width": 1920,
+      "height": 1080,
+      "original": {
+        "url": "/media/fonts/gta-art-deco-bold/GTAArtDeco-Bold.ttf",
+        "bytes": 123328,
+        "mimeType": "font/ttf",
+        "filename": "GTAArtDeco-Bold.ttf"
+      },
+      "poster": {
+        "url": "/media/fonts/gta-art-deco-bold/specimen.png",
+        "width": 1920,
+        "height": 1080,
+        "bytes": 99741,
+        "mimeType": "image/png",
+        "filename": "specimen.png"
+      },
+      "font": {
+        "family": "GTA Art Deco Bold",
+        "style": "Regular",
+        "glyphs": 553,
+        "format": "TrueType"
+      },
+      "variants": [
+        {
+          "width": 480,
+          "height": 270,
+          "url": "/media/fonts/gta-art-deco-bold/w480.webp",
+          "bytes": 5864,
+          "format": "webp"
+        },
+        {
+          "width": 960,
+          "height": 540,
+          "url": "/media/fonts/gta-art-deco-bold/w960.webp",
+          "bytes": 15352,
+          "format": "webp"
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "url": "/media/fonts/gta-art-deco-bold/w1920.webp",
+          "bytes": 29936,
+          "format": "webp"
+        }
+      ],
+      "blurDataUrl": "data:image/webp;base64,UklGRmoAAABXRUJQVlA4IF4AAADQAwCdASoYAA4APu1iqU2ppaOiMAgBMB2JYwCw7B6vFcAvt188BeAA/uwH8kcioJyyrx20AuTfb3ZqzCePDRcsF28spTCJQHnlioFW1lgUJE7p+78JJzrWTdCwQAAA",
+      "dominantColor": "#281828"
+    },
+    {
+      "slug": "gta-art-deco-condensed-bold",
+      "title": "GTA Art Deco Condensed Bold",
+      "kind": "font",
+      "category": "fonts",
+      "tags": [
+        "font",
+        "typeface",
+        "art deco"
+      ],
+      "width": 1920,
+      "height": 1080,
+      "original": {
+        "url": "/media/fonts/gta-art-deco-condensed-bold/GTAArtDeco-Condensed-Bold.ttf",
+        "bytes": 121572,
+        "mimeType": "font/ttf",
+        "filename": "GTAArtDeco-Condensed-Bold.ttf"
+      },
+      "poster": {
+        "url": "/media/fonts/gta-art-deco-condensed-bold/specimen.png",
+        "width": 1920,
+        "height": 1080,
+        "bytes": 100998,
+        "mimeType": "image/png",
+        "filename": "specimen.png"
+      },
+      "font": {
+        "family": "GTA Art Deco Condensed Bold",
+        "style": "Regular",
+        "glyphs": 553,
+        "format": "TrueType"
+      },
+      "variants": [
+        {
+          "width": 480,
+          "height": 270,
+          "url": "/media/fonts/gta-art-deco-condensed-bold/w480.webp",
+          "bytes": 5522,
+          "format": "webp"
+        },
+        {
+          "width": 960,
+          "height": 540,
+          "url": "/media/fonts/gta-art-deco-condensed-bold/w960.webp",
+          "bytes": 15206,
+          "format": "webp"
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "url": "/media/fonts/gta-art-deco-condensed-bold/w1920.webp",
+          "bytes": 30706,
+          "format": "webp"
+        }
+      ],
+      "blurDataUrl": "data:image/webp;base64,UklGRmIAAABXRUJQVlA4IFYAAACwAwCdASoYAA4APu1iqU2ppaOiMAgBMB2JZQC7ACHo+z4Dn/OGQAD+6/KRUjhHFDSI3Mpg22wAE/eegqmIDe/itiUIZdthlhX4SDJ+7eaLABNyYy8AAA==",
+      "dominantColor": "#281828"
+    }
+  ]
+}

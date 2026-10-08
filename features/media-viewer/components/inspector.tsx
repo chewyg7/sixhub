@@ -569,7 +569,7 @@ function InfoSection() {
   ];
   return (
     <Section id="info" title="Media info">
-      {media.item?.verification === "sample" && <p className="mb-2 rounded-md bg-warning/10 px-2.5 py-1.5 text-[11.5px] text-warning">Development sample — not official media.</p>}
+      {media.item?.verification === "community" && <p className="mb-2 rounded-md bg-warning/10 px-2.5 py-1.5 text-[11.5px] text-warning">Community made — not official Rockstar media.</p>}
       {!media.cors && (
         <p className="mb-2 rounded-md bg-surface-3 px-2.5 py-1.5 text-[11.5px] text-muted">
           This remote source blocks pixel access, so capture, crop export and colour picking are unavailable.

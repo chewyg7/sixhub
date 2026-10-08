@@ -1,21 +1,15 @@
-import type { MediaCategory, MediaCategorySlug } from "@/types/content";
+import type { MediaCategory } from "@/types/content";
 
 /**
- * Media categories. Adding a category here (and to `MediaCategorySlug`)
- * is all that's needed for it to appear in navigation, filters, the
- * archive routes (`/media/<slug>`) and the Media Viewer browser.
+ * Categories the database starts with. After the first run, owners manage
+ * categories in the admin panel; read them with getCategories().
  */
-export const MEDIA_CATEGORIES: MediaCategory[] = [
-  { slug: "screenshots", label: "Screenshots", singular: "Screenshot", order: 1, description: "Official in-game screenshots and frames taken from trailers." },
-  { slug: "artwork", label: "Official Artwork", singular: "Artwork", order: 2, description: "Key art, character art and illustrated promotional pieces." },
-  { slug: "videos", label: "Videos", singular: "Video", order: 3, description: "Trailers and other official video releases." },
-  { slug: "audio", label: "Audio", singular: "Audio", order: 4, description: "Music, soundtrack releases and other official audio." },
-  { slug: "logos", label: "Logos & Branding", singular: "Logo", order: 5, description: "Logos, wordmarks and brand marks." },
-  { slug: "promotional", label: "Promotional Material", singular: "Promotional asset", order: 6, description: "Social assets, banners, billboards and campaign material." },
+export const DEFAULT_CATEGORIES: MediaCategory[] = [
+  { slug: "screenshots", label: "Screenshots", singular: "Screenshot", order: 1, description: "Official in-game screenshots released by Rockstar Games." },
+  { slug: "screengrabs", label: "Screengrabs", singular: "Screengrab", order: 2, description: "Frames captured from the official trailers and the Rockstar website." },
+  { slug: "artwork", label: "Official Artwork", singular: "Artwork", order: 3, description: "Key art, character art, posters and illustrated pieces." },
+  { slug: "videos", label: "Videos", singular: "Video", order: 4, description: "Official trailers and gameplay presentations." },
+  { slug: "logos", label: "Logos", singular: "Logo", order: 5, description: "Official logos and marks." },
+  { slug: "fonts", label: "Fonts", singular: "Font", order: 6, description: "Typefaces in the Grand Theft Auto VI style." },
+  { slug: "promotional", label: "Promotional", singular: "Promotional asset", order: 7, description: "Merchandise, partnerships and campaign material." },
 ];
-
-export const CATEGORY_BY_SLUG = Object.fromEntries(MEDIA_CATEGORIES.map((c) => [c.slug, c])) as Record<MediaCategorySlug, MediaCategory>;
-
-export function isCategorySlug(value: string): value is MediaCategorySlug {
-  return value in CATEGORY_BY_SLUG;
-}

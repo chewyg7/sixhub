@@ -51,7 +51,7 @@ export default async function CollectionPage({ params }: PageProps<"/collections
           <div className="mt-10 max-w-3xl">
             <div className="flex flex-wrap gap-1.5">
               <Badge>{c.kind === "release" ? "Release" : "Curated"}</Badge>
-              {items.some((m) => m.verification === "sample") && <Badge tone="sample">Contains sample assets</Badge>}
+              {items.some((m) => m.verification === "community") && <Badge tone="sample">Includes community-made items</Badge>}
             </div>
             <h1 className="display-tight mt-4 text-[56px] sm:text-[84px]">{c.title}</h1>
             <p className="mt-4 text-[16px] leading-relaxed text-muted">{c.description}</p>

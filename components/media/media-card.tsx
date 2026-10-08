@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ScanSearch } from "lucide-react";
 import type { MediaItem } from "@/types/content";
-import { CATEGORY_BY_SLUG } from "@/data/categories";
+import { useCategory } from "@/components/site-data";
 import { cn } from "@/lib/cn";
 import { formatBytes, formatDate, formatDuration, formatResolution, resolutionTier } from "@/lib/format";
 import { buttonClass } from "@/components/ui/button";
@@ -42,7 +42,7 @@ export function MediaCard({ item, group, index, layout = "grid", sizes, priority
   const toast = useToast();
   const menu = useContextMenu();
   const tier = resolutionTier(item.width, item.height);
-  const category = CATEGORY_BY_SLUG[item.category];
+  const category = useCategory(item.category);
   const detailHref = `/media/${item.slug}`;
 
   const onContextMenu = (e: React.MouseEvent) =>
@@ -110,7 +110,7 @@ export function MediaCard({ item, group, index, layout = "grid", sizes, priority
         </div>
         <div className="hidden items-center gap-2 sm:flex">
           {tier && <Badge tone="outline">{tier}</Badge>}
-          {item.verification === "sample" && <Badge tone="sample">Sample</Badge>}
+          {item.verification === "community" && <Badge tone="sample">Community</Badge>}
         </div>
         {actions}
         {menu.element}
@@ -123,7 +123,7 @@ export function MediaCard({ item, group, index, layout = "grid", sizes, priority
       {preview}
       <div className="pointer-events-none absolute top-2 left-2 flex gap-1">
         {tier && layout !== "compact" && <Badge className="bg-black/55 text-white/90 backdrop-blur-sm">{tier}</Badge>}
-        {item.verification === "sample" && <Badge className="bg-black/55 text-[#f3c877] backdrop-blur-sm">Sample</Badge>}
+        {item.verification === "community" && <Badge className="bg-black/55 text-[#f3c877] backdrop-blur-sm">Community</Badge>}
       </div>
       {layout !== "compact" ? (
         <div className="mt-2.5 flex items-start justify-between gap-2">

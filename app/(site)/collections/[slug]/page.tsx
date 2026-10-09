@@ -14,7 +14,9 @@ import { formatDate, pluralize } from "@/lib/format";
 export async function generateStaticParams() {
   return (await getCollections()).map((c) => ({ slug: c.slug }));
 }
-export const dynamicParams = false;
+// Pages for entries added in the admin panel render on first visit. (With `false`, Next.js
+// 404s every path here after an admin save revalidates the site.)
+export const dynamicParams = true;
 
 export async function generateMetadata({ params }: PageProps<"/collections/[slug]">): Promise<Metadata> {
   const c = await getCollection((await params).slug);

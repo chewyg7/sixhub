@@ -17,7 +17,9 @@ import type { InfoSectionSlug } from "@/types/content";
 export async function generateStaticParams() {
   return (await getInfoEntries()).map((e) => ({ section: e.section, slug: e.slug }));
 }
-export const dynamicParams = false;
+// Pages for entries added in the admin panel render on first visit. (With `false`, Next.js
+// 404s every path here after an admin save revalidates the site.)
+export const dynamicParams = true;
 
 export async function generateMetadata({ params }: PageProps<"/info/[section]/[slug]">): Promise<Metadata> {
   const { section, slug } = await params;

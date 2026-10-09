@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { Feather, RotateCcw, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { gsap, prefersReducedMotion } from "@/lib/motion";
@@ -12,6 +12,20 @@ const QUALITY: { value: QualityPref; label: string; icon: typeof Sparkles; note:
   { value: "hifi", label: "HiFi", icon: Sparkles, note: "Every effect: liquid glass, depth and ambient light." },
   { value: "lofi", label: "LoFi", icon: Feather, note: "Lighter on your GPU and battery. Same site, fewer effects." },
 ];
+
+const REDUCE_QUERY = "(prefers-reduced-motion: reduce)";
+/** Whether the device itself asks for reduced motion (e.g. Windows "Animation effects" off). */
+function useDeviceReducesMotion(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      const mql = matchMedia(REDUCE_QUERY);
+      mql.addEventListener("change", cb);
+      return () => mql.removeEventListener("change", cb);
+    },
+    () => matchMedia(REDUCE_QUERY).matches,
+    () => false,
+  );
+}
 
 /** The HiFi / LoFi switch: a pill that slides between the two. */
 export function QualitySwitch({ className }: { className?: string }) {
@@ -105,6 +119,7 @@ function Segmented<T extends string>({ value, options, onChange, label }: { valu
 /** Site settings for this visitor, kept in their browser. Opens over the menu. */
 export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const prefs = usePreferences();
+  const deviceReduces = useDeviceReducesMotion();
   const [mode, setMode] = useClockMode();
   const [tz, setZone, local] = useLaunchZone();
   const panel = useRef<HTMLDivElement>(null);
@@ -151,6 +166,11 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
           </div>
           <div data-row>
             <Row label="Motion" hint="Follow your device, or override it here." stack>
+              {deviceReduces && prefs.motion === "system" && (
+                <p className="-mt-1 rounded-2xl bg-[#ffb84d]/12 px-3.5 py-2.5 text-[13px] leading-relaxed text-[#ffd699]">
+                  Your device asks websites to reduce motion, so the cursor, smooth scrolling and animations are off. Pick <strong>Full</strong> to turn them on.
+                </p>
+              )}
               <Segmented<MotionPref>
                 label="Motion"
                 value={prefs.motion}

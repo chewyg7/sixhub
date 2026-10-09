@@ -2,7 +2,8 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, KeyRound, ShieldCheck, ShieldOff, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { Copy, KeyRound, Pencil, ShieldCheck, ShieldOff, UserPlus } from "lucide-react";
 import { createMember, deleteMember, resetMemberPassword, setMemberDisabled, setMemberRole, signOutMember, type TeamState } from "@/app/chewy/(panel)/users/actions";
 import { Badge, Button, Card, ConfirmButton, Field, Input, Notice, Select, SubmitButton } from "./ui";
 import { Avatar } from "./shell";
@@ -112,6 +113,12 @@ export function TeamManager({ members }: { members: Member[] }) {
                   </span>
                 </p>
               </div>
+              <Link
+                href={m.isMe ? "/chewy/profile" : `/chewy/profile?user=${m.id}`}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-bold text-white/65 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <Pencil className="size-3.5" /> Edit profile
+              </Link>
             </div>
             {!m.isMe && (
               <div className="mt-4 flex flex-wrap gap-2 border-t border-white/8 pt-4">

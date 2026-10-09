@@ -8,16 +8,30 @@ import { currentSession, requireUser, revokeAllSessions, revokeSession } from "@
 import { newRecoveryCodes, verifyTotp } from "@/lib/auth/totp";
 import { LIMITS, recordFailure, userKey } from "@/lib/auth/throttle";
 import * as users from "@/lib/auth/users";
-import { run, str, type ActionState } from "@/lib/admin/action";
+import { bool, hrefField, jsonField, lines, run, str, type ActionState } from "@/lib/admin/action";
+import { Forbidden } from "@/lib/auth/session";
+import { getProfileSettings, saveProfileSettings } from "@/lib/profiles";
+import { mediaSlugExists } from "@/lib/db/content";
+import { revalidatePath } from "next/cache";
 
 export type SecurityState = ActionState & { recoveryCodes?: string[] };
 
 const optionalUrl = z.union([z.literal(""), z.string().url().max(300)]);
 
-export async function saveProfile(_: ActionState, f: FormData): Promise<ActionState> {
+/** You can edit your own profile; owners can edit anyone's. */
+async function profileTarget(targetId: string | null) {
+  const user = await requireUser();
+  if (!targetId || targetId === user.id) return { user, target: user };
+  if (user.role !== "owner") throw new Forbidden("You can only edit your own profile.");
+  const target = users.getUserById(targetId);
+  if (!target) throw new Error("That team member no longer exists.");
+  return { user, target };
+}
+
+export async function saveProfile(targetId: string | null, _: ActionState, f: FormData): Promise<ActionState> {
   return run(async () => {
-    const user = await requireUser();
-    users.updateProfile(user.id, {
+    const { user, target } = await profileTarget(targetId);
+    users.updateProfile(target.id, {
       displayName: z.string().min(1).max(60).parse(str(f, "displayName")),
       bio: z.string().max(500).parse(str(f, "bio")),
       links: {
@@ -26,18 +40,49 @@ export async function saveProfile(_: ActionState, f: FormData): Promise<ActionSt
         instagram: optionalUrl.parse(str(f, "instagram")),
         website: optionalUrl.parse(str(f, "website")),
       },
+      avatarUrl: target.avatarUrl,
     });
-    await audit(user, "profile.edit");
+    await audit(user, "profile.edit", target.id === user.id ? null : target.username);
+    revalidatePath("/team");
     return "Profile saved.";
   }, { revalidate: false });
 }
 
-export async function removeAvatar(): Promise<ActionState> {
+export async function removeAvatar(targetId: string | null): Promise<ActionState> {
   return run(async () => {
-    const user = await requireUser();
-    users.clearAvatar(user.id);
-    await audit(user, "profile.avatar.remove");
+    const { user, target } = await profileTarget(targetId);
+    users.clearAvatar(target.id);
+    await audit(user, "profile.avatar.remove", target.id === user.id ? null : target.username);
     return "Photo removed.";
+  }, { revalidate: false });
+}
+
+const PROFILE_LINK = z.object({ id: z.string().min(1).max(40), label: z.string().trim().min(1, "Every link needs a label").max(60), url: hrefField, featured: z.boolean().optional() });
+
+/** The public page at /@username: look, details, links and pinned uploads. */
+export async function savePublicProfile(targetId: string | null, _: ActionState, f: FormData): Promise<ActionState> {
+  return run(async () => {
+    const { user, target } = await profileTarget(targetId);
+    const banner = str(f, "bannerSlug");
+    if (banner && !mediaSlugExists(banner)) throw new Error("That cover image isn't in the archive any more.");
+    const pinned = lines(f, "pinned").slice(0, 6);
+    saveProfileSettings(target.id, {
+      ...getProfileSettings(target.id),
+      visible: bool(f, "visible"),
+      showContributions: bool(f, "showContributions"),
+      headline: z.string().trim().max(80).parse(str(f, "headline")),
+      pronouns: z.string().trim().max(30).parse(str(f, "pronouns")),
+      location: z.string().trim().max(50).parse(str(f, "location")),
+      accentHue: z.coerce.number().int().min(0).max(360).parse(str(f, "accentHue") || "325"),
+      theme: z.enum(["aurora", "sunset", "midnight", "mono"]).parse(str(f, "theme")),
+      buttonStyle: z.enum(["glass", "solid", "outline"]).parse(str(f, "buttonStyle")),
+      bannerSlug: banner,
+      links: jsonField(f, "links", z.array(PROFILE_LINK).max(20, "Up to 20 links")),
+      pinned: pinned.filter(mediaSlugExists),
+    });
+    await audit(user, "profile.public.edit", target.username);
+    revalidatePath("/team");
+    return `Saved. Live at /@${target.username}`;
   }, { revalidate: false });
 }
 

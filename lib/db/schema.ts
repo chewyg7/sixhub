@@ -141,4 +141,7 @@ export const MIGRATIONS: string[] = [
     created_by TEXT
   );
   `,
+  /* 4: public profiles (/@username) */ `
+  ALTER TABLE users ADD COLUMN profile TEXT NOT NULL DEFAULT '{}';
+  `,
 ];

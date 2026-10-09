@@ -27,7 +27,7 @@ export const maxDuration = 900;
 
 const list = z.array(z.string().trim().min(1).max(64)).max(40).default([]);
 const MetaSchema = z.discriminatedUnion("purpose", [
-  z.object({ purpose: z.literal("avatar") }),
+  z.object({ purpose: z.literal("avatar"), userId: z.string().max(80).optional() }),
   z.object({
     purpose: z.literal("media"),
     filename: z.string().max(200),
@@ -104,16 +104,20 @@ export async function POST(request: NextRequest) {
     /* ---- Avatar ---- */
     if (meta.purpose === "avatar") {
       if (kind.kind !== "image") throw new Error("Avatars must be images.");
+      // Your own photo, or (owners only) a team member's.
+      const target = meta.userId && meta.userId !== user.id ? getUserById(meta.userId) : user;
+      if (!target) throw new Error("That team member no longer exists.");
+      if (target.id !== user.id && user.role !== "owner") throw new Forbidden("You can only change your own photo.");
       const dir = path.join(UPLOAD_DIR, "avatars");
       await mkdir(dir, { recursive: true });
-      const name = `${user.id.slice(0, 8)}-${randomBytes(6).toString("hex")}.webp`;
+      const name = `${target.id.slice(0, 8)}-${randomBytes(6).toString("hex")}.webp`;
       // Re-encoding drops metadata and anything that isn't pixels.
-      const out = await sharp(tmp, { limitInputPixels: 50_000_000 }).rotate().resize(256, 256, { fit: "cover" }).webp({ quality: 85 }).toBuffer();
+      const out = await sharp(tmp, { limitInputPixels: 50_000_000 }).rotate().resize(512, 512, { fit: "cover" }).webp({ quality: 86 }).toBuffer();
       await writeFile(path.join(dir, name), out);
-      const old = getUserById(user.id)?.avatarUrl;
-      updateProfile(user.id, { displayName: user.displayName, bio: user.bio, links: user.links, avatarUrl: `/files/avatars/${name}` });
+      const old = target.avatarUrl;
+      updateProfile(target.id, { displayName: target.displayName, bio: target.bio, links: target.links, avatarUrl: `/files/avatars/${name}` });
       if (old?.startsWith("/files/avatars/")) await rm(path.join(dir, path.basename(old)), { force: true });
-      await audit(user, "profile.avatar");
+      await audit(user, "profile.avatar", target.id === user.id ? null : target.username);
       return Response.json({ url: `/files/avatars/${name}` });
     }
 

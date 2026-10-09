@@ -30,6 +30,7 @@ const COLUMNS = [
       { href: "/faq", label: "FAQ" },
       { href: "/discord", label: "Discord" },
       { href: "/about", label: "About" },
+      { href: "/team", label: "Team" },
       { href: "/contact", label: "Contact" },
       { href: "/privacy", label: "Privacy" },
       { href: "/library", label: "Your library" },

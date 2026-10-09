@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },
+  // Team profiles live at /@username (an "@" folder would be a parallel route, so it maps to /u/).
+  async rewrites() {
+    return [{ source: "/@:username", destination: "/u/:username" }];
+  },
 };
 
 export default nextConfig;

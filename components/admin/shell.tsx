@@ -25,6 +25,7 @@ import {
   Link2,
   ShieldCheck,
   Server,
+  HeartHandshake,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { logout } from "@/app/chewy/auth-actions";
@@ -50,6 +51,7 @@ const NAV: { href: string; label: string; icon: typeof Gauge; owner?: boolean; b
   { href: "/chewy/links", label: "Short links", icon: Link2, owner: true },
   { href: "/chewy/settings", label: "Site settings", icon: Settings2, owner: true },
   { href: "/chewy/users", label: "Team", icon: Users, owner: true, group: "Admin" },
+  { href: "/chewy/team-page", label: "Team page", icon: HeartHandshake, owner: true },
   { href: "/chewy/security", label: "Security", icon: ShieldCheck, owner: true },
   { href: "/chewy/system", label: "System & backups", icon: Server, owner: true },
   { href: "/chewy/audit", label: "Audit log", icon: ScrollText, owner: true },

@@ -343,6 +343,7 @@ function FullscreenMenu({ open, onClose, previews, links }: { open: boolean; onC
               ["Discord", "/discord"],
               ["Your library", "/library"],
               ["About", "/about"],
+              ["Team", "/team"],
               ["Contact", "/contact"],
             ].map(([l, h]) => (
               <Link key={h} href={h} onClick={onClose} className="transition-colors hover:text-white">

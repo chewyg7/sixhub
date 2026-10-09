@@ -236,7 +236,8 @@ export function startImport(requests: ImportRequest[], user: { id: string; usern
                   credit: "Rockstar Games",
                   verification: "official",
                 },
-                { originKey: key, status: "published" },
+                // Credited to whoever ran the import (shows on their profile).
+                { originKey: key, status: "published", createdBy: user.id },
               );
               added.push(slug);
               job.added++;

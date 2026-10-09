@@ -210,7 +210,7 @@ export function Transport() {
   const fps = useViewer((s) => s.a?.meta.fps ?? 30);
   const pip = usePipSupported();
   const actions = useViewerActions();
-  if (!media || media.kind === "image") return null;
+  if (!media || (media.kind !== "video" && media.kind !== "audio")) return null;
   const isVideo = media.kind === "video";
 
   return (

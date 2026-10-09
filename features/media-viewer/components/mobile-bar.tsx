@@ -22,9 +22,11 @@ export function MobileViewerBar({ onBrowse, onTools, onOpenFile }: { onBrowse: (
   const setTool = useViewer((s) => s.setTool);
   const setCompare = useViewer((s) => s.setCompare);
   const actions = useViewerActions();
-  const visual = media && media.kind !== "audio";
+  const visual = media && media.kind !== "audio" && media.kind !== "font";
   const sub = media
-    ? [media.kind === "video" ? "Video" : media.kind === "audio" ? "Audio" : "Image", media.meta.width ? formatResolution(media.meta.width, media.meta.height) : null].filter(Boolean).join(" · ")
+    ? media.kind === "font"
+      ? ["Font", media.item?.font?.style].filter(Boolean).join(" · ")
+      : [media.kind === "video" ? "Video" : media.kind === "audio" ? "Audio" : "Image", media.meta.width ? formatResolution(media.meta.width, media.meta.height) : null].filter(Boolean).join(" · ")
     : "Pick something to view";
 
   return (
@@ -40,7 +42,7 @@ export function MobileViewerBar({ onBrowse, onTools, onOpenFile }: { onBrowse: (
         <button type="button" onClick={onBrowse} aria-label="Add from the archive" className={`${pill} bg-[image:var(--sunset)] shadow-[0_6px_18px_-6px_rgb(255_79_163/0.9)]`}>
           <Plus className="size-[22px]" strokeWidth={2.4} />
         </button>
-        {media && (
+        {visual && (
           <button type="button" onClick={onTools} aria-label="Tools" className={`${pill} text-white/80`}>
             <SlidersHorizontal className="size-[20px]" />
           </button>

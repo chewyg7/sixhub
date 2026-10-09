@@ -10,7 +10,7 @@ export function StatusBar() {
   const pixelated = useViewer((s) => s.pixelated);
   const tool = useViewer((s) => s.tool);
   const view = useConcreteView("a");
-  if (!media || media.kind === "audio") return null;
+  if (!media || media.kind === "audio" || media.kind === "font") return null;
   const { width: w, height: h } = media.meta;
   const zoom = view ? view.scale * 100 : 0;
   return (

@@ -112,7 +112,7 @@ export function Toolbar({ onOpenFile, onOpenSheet, fullscreen }: Props) {
   const rotate = useViewer((s) => s.rotate);
   const set = useViewer((s) => s.set);
   const actions = useViewerActions();
-  const visual = media && media.kind !== "audio";
+  const visual = media && media.kind !== "audio" && media.kind !== "font";
 
   return (
     <div className="flex h-11 shrink-0 items-center gap-1 border-b border-divider bg-surface px-1.5 sm:px-2" role="toolbar" aria-label="Viewer tools">

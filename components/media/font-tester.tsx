@@ -148,7 +148,22 @@ function Chip({ active, onClick, children, label }: { active: boolean; onClick: 
  * size, spacing, case, alignment and colours, see it as a waterfall, or
  * browse its glyphs. Styles of the same family switch in place.
  */
-export function FontTester({ item, styles = [item], onPickStyle, className, fill }: { item: MediaItem; styles?: MediaItem[]; onPickStyle?: (m: MediaItem) => void; className?: string; fill?: boolean }) {
+export function FontTester({
+  item,
+  styles = [item],
+  onPickStyle,
+  className,
+  fill,
+  bare,
+}: {
+  item: MediaItem;
+  styles?: MediaItem[];
+  onPickStyle?: (m: MediaItem) => void;
+  className?: string;
+  fill?: boolean;
+  /** No card frame (when embedded in another surface, e.g. the Media Viewer). */
+  bare?: boolean;
+}) {
   const t = useTester();
   const status = useFontReady(item);
   const [view, setView] = useState<"type" | "waterfall" | "glyphs">("type");
@@ -168,7 +183,7 @@ export function FontTester({ item, styles = [item], onPickStyle, className, fill
   }, [t.text, t.size, t.leading, t.tracking, status, view, item.slug]);
 
   return (
-    <div className={cn("flex min-h-0 flex-col overflow-hidden rounded-[22px] border border-white/10 bg-[#120e17] text-white", fill && "h-full", className)}>
+    <div className={cn("flex min-h-0 flex-col overflow-hidden text-white", bare ? "bg-canvas" : "rounded-[22px] border border-white/10 bg-[#120e17]", fill && "h-full", className)}>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-white/8 px-4 py-3 sm:px-5">
         <div role="tablist" aria-label="View" className="flex rounded-2xl bg-white/[0.06] p-1">

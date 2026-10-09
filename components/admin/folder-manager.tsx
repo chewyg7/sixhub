@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState, useTransition, type DragEvent } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Folder, FolderPlus, GripVertical, Pencil } from "lucide-react";
-import { deleteFolderAction, moveFolderAction, moveItemsAction, saveFolderAction } from "@/app/chewy/(panel)/folders/actions";
+import { applyFolderChanges, deleteFolderAction, saveFolderAction } from "@/app/chewy/(panel)/folders/actions";
 import type { ActionState } from "@/lib/admin/action";
 import type { FolderOption } from "@/lib/admin/folders";
 import type { MediaFolder } from "@/types/content";
@@ -85,14 +85,19 @@ const PAGE = 40;
  * The archive's folder tree with drag and drop. Drag a folder onto another to
  * move it inside, or onto "Top level". Expand a folder to see the items filed
  * directly in it; drag one (or a selection) onto any folder, or onto
- * "Unfiled". Moves show instantly and are saved in the background.
+ * "Unfiled". Moves are previewed straight away and only saved when you press
+ * Save changes (Discard puts everything back).
  */
 export function FolderManager({ rows: serverRows, items: serverItems, options }: { rows: FolderRow[]; items: FolderItem[]; options: FolderOption[] }) {
   const router = useRouter();
-  // Local copy for instant feedback; replaced whenever the server sends fresh data.
-  const [data, setData] = useState({ rows: serverRows, items: serverItems, src: serverRows, srcItems: serverItems });
-  if (data.src !== serverRows || data.srcItems !== serverItems) setData({ rows: serverRows, items: serverItems, src: serverRows, srcItems: serverItems });
-  const { rows, items } = data;
+  // Unsaved moves, layered over what the server sent. Folder moves keep their drag order.
+  const [pending, setPending] = useState<{ folders: [string, string | null][]; items: Record<string, string> }>({ folders: [], items: {} });
+  const rows = useMemo(() => {
+    const to = new Map(pending.folders);
+    return serverRows.map((r) => (to.has(r.id) ? { ...r, parentId: to.get(r.id) ?? null } : r));
+  }, [serverRows, pending.folders]);
+  const items = useMemo(() => serverItems.map((i) => (i.slug in pending.items ? { ...i, folderId: pending.items[i.slug] } : i)), [serverItems, pending.items]);
+  const changeCount = pending.folders.length + Object.keys(pending.items).length;
 
   const [editing, setEditing] = useState<string | null>(null);
   const [creatingIn, setCreatingIn] = useState<string | null | undefined>(undefined);
@@ -133,9 +138,24 @@ export function FolderManager({ rows: serverRows, items: serverItems, options }:
     return true;
   };
 
-  const finish = (result: ActionState) => {
-    setMsg(result);
-    router.refresh();
+  // Don't lose unsaved moves by navigating away.
+  useEffect(() => {
+    if (!changeCount) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [changeCount]);
+
+  const save = () =>
+    start(async () => {
+      const result = await applyFolderChanges({ folders: pending.folders, items: Object.entries(pending.items) });
+      setMsg(result);
+      if (result.ok) setPending({ folders: [], items: {} });
+      router.refresh();
+    });
+  const discard = () => {
+    setPending({ folders: [], items: {} });
+    setMsg({});
   };
 
   const drop = (target: string) => {
@@ -144,17 +164,25 @@ export function FolderManager({ rows: serverRows, items: serverItems, options }:
     setOver(null);
     window.clearTimeout(expandTimer.current);
     if (!d || !accepts(target)) return;
+    setMsg({});
     if (d.type === "folder") {
       const parentId = target === ROOT ? null : target;
-      setData((x) => ({ ...x, rows: x.rows.map((r) => (r.id === d.id ? { ...r, parentId } : r)) }));
+      const original = serverRows.find((r) => r.id === d.id)?.parentId ?? null;
+      // Moving a folder back where it started cancels the change.
+      setPending((p) => ({ ...p, folders: [...p.folders.filter(([id]) => id !== d.id), ...(parentId === original ? [] : [[d.id, parentId] as [string, string | null]])] }));
       if (parentId) toggleOpen(parentId, true);
-      start(async () => finish(await moveFolderAction(d.id, parentId)));
     } else {
       const folderId = target === UNFILED ? "" : target;
-      setData((x) => ({ ...x, items: x.items.map((i) => (d.slugs.includes(i.slug) ? { ...i, folderId } : i)) }));
+      setPending((p) => {
+        const next = { ...p.items };
+        for (const slug of d.slugs) {
+          if ((serverItems.find((i) => i.slug === slug)?.folderId ?? "") === folderId) delete next[slug];
+          else next[slug] = folderId;
+        }
+        return { ...p, items: next };
+      });
       setSelected(new Set());
       if (folderId) toggleOpen(folderId, true);
-      start(async () => finish(await moveItemsAction(d.slugs, folderId)));
     }
   };
 
@@ -377,7 +405,7 @@ export function FolderManager({ rows: serverRows, items: serverItems, options }:
       <Notice tone="error">{msg.error}</Notice>
       <Card
         title="Folder tree"
-        description="Drag a folder onto another to move it inside. Open a folder to see its items, click to select several, and drag them anywhere."
+        description="Drag a folder onto another to move it inside. Open a folder to see its items, click to select several, and drag them anywhere. Then press Save changes."
         actions={
           <div className="flex items-center gap-2">
             {selected.size > 0 && (
@@ -409,8 +437,23 @@ export function FolderManager({ rows: serverRows, items: serverItems, options }:
             {open.has(UNFILED) && itemList("")}
           </div>
         )}
-        {busy && <p className="mt-3 text-[12.5px] text-white/40">Saving…</p>}
       </Card>
+      {changeCount > 0 && (
+        <div className="sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-accent/40 bg-[#1a1020]/95 px-4 py-3 shadow-[0_20px_50px_-20px_rgb(0_0_0/0.9)] backdrop-blur">
+          <p className="text-[14px] font-bold">
+            {changeCount} unsaved change{changeCount === 1 ? "" : "s"}
+            <span className="ml-2 font-normal text-white/50">Nothing moves on the site until you save.</span>
+          </p>
+          <div className="flex gap-2">
+            <Button tone="ghost" size="sm" onClick={discard} disabled={busy}>
+              Discard
+            </Button>
+            <Button tone="primary" size="sm" onClick={save} disabled={busy}>
+              {busy ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

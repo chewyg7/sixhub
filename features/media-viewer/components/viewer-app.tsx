@@ -25,6 +25,7 @@ import { Inspector } from "./inspector";
 import { ShortcutsDialog } from "./shortcuts-dialog";
 import { EmptyViewer } from "./empty-viewer";
 import { MobileViewerBar } from "./mobile-bar";
+import { FontTester, familyStyles } from "@/components/media/font-tester";
 
 const isTyping = (t: EventTarget | null) => {
   const el = t as HTMLElement | null;
@@ -254,7 +255,12 @@ export function ViewerApp({ items }: { items: MediaItem[] }) {
 
           <div className="relative min-h-0 flex-1">
             {!fullscreen && <MobileViewerBar onBrowse={() => setSheet("browser")} onTools={() => setSheet("tools")} onOpenFile={() => openFile("a")} />}
-            {a ? (
+            {a && a.kind === "font" && a.item ? (
+              // Fonts: a live type tester in place of the image stage; switching styles opens them here.
+              <div className="absolute inset-0 pt-[calc(env(safe-area-inset-top)+76px)] lg:pt-0">
+                <FontTester item={a.item} styles={familyStyles(a.item, items)} onPickStyle={(m) => actions.openArchive(m)} fill bare />
+              </div>
+            ) : a ? (
               <div className={cn("absolute inset-0 flex", side && "flex-col md:flex-row")}>
                 <div className="relative min-h-0 min-w-0 flex-1">
                   <Stage pane="a" overlay={overlay} label={side ? `A · ${a.title}` : undefined} />
@@ -349,7 +355,7 @@ export function ViewerApp({ items }: { items: MediaItem[] }) {
           </div>
         </main>
 
-        {showPanels && panels.inspector && a && (
+        {showPanels && panels.inspector && a && a.kind !== "font" && (
           <>
             <ResizeHandle side="right" value={panels.inspectorW} min={260} max={460} onChange={(w) => setPanels({ inspectorW: w })} />
             <aside aria-label="Inspector" className="hidden shrink-0 overflow-y-auto border-l border-divider bg-surface lg:block" style={{ width: panels.inspectorW }}>

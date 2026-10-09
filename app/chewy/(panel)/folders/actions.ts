@@ -49,33 +49,34 @@ export async function deleteFolderAction(id: string): Promise<ActionState> {
   });
 }
 
-/** Drag and drop: moves a folder inside another folder (or to the top level when `parentId` is null). */
-export async function moveFolderAction(id: string, parentId: string | null): Promise<ActionState> {
+/** Saves a batch of pending drag-and-drop moves from the folder editor. */
+export async function applyFolderChanges(changes: { folders: [string, string | null][]; items: [string, string][] }): Promise<ActionState> {
   return run(async () => {
     const user = await requireOwner();
-    const f = repo.getFolder(id);
-    if (!f) throw new Error("That folder no longer exists.");
-    if (parentId && !repo.getFolder(parentId)) throw new Error("The target folder no longer exists.");
-    if ((f.parentId ?? null) === parentId) return `${f.name} is already there.`;
-    const siblings = repo.listFolders().filter((x) => (x.parentId ?? null) === parentId);
-    if (siblings.some((x) => x.slug === f.slug)) throw new Error(`There's already a folder called “${f.slug}” there. Rename one first.`);
-    // saveFolder refuses moves into the folder itself or its own sub-folders.
-    repo.saveFolder({ ...f, parentId, sort: siblings.length });
-    const target = parentId ? repo.getFolder(parentId)?.name : "the top level";
-    await audit(user, "folder.move", id, { to: parentId ?? "(top level)" });
-    return `Moved ${f.name} to ${target}.`;
-  });
-}
-
-/** Drag and drop: files media items into a folder ("" = unfiled). */
-export async function moveItemsAction(slugs: string[], folderId: string): Promise<ActionState> {
-  return run(async () => {
-    const user = await requireOwner();
-    const list = z.array(z.string().min(1).max(120)).min(1).max(2000).parse(slugs);
-    if (folderId && !repo.getFolder(folderId)) throw new Error("The target folder no longer exists.");
-    repo.moveMedia(list, folderId);
-    const target = folderId ? repo.getFolder(folderId)?.name : "Unfiled";
-    await audit(user, "media.move", folderId || "(unfiled)", { count: list.length, items: list.slice(0, 20) });
-    return `Moved ${list.length} item${list.length === 1 ? "" : "s"} to ${target}.`;
+    const c = z
+      .object({
+        folders: z.array(z.tuple([z.string().min(1).max(200), z.string().max(200).nullable()])).max(500),
+        items: z.array(z.tuple([z.string().min(1).max(120), z.string().max(200)])).max(5000),
+      })
+      .parse(changes);
+    // Folders first (in the order they were dragged), so items can go into folders that just moved.
+    for (const [id, parentId] of c.folders) {
+      const f = repo.getFolder(id);
+      if (!f) throw new Error("A folder you moved no longer exists. Reload and try again.");
+      if (parentId && !repo.getFolder(parentId)) throw new Error("A target folder no longer exists. Reload and try again.");
+      if ((f.parentId ?? null) === parentId) continue;
+      const siblings = repo.listFolders().filter((x) => (x.parentId ?? null) === parentId);
+      if (siblings.some((x) => x.slug === f.slug)) throw new Error(`There's already a folder called “${f.slug}” where you moved ${f.name}. Rename one first.`);
+      repo.saveFolder({ ...f, parentId, sort: siblings.length });
+    }
+    const byTarget = new Map<string, string[]>();
+    for (const [slug, folderId] of c.items) byTarget.set(folderId, [...(byTarget.get(folderId) ?? []), slug]);
+    for (const [folderId, slugs] of byTarget) {
+      if (folderId && !repo.getFolder(folderId)) throw new Error("A target folder no longer exists. Reload and try again.");
+      repo.moveMedia(slugs, folderId);
+    }
+    await audit(user, "folders.reorganise", null, { folders: c.folders.length, items: c.items.length });
+    const parts = [c.folders.length && `${c.folders.length} folder${c.folders.length === 1 ? "" : "s"}`, c.items.length && `${c.items.length} item${c.items.length === 1 ? "" : "s"}`].filter(Boolean);
+    return `Saved. Moved ${parts.join(" and ")}.`;
   });
 }

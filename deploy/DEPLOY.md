@@ -52,9 +52,10 @@ chmod 440 /etc/sudoers.d/gtasixhub
 ## 3. Get the code and configure it
 
 ```bash
-sudo -u gtasixhub git clone https://github.com/chewyg7/sixhub.git /srv/gtasixhub
+sudo -u gtasixhub git clone --depth 1 https://github.com/chewyg7/sixhub.git /srv/gtasixhub
 cp /srv/gtasixhub/deploy/gtasixhub.env.example /etc/gtasixhub.env
-chmod 600 /etc/gtasixhub.env
+# Readable by root and the app user only (the deploy script runs as gtasixhub and loads it).
+chown root:gtasixhub /etc/gtasixhub.env && chmod 640 /etc/gtasixhub.env
 # Generate the two secrets and put them in the file:
 sed -i "s|^AUTH_SECRET=.*|AUTH_SECRET=$(openssl rand -base64 32)|" /etc/gtasixhub.env
 sed -i "s|^NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=.*|NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=$(openssl rand -base64 32)|" /etc/gtasixhub.env
@@ -76,7 +77,7 @@ cp /srv/gtasixhub/deploy/gtasixhub.service /etc/systemd/system/
 systemctl daemon-reload && systemctl enable gtasixhub
 sudo -u gtasixhub /srv/gtasixhub/deploy/deploy.sh
 systemctl status gtasixhub --no-pager   # should say "active (running)"
-curl -sI http://127.0.0.1:3000 | head -1   # should print HTTP/1.1 200 OK
+curl -sI http://127.0.0.1:3100 | head -1   # should print HTTP/1.1 200 OK
 ```
 
 The first build creates the database and fills it with the archive. It takes a

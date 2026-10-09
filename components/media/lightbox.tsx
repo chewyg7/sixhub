@@ -17,6 +17,7 @@ import { ZoomableImage, type ZoomHandle } from "./zoomable-image";
 import { VideoPlayer } from "./player/video-player";
 import { AudioPlayer } from "./player/audio-player";
 import { FontTester, familyStyles } from "./font-tester";
+import { SaveMediaButton } from "./save-media";
 import { FavoriteButton } from "./favorite-button";
 import { MediaThumb } from "./media-thumb";
 import { viewerHref } from "./media-links";
@@ -28,7 +29,7 @@ interface Props {
   onClose: () => void;
 }
 
-export function Lightbox({ items, index, onIndexChange, onClose }: Props) {
+export function Lightbox({ items, index, onIndexChange, onClose: closeNow }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const zoom = useRef<ZoomHandle>(null);
   const strip = useRef<HTMLDivElement>(null);
@@ -42,6 +43,23 @@ export function Lightbox({ items, index, onIndexChange, onClose }: Props) {
   const go = useCallback((d: number) => onIndexChange((index + d + count) % count), [index, count, onIndexChange]);
 
   useEffect(() => lockScroll(), []);
+
+  // Open = one history step, so the phone's back gesture / the browser's Back closes it.
+  // Next.js's own history state is kept so its router treats going back as staying on this page.
+  const closeNowRef = useRef(closeNow);
+  useEffect(() => {
+    closeNowRef.current = closeNow;
+  }, [closeNow]);
+  useEffect(() => {
+    window.history.pushState({ ...window.history.state, ghLightbox: true }, "");
+    const onPop = () => closeNowRef.current();
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  const onClose = useCallback(() => {
+    if (window.history.state?.ghLightbox) window.history.back();
+    else closeNow();
+  }, [closeNow]);
   useEffect(() => library.recordView(item.slug), [item.slug]);
 
   // Preload neighbours' display variants for instant navigation.
@@ -130,8 +148,8 @@ export function Lightbox({ items, index, onIndexChange, onClose }: Props) {
       aria-label={`${item.title} — ${index + 1} of ${count}`}
       className="fixed inset-0 z-[800] flex animate-fade-in flex-col bg-[rgb(8_8_9/0.96)] text-white [--text-muted:#a4a39f] [--text:#f2f1ee]"
     >
-      {/* Top bar */}
-      <header className="flex h-14 shrink-0 items-center gap-3 px-3 sm:px-4">
+      {/* Top bar (below the status bar / notch when installed as an app) */}
+      <header className="flex h-[calc(env(safe-area-inset-top)+56px)] shrink-0 items-center gap-3 px-3 pt-[env(safe-area-inset-top)] sm:px-4">
         <span className="tabular min-w-[4.5rem] font-mono text-[12px] text-white/55">
           {index + 1} / {count}
         </span>
@@ -142,6 +160,9 @@ export function Lightbox({ items, index, onIndexChange, onClose }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-0.5 [&_a]:text-white/85 [&_button]:text-white/85">
+          {item.downloadable && (
+            <SaveMediaButton item={item} label={false} className="flex size-10 items-center justify-center rounded-full transition-colors hover:bg-white/10" />
+          )}
           <FavoriteButton slug={item.slug} title={item.title} size="icon" />
           <IconButton label="Media information" shortcut="I" pressed={infoOpen} onClick={() => setInfoOpen((o) => !o)}>
             <Info />
@@ -151,12 +172,12 @@ export function Lightbox({ items, index, onIndexChange, onClose }: Props) {
           </IconButton>
           {item.kind !== "font" && (
             <>
-              <Link href={viewerHref(item.slug)} onClick={onClose} className={buttonClass({ variant: "ghost", size: "sm", className: "hidden hover:bg-white/10 md:inline-flex" })}>
+              <Link href={viewerHref(item.slug)} onClick={closeNow} className={buttonClass({ variant: "ghost", size: "sm", className: "hidden hover:bg-white/10 md:inline-flex" })}>
                 <ScanSearch /> Open in Viewer
               </Link>
               <Link
                 href={viewerHref(item.slug)}
-                onClick={onClose}
+                onClick={closeNow}
                 aria-label="Open in Media Viewer"
                 className={buttonClass({ variant: "ghost", size: "icon", className: "md:hidden" })}
               >
@@ -182,7 +203,10 @@ export function Lightbox({ items, index, onIndexChange, onClose }: Props) {
             swipe.current = null;
             if (!s || zoomed || item.kind !== "image") return;
             const dx = e.clientX - s.x;
-            if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(e.clientY - s.y) * 1.5) go(dx < 0 ? 1 : -1);
+            const dy = e.clientY - s.y;
+            // Sideways: next / previous. Downwards: close, like the Photos app.
+            if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1);
+            else if (dy > 110 && dy > Math.abs(dx) * 1.5) onClose();
           }}
         >
           <div key={item.slug} className="absolute inset-0 animate-fade-in">
@@ -265,7 +289,7 @@ export function Lightbox({ items, index, onIndexChange, onClose }: Props) {
             <div className="mt-6 flex flex-col gap-2">
               <Link
                 href={`/media/${item.slug}`}
-                onClick={onClose}
+                onClick={closeNow}
                 className={buttonClass({ variant: "secondary", size: "sm", className: "justify-start bg-white/10 text-white hover:bg-white/15" })}
               >
                 View details, tags &amp; related media
@@ -285,7 +309,7 @@ export function Lightbox({ items, index, onIndexChange, onClose }: Props) {
 
       {/* Filmstrip */}
       {count > 1 && (
-        <div ref={strip} className="no-scrollbar flex h-[76px] shrink-0 items-center gap-1.5 overflow-x-auto px-4 pt-2 pb-3" role="listbox" aria-label="Media in this set">
+        <div ref={strip} className="no-scrollbar flex h-[calc(env(safe-area-inset-bottom)+76px)] shrink-0 items-center gap-1.5 overflow-x-auto px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+12px)]" role="listbox" aria-label="Media in this set">
           {items.map((m, i) => (
             <button
               key={m.slug}

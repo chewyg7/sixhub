@@ -14,6 +14,7 @@ import { ZoomableImage, type ZoomHandle } from "./zoomable-image";
 import { VideoPlayer } from "./player/video-player";
 import { AudioPlayer } from "./player/audio-player";
 import { FontTester, familyStyles } from "./font-tester";
+import { SaveMediaButton } from "./save-media";
 import { FavoriteButton } from "./favorite-button";
 import { AddToCollection } from "./add-to-collection";
 import { useLightbox } from "./lightbox-context";
@@ -95,10 +96,14 @@ export function MediaActions({ item }: { item: MediaItem }) {
       <FavoriteButton slug={item.slug} title={item.title} variant="secondary" size="icon" />
       <AddToCollection slug={item.slug} title={item.title} iconOnly size="icon" />
       {item.downloadable && (
+        // Phones: Save opens the share sheet (Save Image / Save to device).
+        <SaveMediaButton item={item} className={buttonClass({ variant: "primary", className: "lg:hidden" })} />
+      )}
+      {item.downloadable && (
         <a
           href={item.original.url}
           download={item.original.filename}
-          className={buttonClass({ variant: "secondary", size: "icon" })}
+          className={buttonClass({ variant: "secondary", size: "icon", className: "hidden lg:inline-flex" })}
           aria-label={`Download original (${item.original.filename})`}
           title="Download original"
         >

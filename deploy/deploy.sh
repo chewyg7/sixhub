@@ -11,7 +11,8 @@ source /etc/gtasixhub.env
 set +a
 
 git pull --ff-only
-npm ci --no-audit --no-fund
+# Build tools are devDependencies; NODE_ENV=production (from the env file) would skip them.
+npm ci --include=dev --no-audit --no-fund
 npm run build
 sudo systemctl restart gtasixhub
 echo "Deployed $(git rev-parse --short HEAD)."

@@ -8,7 +8,7 @@ import { Field, Input, Notice, SubmitButton } from "./ui";
 export function AuthCard({ title, subtitle, children }: { title: ReactNode; subtitle?: ReactNode; children: ReactNode }) {
   return (
     <main className="relative grid min-h-svh place-items-center overflow-hidden bg-[#0b0910] px-4 py-10 text-white">
-      <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(255_79_163/0.22),transparent)]" />
+      <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[min(900px,100vw)] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(255_79_163/0.22),transparent)]" />
       <div className="relative w-full max-w-[420px] rounded-[32px] border border-white/10 bg-white/[0.04] p-7 shadow-[0_40px_120px_-40px_rgb(0_0_0/0.9)] backdrop-blur-xl sm:p-9">
         {/* eslint-disable-next-line @next/next/no-img-element -- brand mark */}
         <img src="/brand/logo-480.webp" alt="GTA 6 Hub" className="mb-7 h-12 w-auto" />

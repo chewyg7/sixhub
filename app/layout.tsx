@@ -43,15 +43,18 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: { type: "website", siteName: SITE.name, url: SITE.url, title: site.title, description: site.description },
     twitter: { card: "summary_large_image", title: site.title, description: site.description },
     alternates: { canonical: "/" },
+    // Installed to the home screen: full screen, status bar over the page.
+    appleWebApp: { capable: true, title: "GTA 6 Hub", statusBarStyle: "black-translucent" },
+    // Older iPhones (iOS 16 and below) only go full screen with the Apple-specific tag.
+    other: { "apple-mobile-web-app-capable": "yes" },
   };
 }
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#0e0c12" },
-    { media: "(prefers-color-scheme: light)", color: "#f5f4f1" },
-  ],
+  themeColor: "#0b0910",
   colorScheme: "dark light",
+  // Lets the page draw under the notch / home indicator (padded with safe-area insets).
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

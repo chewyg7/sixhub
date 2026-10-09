@@ -105,7 +105,8 @@ export default async function HomePage() {
       ),
     viewer: () =>
       still && (
-        <Container wide className="mt-20 sm:mt-28">
+        // The Viewer promo is a desktop pitch (frame stepping, pixel zoom); phones get the tab bar's Viewer button.
+        <Container wide className="mt-20 hidden sm:mt-28 lg:block">
           <ViewerPromo still={still} picks={picks} />
         </Container>
       ),

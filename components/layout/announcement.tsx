@@ -33,7 +33,7 @@ export function Announcement() {
   const cls = "group flex min-w-0 items-center gap-2.5 py-2 pl-4 text-[13.5px] font-bold text-white";
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-[92px] z-40 flex justify-center px-4 sm:top-[104px]">
+    <div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+12px)] z-40 flex justify-center px-4 lg:top-[104px]">
       <div className="pointer-events-auto flex max-w-[min(640px,100%)] animate-fade-in items-center rounded-full border border-white/12 bg-[#140c1c]/70 shadow-[0_16px_40px_-16px_rgb(0_0_0/0.8)] backdrop-blur-xl">
         {announcement.href ? (
           external ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Columns2, FolderOpen, Link2, Search, X } from "lucide-react";
 import type { MediaCategorySlug, MediaItem } from "@/types/content";
 import { useCategories } from "@/components/site-data";
@@ -43,6 +43,21 @@ export function BrowserPanel({ items, onOpenFile, onPicked }: Props) {
       })
       .sort((a, b) => b.dateAdded.localeCompare(a.dateAdded));
   }, [items, query, category]);
+
+  // Render in pages: a thousand thumbnails at once is enough to make iOS Safari reload the tab.
+  const PAGE = 60;
+  const filterKey = `${query}|${category}`;
+  const [paging, setPaging] = useState({ key: filterKey, limit: PAGE });
+  if (paging.key !== filterKey) setPaging({ key: filterKey, limit: PAGE });
+  const shown = list.slice(0, paging.limit);
+  const sentinel = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && setPaging((p) => ({ ...p, limit: p.limit + PAGE })), { rootMargin: "600px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [paging.limit, list.length]);
 
   const pick = (m: MediaItem, pane: "a" | "b") => {
     actions.openArchive(m, pane);
@@ -127,7 +142,7 @@ export function BrowserPanel({ items, onOpenFile, onPicked }: Props) {
           <p className="px-1 py-8 text-center text-[12.5px] text-muted">No media matches.</p>
         ) : (
           <ul className="grid grid-cols-2 gap-2" aria-label="Media">
-            {list.map((m) => {
+            {shown.map((m) => {
               const isA = activeA === m.slug;
               const isB = activeB === m.slug;
               const thumb = smallestVariant(m, 320);
@@ -191,6 +206,7 @@ export function BrowserPanel({ items, onOpenFile, onPicked }: Props) {
                 </li>
               );
             })}
+            {list.length > shown.length && <li ref={sentinel} aria-hidden className="col-span-2 h-px" />}
           </ul>
         )}
       </div>

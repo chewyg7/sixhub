@@ -24,6 +24,7 @@ import { BrowserPanel } from "./browser-panel";
 import { Inspector } from "./inspector";
 import { ShortcutsDialog } from "./shortcuts-dialog";
 import { EmptyViewer } from "./empty-viewer";
+import { MobileViewerBar } from "./mobile-bar";
 
 const isTyping = (t: EventTarget | null) => {
   const el = t as HTMLElement | null;
@@ -192,6 +193,12 @@ export function ViewerApp({ items }: { items: MediaItem[] }) {
     };
   }, [panels.focus]);
 
+  /* The viewer is a full-screen app: the page behind it must never scroll (or rubber-band on iOS). */
+  useEffect(() => {
+    document.documentElement.classList.add("viewer-lock");
+    return () => document.documentElement.classList.remove("viewer-lock");
+  }, []);
+
   /* Pause on unmount (navigating away). */
   useEffect(() => () => player.pause(), []);
 
@@ -224,7 +231,11 @@ export function ViewerApp({ items }: { items: MediaItem[] }) {
       onDrop={(e) => onDrop(e, "a")}
     >
       <ViewerFilterDefs adjust={adjust} />
-      {showPanels && !fullscreen && <Navbar variant="app" />}
+      {showPanels && !fullscreen && (
+        <div className="hidden lg:block">
+          <Navbar variant="app" />
+        </div>
+      )}
 
       <div className="flex min-h-0 flex-1">
         {showPanels && panels.browser && (
@@ -237,11 +248,12 @@ export function ViewerApp({ items }: { items: MediaItem[] }) {
         )}
 
         <main id="main" className="relative flex min-w-0 flex-1 flex-col">
-          <div className={cn("transition-opacity duration-300", panels.focus && idle && "pointer-events-none opacity-0")}>
+          <div className={cn("hidden transition-opacity duration-300 lg:block", panels.focus && idle && "pointer-events-none opacity-0")}>
             <Toolbar onOpenFile={openFile} onOpenSheet={setSheet} fullscreen={fullscreen} />
           </div>
 
           <div className="relative min-h-0 flex-1">
+            {!fullscreen && <MobileViewerBar onBrowse={() => setSheet("browser")} onTools={() => setSheet("tools")} onOpenFile={() => openFile("a")} />}
             {a ? (
               <div className={cn("absolute inset-0 flex", side && "flex-col md:flex-row")}>
                 <div className="relative min-h-0 min-w-0 flex-1">
@@ -276,7 +288,7 @@ export function ViewerApp({ items }: { items: MediaItem[] }) {
                 )}
               </div>
             ) : (
-              <EmptyViewer items={items} onOpenFile={() => openFile("a")} />
+              <EmptyViewer items={items} onOpenFile={() => openFile("a")} onBrowse={() => setSheet("browser")} />
             )}
 
             {/* Mobile crop bar */}
@@ -360,7 +372,7 @@ export function ViewerApp({ items }: { items: MediaItem[] }) {
       />
       <ShortcutsDialog />
 
-      <Sheet open={sheet === "browser"} onClose={() => setSheet(null)} title="Browse media">
+      <Sheet open={sheet === "browser"} onClose={() => setSheet(null)} title="Add from the archive">
         <div className="h-[70dvh]">
           <BrowserPanel items={items} onOpenFile={(p) => (setSheet(null), openFile(p))} onPicked={() => setSheet(null)} />
         </div>

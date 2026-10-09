@@ -63,6 +63,29 @@ const NAV_INFO_TOOLS = {
 };
 FIXUPS.push(NAV_INFO_TOOLS);
 
+FIXUPS.push({
+  // Shorter browser-tab title, and a menu that matches the header (Info and Tools instead of Characters and Leonida).
+  key: "fixup:title-and-menu",
+  run(db: Database.Database) {
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'site'").get() as { value: string } | undefined;
+    if (!row) return;
+    const site = JSON.parse(row.value);
+    if (site.title === "GTA 6 Hub — GTA VI news, media archive & Media Viewer") site.title = "GTA 6 Hub";
+    const old = ["/", "/news", "/media", "/viewer", "/info/characters", "/info/locations", "/timeline"];
+    if (Array.isArray(site.menu) && site.menu.map((l: { href: string }) => l.href).join() === old.join())
+      site.menu = [
+        { label: "Home", href: "/" },
+        { label: "News", href: "/news" },
+        { label: "Media", href: "/media" },
+        { label: "Viewer", href: "/viewer" },
+        { label: "Info", href: "/info" },
+        { label: "Tools", href: "/tools" },
+        { label: "Timeline", href: "/timeline" },
+      ];
+    db.prepare("UPDATE settings SET value = ? WHERE key = 'site'").run(JSON.stringify(site));
+  },
+});
+
 export function runFixups(db: Database.Database) {
   const done = db.prepare("SELECT 1 FROM meta WHERE key = ?");
   for (const f of FIXUPS) {

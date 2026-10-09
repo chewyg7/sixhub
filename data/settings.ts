@@ -43,7 +43,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
     viewerPicks: ["gta-vi-trailer-2", "gv-gta-vi-trailer-1-0057", "gv-vice-city-hi-res-artwork", "gv-jason-and-lucia-motel-landscape"],
   },
   site: {
-    title: "GTA 6 Hub — GTA VI news, media archive & Media Viewer",
+    title: "GTA 6 Hub",
     description: "News, a searchable archive of official GTA VI media, and a built-in Media Viewer for analyzing trailers, screenshots, artwork and audio.",
     sections: DEFAULT_SECTIONS,
     marquee: ["Coming", "{date}"],
@@ -59,9 +59,9 @@ export const DEFAULT_SETTINGS: SiteSettings = {
       { label: "Home", href: "/" },
       { label: "News", href: "/news" },
       { label: "Media", href: "/media" },
-      { label: "Media Viewer", href: "/viewer" },
-      { label: "Characters", href: "/info/characters" },
-      { label: "Leonida", href: "/info/locations" },
+      { label: "Viewer", href: "/viewer" },
+      { label: "Info", href: "/info" },
+      { label: "Tools", href: "/tools" },
       { label: "Timeline", href: "/timeline" },
     ],
     footer: {

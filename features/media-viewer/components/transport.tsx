@@ -214,7 +214,7 @@ export function Transport() {
   const isVideo = media.kind === "video";
 
   return (
-    <div className="border-t border-divider bg-surface px-2 pt-1 pb-2 sm:px-3" role="group" aria-label="Playback controls">
+    <div className="border-t border-divider bg-surface px-2 pt-1 pb-[calc(env(safe-area-inset-bottom)+8px)] sm:px-3 lg:pb-2" role="group" aria-label="Playback controls">
       <Scrubber
         duration={duration}
         current={time}

@@ -127,7 +127,7 @@ export function Hero({ release, launchMode, trailer }: { release: SiteSettings["
   }, [launched, preview]);
 
   return (
-    <section ref={root} aria-label="Grand Theft Auto VI" className="relative -mt-24 h-[100svh] min-h-[700px] overflow-hidden bg-[#2a1d4a] text-white [perspective:1400px] sm:-mt-28">
+    <section ref={root} aria-label="Grand Theft Auto VI" className="relative -mt-[env(safe-area-inset-top)] h-[100svh] min-h-[640px] overflow-hidden bg-[#2a1d4a] text-white [perspective:1400px] lg:-mt-28 lg:min-h-[700px]">
       {/* Background scene */}
       <div data-layer="bg" className="absolute -inset-[5%] will-change-transform" style={{ backgroundImage: `url(${BG_BLUR})`, backgroundSize: "cover", backgroundPosition: "center" }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- layered artwork needs the exact files */}
@@ -209,9 +209,9 @@ export function Hero({ release, launchMode, trailer }: { release: SiteSettings["
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black/35 to-transparent" />
 
       {/* Countdown dock */}
-      <div data-hero-dock className="absolute inset-x-0 bottom-0 z-10 mx-auto flex max-w-[1600px] flex-col items-stretch px-4 pb-5 sm:px-8 sm:pb-9 lg:items-start lg:px-12">
+      <div data-hero-dock className="absolute inset-x-0 bottom-0 z-10 mx-auto flex max-w-[1600px] flex-col items-stretch px-4 pb-[calc(env(safe-area-inset-bottom)+92px)] sm:px-8 lg:items-start lg:px-12 lg:pb-9">
         <div data-hero-ui className="mb-3 flex flex-wrap items-center gap-3">
-          <p className="text-[14px] text-white/85 sm:text-[15px]">
+          <p className="hidden text-[15px] text-white/85 lg:block">
             {longDate(release.date)} · {release.platforms.join(" & ")}
           </p>
           {trailer && (

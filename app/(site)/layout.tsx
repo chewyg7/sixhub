@@ -2,6 +2,7 @@ import { SiteHeader, type MenuPreview } from "@/components/layout/site-header";
 import { Footer } from "@/components/layout/footer";
 import { Announcement } from "@/components/layout/announcement";
 import { Maintenance } from "@/components/layout/maintenance";
+import { InstallPrompt, ServiceWorker } from "@/components/pwa/install-prompt";
 import { getMediaBySlugs, getSettings } from "@/lib/content";
 import { smallestVariant } from "@/lib/media/variants";
 
@@ -28,10 +29,14 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
     <>
       <SiteHeader previews={previews} nav={settings.site.nav} menu={settings.site.menu} />
       <Announcement />
-      <main id="main" className="min-h-[70vh] pt-24 sm:pt-28">
+      <main id="main" className="min-h-[70vh] overflow-x-clip pt-[env(safe-area-inset-top)] lg:pt-28">
         {children}
       </main>
       <Footer />
+      <InstallPrompt />
+      <ServiceWorker />
+      {/* Room for the mobile tab bar */}
+      <div aria-hidden className="h-[calc(env(safe-area-inset-bottom)+96px)] lg:hidden" />
       {settings.maintenance.enabled && <Maintenance title={settings.maintenance.title} message={settings.maintenance.message} />}
     </>
   );

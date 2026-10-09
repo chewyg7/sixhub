@@ -57,7 +57,7 @@ export function PageHeader({
       {/* soft dusk glow behind the title */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-[420px] w-[900px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(244_162_197/0.14),transparent)] blur-2xl"
+        className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-[420px] w-[min(900px,100vw)] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(244_162_197/0.14),transparent)] blur-2xl"
       />
       {crumbs && <Breadcrumbs items={crumbs} className="mb-6" />}
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">

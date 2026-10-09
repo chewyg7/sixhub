@@ -150,7 +150,7 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
         ref={panel}
         role="dialog"
         aria-label="Settings"
-        className="absolute top-[92px] right-3 bottom-3 z-30 flex w-[min(440px,calc(100%-24px))] sm:top-[100px] sm:right-5 flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[rgb(20_14_26/0.92)] shadow-[0_30px_80px_-20px_rgb(0_0_0/0.8)] backdrop-blur-2xl"
+        className="absolute top-[calc(env(safe-area-inset-top)+12px)] right-3 bottom-[calc(env(safe-area-inset-bottom)+92px)] z-30 flex w-[min(440px,calc(100%-24px))] sm:right-5 lg:top-[100px] lg:bottom-3 flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[rgb(20_14_26/0.92)] shadow-[0_30px_80px_-20px_rgb(0_0_0/0.8)] backdrop-blur-2xl"
       >
         <div className="flex items-center justify-between px-6 pt-5 pb-3">
           <h2 className="display text-[28px]">Settings</h2>

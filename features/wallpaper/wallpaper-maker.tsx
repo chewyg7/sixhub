@@ -338,7 +338,9 @@ function MediaGrid({ items, selected, onPick, checker, empty }: { items: Wallpap
   const [shown, setShown] = useState(48);
   return (
     <>
-      <div className="no-scrollbar grid max-h-[380px] grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4" data-lenis-prevent>
+      {/* The scroll box wraps the grid (a grid that scrolls itself collapses its rows in iOS Safari). */}
+      <div className="no-scrollbar max-h-[380px] overflow-y-auto overscroll-contain pr-1" data-lenis-prevent>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
         {items.slice(0, shown).map((a) => (
           <button
             key={a.slug}
@@ -346,13 +348,14 @@ function MediaGrid({ items, selected, onPick, checker, empty }: { items: Wallpap
             onClick={() => onPick(a)}
             title={a.title}
             aria-pressed={selected === a.slug}
-            className={cn("aspect-square overflow-hidden rounded-xl border-2 transition-colors", selected === a.slug ? "border-accent" : "border-transparent hover:border-white/30")}
+            className={cn("relative block w-full overflow-hidden rounded-xl border-2 pt-[100%] transition-colors", selected === a.slug ? "border-accent" : "border-transparent hover:border-white/30")}
             style={checker ? CHECKER : { backgroundColor: a.color ?? undefined }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- archive thumbnail */}
-            <img src={a.thumb} alt={a.title} loading="lazy" className={cn("size-full", checker ? "object-contain p-1.5" : "object-cover")} />
+            <img src={a.thumb} alt={a.title} loading="lazy" className={cn("absolute inset-0 size-full", checker ? "object-contain p-1.5" : "object-cover")} />
           </button>
         ))}
+      </div>
       </div>
       {items.length > shown && (
         <button type="button" onClick={() => setShown((n) => n + 48)} className="mt-3 h-10 w-full rounded-xl bg-white/[0.06] text-[13.5px] font-bold text-white/70 hover:bg-white/12 hover:text-white">
@@ -569,7 +572,7 @@ export function WallpaperMaker({ art, cutouts }: { art: WallpaperArt[]; cutouts:
   const portrait = H > W;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)] lg:items-start">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)] lg:items-start">
       {/* Preview */}
       <div className="grid justify-items-center gap-4 lg:sticky lg:top-28">
         <div

@@ -119,7 +119,7 @@ export function TextGenerator() {
   const shuffle = () => c.setText(randomText(c.text));
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start">
       {/* Stage */}
       <div className="grid gap-4 lg:sticky lg:top-28">
         <div
@@ -127,7 +127,7 @@ export function TextGenerator() {
           className="relative flex h-[42svh] min-h-[240px] items-center justify-center overflow-hidden rounded-[30px] border border-white/10 bg-[#0d0a12] p-4 sm:p-8 lg:h-[min(68vh,640px)]"
           style={c.bgMode === "none" ? checkerboard(28) : undefined}
         >
-          <canvas ref={viewCanvasRef} className="block max-w-none" aria-label="Preview of your text in the GTA VI style" role="img" />
+          <canvas ref={viewCanvasRef} className="block max-w-full" aria-label="Preview of your text in the GTA VI style" role="img" />
           {!c.fontReady && <span className="absolute inset-0 flex items-center justify-center text-[14px] text-white/45">Loading the lettering…</span>}
         </div>
 
@@ -279,9 +279,9 @@ export function TextGenerator() {
                   onClick={() => c.applyBackground(null)}
                   aria-pressed={c.selectedBackgroundKey === ""}
                   title={LABELS.transparent}
-                  className={cn("aspect-square overflow-hidden rounded-xl border-2 transition-colors", c.selectedBackgroundKey === "" ? "border-accent" : "border-transparent hover:border-white/30")}
+                  className={cn("relative block w-full overflow-hidden rounded-xl border-2 pt-[100%] transition-colors", c.selectedBackgroundKey === "" ? "border-accent" : "border-transparent hover:border-white/30")}
                 >
-                  <span className="block size-full rounded-[10px]" style={checkerboard(14)} />
+                  <span className="absolute inset-0 rounded-[10px]" style={checkerboard(14)} />
                   <span className="sr-only">{LABELS.transparent}</span>
                 </button>
                 {BACKGROUNDS.map((bg) => {
@@ -293,10 +293,10 @@ export function TextGenerator() {
                       onClick={() => c.applyBackground(bg.key)}
                       aria-pressed={active}
                       title={bg.label}
-                      className={cn("aspect-square overflow-hidden rounded-xl border-2 transition-colors", active ? "border-accent" : "border-transparent hover:border-white/30")}
+                      className={cn("relative block w-full overflow-hidden rounded-xl border-2 pt-[100%] transition-colors", active ? "border-accent" : "border-transparent hover:border-white/30")}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element -- background thumbnail */}
-                      <img src={c.asset(bg.path)} alt={bg.label} loading="lazy" className="size-full rounded-[10px] object-cover" />
+                      <img src={c.asset(bg.path)} alt={bg.label} loading="lazy" className="absolute inset-0 size-full rounded-[10px] object-cover" />
                     </button>
                   );
                 })}

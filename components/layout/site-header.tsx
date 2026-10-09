@@ -17,7 +17,8 @@ import type { SiteLink } from "@/types/content";
 import { TOOLS } from "@/lib/tools";
 import { SocialLinks } from "./social-links";
 import { NavLogo } from "./nav-logo";
-import { QualitySwitch, SettingsPanel } from "./menu-settings";
+import { TabBar } from "./tab-bar";
+import { SettingsPanel } from "./menu-settings";
 
 export interface MenuPreview {
   src: string;
@@ -34,6 +35,7 @@ const PREVIEW_FOR: Record<string, string> = {
   "/info": "locations",
   "/info/locations": "locations",
   "/timeline": "timeline",
+  "/tools": "characters",
 };
 const matchFor = (href: string) => (href === "/media" ? ["/media", "/collections"] : href === "/" ? [] : [href]);
 
@@ -94,7 +96,7 @@ export function SiteHeader({ previews, nav: navLinks = DEFAULT_SETTINGS.site.nav
 
   return (
     <>
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-50 hidden px-5 pt-4 lg:block">
         <div ref={bar} className="pointer-events-auto mx-auto max-w-[1240px]">
           <LiquidGlass elevated radius={30} bezel={22} thickness={48} tint="rgb(16 10 20 / 0.2)" className="flex h-[68px] items-center gap-2 pr-2 pl-3 sm:pl-4">
             <NavLogo />
@@ -178,6 +180,7 @@ export function SiteHeader({ previews, nav: navLinks = DEFAULT_SETTINGS.site.nav
           </LiquidGlass>
         </div>
       </header>
+      <TabBar menuOpen={menuOpen} onMenu={() => setMenuOpen((o) => !o)} />
       <FullscreenMenu open={menuOpen} onClose={() => setMenuOpen(false)} previews={previews} links={menu} />
     </>
   );
@@ -220,6 +223,7 @@ function FullscreenMenu({ open, onClose, previews, links }: { open: boolean; onC
   const [mounted, setMounted] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const [preview, setPreview] = useState<string>("home");
+  const { open: openSearch } = useCommandPalette();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
   const path = usePathname();
@@ -279,7 +283,7 @@ function FullscreenMenu({ open, onClose, previews, links }: { open: boolean; onC
       ))}
       <div aria-hidden className="absolute inset-0 bg-[linear-gradient(90deg,#0b0910_20%,rgb(11_9_16/0.55)_60%,rgb(11_9_16/0.2))]" />
 
-      <div className="relative mx-auto flex h-full max-w-[1240px] flex-col px-5 pt-32 pb-10 sm:px-8 lg:flex-row lg:items-end lg:gap-16 lg:pb-16">
+      <div className="no-scrollbar relative mx-auto flex h-full max-w-[1240px] flex-col overflow-y-auto px-6 pt-[calc(env(safe-area-inset-top)+2.5rem)] pb-[calc(env(safe-area-inset-bottom)+7rem)] sm:px-8 lg:flex-row lg:items-end lg:gap-16 lg:overflow-visible lg:pt-32 lg:pb-16">
         <nav aria-label="Menu" className="flex-1">
           <ul>
             {links.map((m, i) => (
@@ -295,16 +299,25 @@ function FullscreenMenu({ open, onClose, previews, links }: { open: boolean; onC
                     path === m.href ? "text-accent-text" : "text-white/90 hover:text-white",
                   )}
                 >
-                  <span className="w-8 text-[14px] font-medium text-white/40">{String(i + 1).padStart(2, "0")}</span>
-                  <span className="display-xl group-hover:text-hot text-[15vw] leading-[0.95] sm:text-[76px] lg:text-[92px]">{m.label}</span>
+                  <span className="w-7 text-[13px] font-medium text-white/40 lg:w-8 lg:text-[14px]">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="display-xl group-hover:text-hot text-[13vw] leading-[0.95] sm:text-[76px] lg:text-[92px]">{m.label}</span>
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
-        <div className="mt-10 grid gap-8 lg:mt-0 lg:w-[400px]">
-          <div data-menu-fade className="flex flex-wrap items-start justify-between gap-4">
-            <QualitySwitch />
+        <div className="mt-9 grid gap-6 lg:mt-0 lg:w-[400px] lg:gap-8">
+          <div data-menu-fade className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                openSearch();
+              }}
+              className="inline-flex h-12 items-center gap-2 rounded-full bg-white/[0.07] pr-5 pl-4 text-[14.5px] font-bold text-white/85 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)] transition-colors hover:bg-white/12 hover:text-white lg:hidden"
+            >
+              <Search className="size-[18px]" /> Search
+            </button>
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
@@ -314,15 +327,15 @@ function FullscreenMenu({ open, onClose, previews, links }: { open: boolean; onC
               <Settings2 className="size-[18px] transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:rotate-90" /> Settings
             </button>
           </div>
-          <div data-menu-fade>
+          <div data-menu-fade className="hidden lg:block">
             <p className="text-[14px] text-white/60">Grand Theft Auto VI arrives</p>
             <p className="display mt-1 text-[26px]">{releaseLabel}</p>
             <div className="mt-4 -ml-3">
               <Countdown date={release.date} size="sm" />
             </div>
           </div>
-          <SocialLinks className="-mt-2" size="sm" />
-          <div data-menu-fade className="flex flex-wrap gap-x-6 gap-y-2 text-[15px] text-white/70">
+          <SocialLinks className="lg:-mt-2" size="sm" />
+          <div data-menu-fade className="hidden flex-wrap gap-x-6 gap-y-2 text-[15px] text-white/70 lg:flex">
             {[
               ["Collections", "/collections"],
               ["Tools", "/tools"],

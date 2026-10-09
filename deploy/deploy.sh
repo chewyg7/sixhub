@@ -13,6 +13,7 @@ set +a
 git pull --ff-only
 # Build tools are devDependencies; NODE_ENV=production (from the env file) would skip them.
 npm ci --include=dev --no-audit --no-fund
-npm run build
+# A failed build can leave a cached error behind; retry once from a clean cache.
+npm run build || { echo "Build failed; retrying with a clean cache…"; rm -rf .next; npm run build; }
 sudo systemctl restart gtasixhub
 echo "Deployed $(git rev-parse --short HEAD)."

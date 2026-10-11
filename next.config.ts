@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },
+  // One address for search engines: www.gtasixhub.com sends visitors to gtasixhub.com.
+  async redirects() {
+    return [{ source: "/:path*", has: [{ type: "host", value: "www.gtasixhub.com" }], destination: "https://gtasixhub.com/:path*", permanent: true }];
+  },
   // Team profiles live at /@username (an "@" folder would be a parallel route, so it maps to /u/).
   async rewrites() {
     return [{ source: "/@:username", destination: "/u/:username" }];

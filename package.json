@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "admin": "node scripts/admin-user.mjs",
+    "backup": "node scripts/backup-db.mjs",
     "import:trailers": "node scripts/import-trailers.mjs",
     "import:brand": "node scripts/import-brand-assets.mjs"
   },

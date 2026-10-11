@@ -151,14 +151,31 @@ Content edits made in the admin panel are live immediately and need no deploy.
 
 ## Backups
 
-Everything worth keeping is in `/var/lib/gtasixhub`. The admin panel's
-**System & backups** page makes database snapshots, but they sit on the same
-server; also copy them somewhere else. A nightly copy:
+Everything worth keeping is in `/var/lib/gtasixhub`: the database and
+`uploads/`. The code is on GitHub and in `/srv/gtasixhub`.
+
+**Nightly database snapshots on the server** (the newest 20 are kept, and they
+show up in the admin panel's **System & backups** page). Install once:
 
 ```bash
-crontab -e
-# 30 3 * * * sqlite3 /var/lib/gtasixhub/gtasixhub.db ".backup /root/backup-$(date +\%a).db" && tar czf /root/uploads-$(date +\%a).tgz -C /var/lib/gtasixhub uploads
+sudo cp /srv/gtasixhub/deploy/gtasixhub-backup.service /srv/gtasixhub/deploy/gtasixhub-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now gtasixhub-backup.timer
+sudo systemctl start gtasixhub-backup.service      # one now, to check it works
+ls -lh /var/lib/gtasixhub/backups
 ```
+
+**A copy off the server.** On your Windows PC, this downloads a fresh database
+backup and every uploaded file to `Documents\gtasixhub-backups` (after the
+first run, only new or changed files):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$HOME\Documents\gtasixhub\deploy\pull-backup.ps1" -Server root@89.117.59.155
+```
+
+Run it every week or so. To restore, stop the site, copy a `.db` file back to
+`/var/lib/gtasixhub/gtasixhub.db` (owned by `gtasixhub`), copy `uploads/` back,
+and start the site again.
 
 ## If something goes wrong
 

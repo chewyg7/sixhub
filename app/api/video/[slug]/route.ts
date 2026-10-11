@@ -17,28 +17,33 @@ import trailers from "@/data/generated/trailers.json";
  * that copy is used instead (no dependence on the original host).
  */
 const UPSTREAM = new Map(
-  Object.entries(trailers as Record<string, { url: string; proxy: boolean }>)
+  Object.entries(trailers as Record<string, { url: string; proxy: boolean; fallback?: string }>)
     .filter(([, t]) => t.proxy)
-    .map(([slug, t]) => [slug, t.url]),
+    .map(([slug, t]) => [slug, [t.url, t.fallback].filter((u): u is string => Boolean(u))]),
 );
 
 const PASS_HEADERS = ["content-type", "content-length", "content-range", "accept-ranges", "last-modified", "etag"];
 
 async function stream(request: NextRequest, ctx: RouteContext<"/api/video/[slug]">, method: "GET" | "HEAD") {
   const { slug } = await ctx.params;
-  const url = UPSTREAM.get(slug);
-  if (!url) return new Response("Not found", { status: 404 });
+  const urls = UPSTREAM.get(slug);
+  if (!urls) return new Response("Not found", { status: 404 });
   if (existsSync(/*turbopackIgnore: true*/ path.join(UPLOAD_DIR, "trailers", `${slug}.mp4`))) {
     return new Response(null, { status: 307, headers: { location: `/files/trailers/${slug}.mp4`, "cache-control": "no-store" } });
   }
 
+  // The first host that answers wins; a backup host covers a link that has expired.
   const range = request.headers.get("range");
-  const upstream = await fetch(url, {
-    method,
-    headers: range ? { range } : undefined,
-    signal: request.signal,
-    cache: "no-store",
-  }).catch(() => null);
+  let upstream: Response | null = null;
+  for (const url of urls) {
+    upstream = await fetch(url, {
+      method,
+      headers: range ? { range } : undefined,
+      signal: request.signal,
+      cache: "no-store",
+    }).catch(() => null);
+    if (upstream && (upstream.ok || upstream.status === 206 || upstream.status === 416)) break;
+  }
   if (!upstream || (!upstream.ok && upstream.status !== 206)) {
     return new Response("Upstream unavailable", { status: upstream?.status === 416 ? 416 : 502 });
   }
@@ -49,6 +54,8 @@ async function stream(request: NextRequest, ctx: RouteContext<"/api/video/[slug]
     if (v) headers.set(h, v);
   }
   if (!headers.has("accept-ranges")) headers.set("accept-ranges", "bytes");
+  // Some hosts (pCloud) send a generic type; Safari won't play a video labelled as a download.
+  if (!headers.get("content-type")?.startsWith("video/")) headers.set("content-type", "video/mp4");
   return new Response(method === "HEAD" ? null : upstream.body, { status: upstream.status, headers });
 }
 

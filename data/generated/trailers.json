@@ -1,7 +1,7 @@
 {
   "gta-vi-trailer-1": {
     "kind": "video",
-    "url": "https://cdn.invincible25.com/GTAVI_Trailer1.mp4",
+    "url": "https://edef3.pcloud.com/cfZ79auidZfX0YVJkZDr1sZZYVAfJkZ2ZZ9i0ZZjazDAZNMZe8ZLPZdMZKPZ0QZCMZ0RZYPZb9ZIPZDPZyPZ69ZJF0NTcWQp4zrSgJMwYw8rfJOO6Gy/GTAVI_Trailer_1.mp4",
     "proxy": true,
     "original": {
       "url": "/api/video/gta-vi-trailer-1",
@@ -58,7 +58,8 @@
       "tileWidth": 192,
       "tileHeight": 108,
       "count": 46
-    }
+    },
+    "fallback": "https://cdn.invincible25.com/GTAVI_Trailer1.mp4"
   },
   "gta-vi-trailer-2": {
     "kind": "video",

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
-import { Feather, RotateCcw, Sparkles, X } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { Feather, RotateCcw, ShieldAlert, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { gsap, prefersReducedMotion } from "@/lib/motion";
 import { resetPreferences, setPreferences, usePreferences, type MotionPref, type QualityPref } from "@/lib/preferences";
@@ -116,6 +116,61 @@ function Segmented<T extends string>({ value, options, onChange, label }: { valu
   );
 }
 
+/**
+ * Third-party repositories. Off by default; turning them on needs an explicit
+ * "I understand" first, because nothing in a repo comes from (or is checked by) us.
+ */
+function ReposSetting() {
+  const { repos } = usePreferences();
+  const [asking, setAsking] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  return (
+    <Row label="Repositories" hint="Advanced. Browse media lists other people host, by link." stack={asking}>
+      {asking ? (
+        <div className="rounded-2xl border border-[#ffb84d]/25 bg-[#ffb84d]/[0.08] p-4 text-[13px] leading-relaxed text-white/75">
+          <p className="flex items-center gap-2 font-bold text-[#ffd699]">
+            <ShieldAlert className="size-4" /> Before you turn this on
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li>Repos are made by other people. GTA 6 Hub doesn’t host, check or vouch for anything in them.</li>
+            <li>Media loads straight from the repo’s own links, so those sites see your IP address.</li>
+            <li>Only add repos from people you trust.</li>
+          </ul>
+          <label className="mt-3 flex cursor-pointer items-start gap-2.5 font-bold text-white">
+            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 size-4 shrink-0 accent-[#ff4fa3]" />I understand and know what I’m doing.
+          </label>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              disabled={!agreed}
+              onClick={() => {
+                setPreferences({ repos: true });
+                setAsking(false);
+              }}
+              className="h-9 rounded-full bg-white px-4 text-[13px] font-bold text-[#140c18] transition-opacity disabled:opacity-35"
+            >
+              Turn on
+            </button>
+            <button type="button" onClick={() => setAsking(false)} className="h-9 rounded-full px-4 text-[13px] font-bold text-white/60 hover:bg-white/8 hover:text-white">
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <Switch
+          label="Repositories"
+          checked={repos}
+          onChange={(on) => {
+            if (!on) return setPreferences({ repos: false });
+            setAgreed(false);
+            setAsking(true);
+          }}
+        />
+      )}
+    </Row>
+  );
+}
+
 /** Site settings for this visitor, kept in their browser. Opens over the menu. */
 export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const prefs = usePreferences();
@@ -226,6 +281,9 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
                 ))}
               </select>
             </Row>
+          </div>
+          <div data-row>
+            <ReposSetting />
           </div>
         </div>
         <div className="flex items-center justify-between gap-3 border-t border-white/8 px-6 py-4">

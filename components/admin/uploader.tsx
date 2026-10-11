@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, FileUp, Loader2, X, XCircle } from "lucide-react";
+import { CheckCircle2, FileUp, FolderOpen, FolderUp, Loader2, X, XCircle } from "lucide-react";
+import { ensureUploadFolders } from "@/app/chewy/(panel)/media/upload/actions";
 import type { FolderOption } from "@/lib/admin/folders";
 import { cn } from "@/lib/cn";
 import { titleFromFilename } from "@/lib/slug";
@@ -13,6 +14,8 @@ import { ChipPicker } from "./media-edit-form";
 interface Job {
   id: string;
   file: File;
+  /** Folder path inside an uploaded folder, e.g. ["Trailer 2", "Stills"]. Empty for loose files. */
+  dir: string[];
   title: string;
   progress: number;
   state: "queued" | "uploading" | "processing" | "done" | "error";
@@ -22,6 +25,28 @@ interface Job {
 }
 
 const ACCEPT = ".jpg,.jpeg,.png,.webp,.gif,.avif,.mp4,.mov,.webm,.mp3,.m4a,.wav,.ogg,.flac,.ttf,.otf,.woff,.woff2";
+const EXTENSIONS = new Set(ACCEPT.split(","));
+/** Files inside uploaded folders that aren't media (and system clutter) are skipped. */
+const usable = (name: string) => !name.startsWith(".") && EXTENSIONS.has(name.slice(name.lastIndexOf(".")).toLowerCase());
+
+type Picked = { file: File; dir: string[] };
+
+/** Walks a dropped folder (and every sub-folder) into a flat list of files with their paths. */
+async function walk(entry: FileSystemEntry, dir: string[], out: Picked[]) {
+  if (entry.isFile) {
+    const file = await new Promise<File>((res, rej) => (entry as FileSystemFileEntry).file(res, rej));
+    out.push({ file, dir });
+  } else if (entry.isDirectory) {
+    const reader = (entry as FileSystemDirectoryEntry).createReader();
+    const inside = [...dir, entry.name];
+    // readEntries hands back the contents in batches until it returns an empty one.
+    for (;;) {
+      const batch = await new Promise<FileSystemEntry[]>((res, rej) => reader.readEntries(res, rej));
+      if (!batch.length) break;
+      for (const e of batch) await walk(e, inside, out);
+    }
+  }
+}
 
 /** Sends one file as the raw request body so the server can stream it to disk; XHR gives upload progress. */
 function send(file: File, meta: object, onProgress: (p: number) => void, onUploaded: () => void): Promise<{ slug?: string; status?: string; error?: string }> {
@@ -62,13 +87,21 @@ export function Uploader({
 }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
+  const folderInput = useRef<HTMLInputElement>(null);
   const form = useRef<HTMLFormElement>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [drag, setDrag] = useState(false);
   const [running, setRunning] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
 
-  const add = (files: FileList | File[]) =>
-    setJobs((j) => [...j, ...[...files].map((file) => ({ id: `${file.name}-${file.size}-${Math.random()}`, file, title: titleFromFilename(file.name), progress: 0, state: "queued" as const }))]);
+  const add = (picked: Picked[]) =>
+    setJobs((j) => [
+      ...j,
+      ...picked
+        .filter((p) => usable(p.file.name))
+        .map(({ file, dir }) => ({ id: `${file.name}-${file.size}-${Math.random()}`, file, dir, title: titleFromFilename(file.name), progress: 0, state: "queued" as const })),
+    ]);
+  const loose = (files: FileList) => [...files].map((file) => ({ file, dir: [] }));
   const patch = (id: string, p: Partial<Job>) => setJobs((js) => js.map((j) => (j.id === id ? { ...j, ...p } : j)));
 
   const start = async () => {
@@ -92,11 +125,25 @@ export function Uploader({
       hidden: f.get("hidden") === "on",
     };
     setRunning(true);
-    for (const job of jobs.filter((j) => j.state === "queued" || j.state === "error")) {
+    setProblem(null);
+    const todo = jobs.filter((j) => j.state === "queued" || j.state === "error");
+    // Folder uploads: owners recreate the folder tree inside the chosen folder first.
+    let folderIds: Record<string, string> = {};
+    const paths = [...new Map(todo.filter((j) => j.dir.length).map((j) => [j.dir.join("/"), j.dir])).values()];
+    if (owner && paths.length) {
+      const res = await ensureUploadFolders({ parentId: base.folderId, paths });
+      if (res.error || !res.ids) {
+        setProblem(res.error ?? "Couldn't create the folders.");
+        setRunning(false);
+        return;
+      }
+      folderIds = res.ids;
+    }
+    for (const job of todo) {
       patch(job.id, { state: "uploading", progress: 0, error: undefined });
       const res = await send(
         job.file,
-        { ...base, filename: job.file.name, title: job.title },
+        { ...base, folderId: (job.dir.length && folderIds[job.dir.join("/")]) || base.folderId, filename: job.file.name, title: job.title },
         (p) => patch(job.id, { progress: p }),
         () => patch(job.id, { state: "processing", progress: 1 }),
       );
@@ -108,6 +155,7 @@ export function Uploader({
   };
 
   const queued = jobs.filter((j) => j.state === "queued" || j.state === "error").length;
+  const tops = [...new Set(jobs.filter((j) => j.dir.length).map((j) => j.dir[0]))];
 
   return (
     <form ref={form} onSubmit={(e) => e.preventDefault()} className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
@@ -118,19 +166,32 @@ export function Uploader({
             setDrag(true);
           }}
           onDragLeave={() => setDrag(false)}
-          onDrop={(e) => {
+          onDrop={async (e) => {
             e.preventDefault();
             setDrag(false);
-            if (e.dataTransfer.files.length) add(e.dataTransfer.files);
+            // Entries must be read synchronously, before the event ends.
+            const entries = [...e.dataTransfer.items].map((i) => i.webkitGetAsEntry?.()).filter((x): x is FileSystemEntry => !!x);
+            if (!entries.some((x) => x.isDirectory)) return add(loose(e.dataTransfer.files));
+            const out: Picked[] = [];
+            for (const entry of entries) await walk(entry, [], out);
+            add(out);
           }}
           className={cn("grid place-items-center rounded-[20px] border-2 border-dashed px-6 py-12 text-center transition-colors", drag ? "border-accent bg-accent/10" : "border-white/15")}
         >
           <FileUp className="size-9 text-accent-text" />
-          <p className="mt-3 text-[16px] font-bold">Drop files here</p>
+          <p className="mt-3 text-[16px] font-bold">{owner ? "Drop files or folders here" : "Drop files here"}</p>
           <p className="mt-1 text-[13.5px] text-white/50">Images up to 80 MB, videos up to 6 GB, audio up to 600 MB, fonts up to 25 MB</p>
-          <Button className="mt-5" onClick={() => input.current?.click()}>
-            Choose files
-          </Button>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <Button onClick={() => input.current?.click()}>
+              <FileUp className="size-4" /> Choose files
+            </Button>
+            {owner && (
+              <Button onClick={() => folderInput.current?.click()}>
+                <FolderUp className="size-4" /> Choose a folder
+              </Button>
+            )}
+          </div>
+          {owner && <p className="mt-3 max-w-md text-[12.5px] text-white/40">Folders upload with every sub-folder, recreated inside the folder picked on the right. Files that aren’t media are skipped.</p>}
           <input
             ref={input}
             type="file"
@@ -138,12 +199,36 @@ export function Uploader({
             accept={ACCEPT}
             className="sr-only"
             onChange={(e) => {
-              if (e.target.files) add(e.target.files);
+              if (e.target.files) add(loose(e.target.files));
+              e.target.value = "";
+            }}
+          />
+          <input
+            ref={folderInput}
+            type="file"
+            multiple
+            className="sr-only"
+            {...{ webkitdirectory: "" }}
+            onChange={(e) => {
+              // webkitRelativePath is "Folder/Sub/file.png".
+              if (e.target.files) add([...e.target.files].map((file) => ({ file, dir: file.webkitRelativePath.split("/").slice(0, -1) })));
               e.target.value = "";
             }}
           />
         </div>
 
+        {tops.length > 0 && (
+          <p className="mt-5 flex flex-wrap items-center gap-2 text-[13px] text-white/60">
+            <FolderOpen className="size-4 text-accent-text" />
+            {owner ? "Folders to create:" : "Folder structure is kept for owners only; these go into the folder on the right:"}
+            {tops.map((t) => (
+              <span key={t} className="rounded-full bg-white/[0.07] px-2.5 py-0.5 font-bold text-white/80">
+                {t}
+              </span>
+            ))}
+          </p>
+        )}
+        {problem && <p className="mt-3 text-[13px] text-[#ff8a9a]">{problem}</p>}
         {jobs.length > 0 && (
           <ul className="mt-5 grid gap-2">
             {jobs.map((j) => (
@@ -166,6 +251,7 @@ export function Uploader({
                     </button>
                   )}
                 </div>
+                {j.dir.length > 0 && <p className="mt-1.5 truncate pl-8 text-[12px] text-white/40">{j.dir.join(" / ")}</p>}
                 {(j.state === "uploading" || j.state === "processing") && (
                   <div className="mt-2.5">
                     <div className="h-1.5 overflow-hidden rounded-full bg-white/10">

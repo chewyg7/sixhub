@@ -7,6 +7,7 @@ import { FolderGrid } from "@/components/media/folder-grid";
 import { getAllMedia, getFolderTree, getLabelLookups, getSources, toFolderCards } from "@/lib/content";
 import { pluralize } from "@/lib/format";
 import { ButtonLink } from "@/components/ui/button";
+import { RepoEntry } from "@/features/repos/repo-entry";
 
 export const metadata: Metadata = {
   title: "Media Archive",
@@ -25,9 +26,12 @@ export default async function MediaArchivePage() {
         title="Media archive"
         lede="Every official screenshot, screengrab, artwork, trailer, logo and font, sorted into folders, with full metadata."
         actions={
-          <ButtonLink href="/collections" variant="outline">
-            Browse collections
-          </ButtonLink>
+          <>
+            <ButtonLink href="/collections" variant="outline">
+              Browse collections
+            </ButtonLink>
+            <RepoEntry />
+          </>
         }
       />
       <section aria-labelledby="folders-h">

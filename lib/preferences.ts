@@ -19,9 +19,11 @@ export interface Preferences {
   intro: boolean;
   /** Fire confetti when the game launches. */
   confetti: boolean;
+  /** Third-party repositories in Media. Only turned on after agreeing to the warning. */
+  repos: boolean;
 }
 
-export const DEFAULT_PREFERENCES: Preferences = { theme: "dark", motion: "system", quality: "hifi", cursor: true, smoothScroll: true, intro: true, confetti: true };
+export const DEFAULT_PREFERENCES: Preferences = { theme: "dark", motion: "system", quality: "hifi", cursor: true, smoothScroll: true, intro: true, confetti: true, repos: false };
 
 let prefs: Preferences | null = null;
 const listeners = new Set<() => void>();

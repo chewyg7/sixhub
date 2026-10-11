@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Fragment } from "react";
 import Link from "next/link";
 import type { HomeSectionId, MediaItem } from "@/types/content";
@@ -17,6 +18,8 @@ import { getAllMedia, getCollection, getFaq, getInfoEntries, getMediaBySlugs, ge
 import { byNewest } from "@/lib/content/relations";
 import { fetchRockstarIntel } from "@/lib/news/rockstarintel";
 import { formatDate } from "@/lib/format";
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 export const revalidate = 600;
 

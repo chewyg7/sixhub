@@ -5,6 +5,8 @@ import { Maintenance } from "@/components/layout/maintenance";
 import { InstallPrompt, ServiceWorker } from "@/components/pwa/install-prompt";
 import { getMediaBySlugs, getSettings } from "@/lib/content";
 import { smallestVariant } from "@/lib/media/variants";
+import { siteJsonLd } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/json-ld";
 
 /** Artwork shown behind each destination in the full-screen menu. */
 const MENU_ART: Record<string, string> = {
@@ -27,6 +29,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   }
   return (
     <>
+      <JsonLd data={siteJsonLd([settings.socials.x, settings.socials.instagram, settings.socials.discord])} />
       <SiteHeader previews={previews} nav={settings.site.nav} menu={settings.site.menu} />
       <Announcement />
       <main id="main" className="min-h-[70vh] overflow-x-clip pt-[env(safe-area-inset-top)] lg:pt-28">

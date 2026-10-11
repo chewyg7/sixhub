@@ -15,6 +15,8 @@ import { folderHref, getAllMedia, getCategories, getCollections, getLabelLookups
 import { mediaTags, relatedMedia } from "@/lib/content/relations";
 import { smallestVariant } from "@/lib/media/variants";
 import { formatDate, pluralize, resolutionTier } from "@/lib/format";
+import { mediaImage, mediaJsonLd, mediaKeywords, mediaSeoDescription, mediaSeoTitle } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/json-ld";
 
 /**
  * /media/<category> renders the archive scoped to a category;
@@ -38,14 +40,20 @@ export async function generateMetadata({ params }: PageProps<"/media/[slug]">): 
   if (c) {
     return { title: c.label, description: c.description, alternates: { canonical: `/media/${slug}` } };
   }
-  const item = await getMediaBySlug(slug);
+  const [item, labels, categories] = await Promise.all([getMediaBySlug(slug), getLabelLookups(), getCategories()]);
   if (!item) return {};
-  const og = smallestVariant(item, 1200);
+  const singular = categories.find((x) => x.slug === item.category)?.singular ?? "Media";
+  const title = mediaSeoTitle(item, singular);
+  const description = mediaSeoDescription(item, singular, labels);
+  const og = smallestVariant(item, 1200) ?? mediaImage(item);
+  const images = og ? [{ url: og.url, width: og.width, height: og.height, alt: item.alt || item.title }] : undefined;
   return {
-    title: item.title,
-    description: item.description,
+    title,
+    description,
+    keywords: mediaKeywords(item, singular, labels),
     alternates: { canonical: `/media/${slug}` },
-    openGraph: { title: item.title, description: item.description, images: og ? [{ url: og.url, width: og.width, height: og.height, alt: item.alt }] : undefined },
+    openGraph: { type: item.kind === "video" ? "video.other" : "article", title, description, url: `/media/${slug}`, images },
+    twitter: { card: "summary_large_image", title, description, images },
   };
 }
 
@@ -100,16 +108,12 @@ async function MediaDetail({ slug }: { slug: string }) {
   const inCollections = collections.filter((c) => item.collections.includes(c.slug));
   const tier = resolutionTier(item.width, item.height);
 
+  const trail = [{ href: "/media", label: "Media" }, ...(folder ? folder.trail.map((t) => ({ href: t.href, label: t.name })) : [{ href: `/media/${item.category}`, label: category.label }])];
+
   return (
     <Container className="pt-6">
-      <Breadcrumbs
-        items={[
-          { href: "/media", label: "Media" },
-          ...(folder ? folder.trail.map((t) => ({ href: t.href, label: t.name })) : [{ href: `/media/${item.category}`, label: category.label }]),
-          { label: item.title },
-        ]}
-        className="mb-5"
-      />
+      <JsonLd data={mediaJsonLd(item, { singular: category.singular, labels, crumbs: trail.map((t) => ({ name: t.label, href: t.href })) })} />
+      <Breadcrumbs items={[...trail, { label: item.title }]} className="mb-5" />
       <MediaStage item={item} family={item.kind === "font" ? all.filter((m) => m.kind === "font" && m.font?.family === item.font?.family) : undefined} />
 
       <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px]">

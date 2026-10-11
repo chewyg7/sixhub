@@ -40,9 +40,9 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: site.title, template: `%s · ${SITE.name}` },
     description: site.description,
     applicationName: SITE.name,
-    openGraph: { type: "website", siteName: SITE.name, url: SITE.url, title: site.title, description: site.description },
-    twitter: { card: "summary_large_image", title: site.title, description: site.description },
-    alternates: { canonical: "/" },
+    // Pages set their own canonical URL (the homepage's is on app/(site)/page.tsx), so none inherits "/".
+    openGraph: { type: "website", siteName: SITE.name, url: SITE.url, title: site.title, description: site.description, images: [{ url: "/brand/logo-1200.webp", alt: SITE.name }] },
+    twitter: { card: "summary_large_image", title: site.title, description: site.description, images: ["/brand/logo-1200.webp"] },
     // Installed to the home screen: full screen, status bar over the page.
     appleWebApp: { capable: true, title: "GTA 6 Hub", statusBarStyle: "black-translucent" },
     // Older iPhones (iOS 16 and below) only go full screen with the Apple-specific tag.

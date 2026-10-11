@@ -15,14 +15,22 @@
 
 .PARAMETER Server
   How you SSH into the VPS, e.g. root@89.117.59.155.
+
+.PARAMETER KeyFile
+  SSH key to log in with, so it runs without a password (e.g. as a scheduled task).
 #>
 param(
   [string]$Server = "root@gtasixhub.com",
   [string]$Destination = (Join-Path ([Environment]::GetFolderPath("MyDocuments")) "gtasixhub-backups"),
   [string]$DataDir = "/var/lib/gtasixhub",
-  [int]$KeepDatabases = 30
+  [int]$KeepDatabases = 30,
+  [string]$KeyFile = ""
 )
 $ErrorActionPreference = "Stop"
+
+# With a key: never stop to ask for a password (scheduled runs have nobody to answer).
+$sshOpts = @("-o", "StrictHostKeyChecking=accept-new")
+if ($KeyFile) { $sshOpts += @("-i", $KeyFile, "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes") }
 
 foreach ($cmd in "ssh", "scp", "tar") {
   if (-not (Get-Command $cmd -ErrorAction SilentlyContinue)) { throw "$cmd isn't available. Turn on Windows' OpenSSH Client (Settings > System > Optional features)." }
@@ -30,25 +38,26 @@ foreach ($cmd in "ssh", "scp", "tar") {
 $dbDir = Join-Path $Destination "database"
 $upDir = Join-Path $Destination "uploads"
 New-Item -ItemType Directory -Force -Path $dbDir, $upDir | Out-Null
+Start-Transcript -Path (Join-Path $Destination "last-run.log") -Force | Out-Null
 
 $name = "gtasixhub-$(Get-Date -Format 'yyyyMMdd-HHmmss').db"
 $remoteDb = "/tmp/$name"
 Write-Host "1/3  Copying the database on the server..."
-ssh $Server "sudo -u gtasixhub bash -c 'set -a; . /etc/gtasixhub.env; set +a; cd /srv/gtasixhub && node scripts/backup-db.mjs --out $remoteDb'"
+ssh @sshOpts $Server "sudo -u gtasixhub bash -c 'set -a; . /etc/gtasixhub.env; set +a; cd /srv/gtasixhub && node scripts/backup-db.mjs --out $remoteDb'"
 if ($LASTEXITCODE -ne 0) { throw "Couldn't copy the database on the server." }
 
 Write-Host "2/3  Downloading the database..."
 try {
-  scp -q "${Server}:$remoteDb" (Join-Path $dbDir $name)
+  scp -q @sshOpts "${Server}:$remoteDb" (Join-Path $dbDir $name)
   if ($LASTEXITCODE -ne 0) { throw "Downloading the database failed." }
 } finally {
-  ssh $Server "rm -f $remoteDb" | Out-Null
+  ssh @sshOpts $Server "rm -f $remoteDb" | Out-Null
 }
 Get-ChildItem $dbDir -Filter "gtasixhub-*.db" | Sort-Object Name -Descending | Select-Object -Skip $KeepDatabases | Remove-Item
 Write-Host "     Saved database\$name"
 
 Write-Host "3/3  Checking uploads..."
-$remote = ssh $Server "cd $DataDir/uploads && find . -type f -printf '%s\t%P\n'"
+$remote = ssh @sshOpts $Server "cd $DataDir/uploads && find . -type f -printf '%s\t%P\n'"
 if ($LASTEXITCODE -ne 0) { throw "Couldn't list the uploads on the server." }
 $need = @(foreach ($line in @($remote)) {
     if (-not $line) { continue }
@@ -66,18 +75,19 @@ if ($need.Count -eq 0) {
   # Unix line endings: tar on the server reads this list.
   [IO.File]::WriteAllText($list, (($need -join "`n") + "`n"))
   try {
-    scp -q $list "${Server}:/tmp/gtasixhub-$tag.txt"
-    ssh $Server "tar -C $DataDir/uploads -cf /tmp/gtasixhub-$tag.tar -T /tmp/gtasixhub-$tag.txt"
+    scp -q @sshOpts $list "${Server}:/tmp/gtasixhub-$tag.txt"
+    ssh @sshOpts $Server "tar -C $DataDir/uploads -cf /tmp/gtasixhub-$tag.tar -T /tmp/gtasixhub-$tag.txt"
     if ($LASTEXITCODE -ne 0) { throw "Packing the uploads on the server failed." }
-    scp -q "${Server}:/tmp/gtasixhub-$tag.tar" $tarLocal
+    scp -q @sshOpts "${Server}:/tmp/gtasixhub-$tag.tar" $tarLocal
     if ($LASTEXITCODE -ne 0) { throw "Downloading the uploads failed." }
     tar -xf $tarLocal -C $upDir
     if ($LASTEXITCODE -ne 0) { throw "Unpacking the uploads failed." }
   } finally {
-    ssh $Server "rm -f /tmp/gtasixhub-$tag.txt /tmp/gtasixhub-$tag.tar" | Out-Null
+    ssh @sshOpts $Server "rm -f /tmp/gtasixhub-$tag.txt /tmp/gtasixhub-$tag.tar" | Out-Null
     Remove-Item -Force -ErrorAction SilentlyContinue $list, $tarLocal
   }
 }
 
 Write-Host ""
 Write-Host "Done. Backup is in $Destination"
+Stop-Transcript | Out-Null

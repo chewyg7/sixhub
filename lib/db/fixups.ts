@@ -115,6 +115,20 @@ FIXUPS.push({
   },
 });
 
+FIXUPS.push({
+  // English subtitles for the three trailers (files in public/media/<slug>/).
+  key: "fixup:trailer-subtitles",
+  run(db: Database.Database) {
+    const t = Date.now();
+    for (const slug of Object.keys(TRAILER_ART)) {
+      const row = db.prepare("SELECT data FROM media WHERE slug = ?").get(slug) as { data: string } | undefined;
+      if (!row) continue;
+      const item = { ...JSON.parse(row.data), subtitles: [{ url: `/media/${slug}/subtitles.en.vtt`, lang: "en", label: "English" }] };
+      db.prepare("UPDATE media SET data = ?, updated_at = ? WHERE slug = ?").run(JSON.stringify(item), t, slug);
+    }
+  },
+});
+
 export function runFixups(db: Database.Database) {
   const done = db.prepare("SELECT 1 FROM meta WHERE key = ?");
   for (const f of FIXUPS) {

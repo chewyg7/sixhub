@@ -58,7 +58,14 @@
       "tileWidth": 192,
       "tileHeight": 108,
       "count": 46
-    }
+    },
+    "subtitles": [
+      {
+        "url": "/media/gta-vi-trailer-1/subtitles.en.vtt",
+        "lang": "en",
+        "label": "English"
+      }
+    ]
   },
   "gta-vi-trailer-2": {
     "kind": "video",
@@ -132,6 +139,13 @@
         "height": 720,
         "url": "https://videos-rockstargames-com.akamaized.net/v4/cpys7u2s/flv/en-us-720p.mp4",
         "bytes": 44210476
+      }
+    ],
+    "subtitles": [
+      {
+        "url": "/media/gta-vi-trailer-2/subtitles.en.vtt",
+        "lang": "en",
+        "label": "English"
       }
     ]
   },
@@ -207,6 +221,13 @@
         "height": 720,
         "url": "https://videos-rockstargames-com.akamaized.net/v4/rk721912/flv/en-us-720p.mp4",
         "bytes": 1019756773
+      }
+    ],
+    "subtitles": [
+      {
+        "url": "/media/gta-vi-extended-look/subtitles.en.vtt",
+        "lang": "en",
+        "label": "English"
       }
     ]
   }

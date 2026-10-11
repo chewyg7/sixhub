@@ -154,19 +154,8 @@ Content edits made in the admin panel are live immediately and need no deploy.
 Everything worth keeping is in `/var/lib/gtasixhub`: the database and
 `uploads/`. The code is on GitHub and in `/srv/gtasixhub`.
 
-**Nightly database snapshots on the server** (the newest 20 are kept, and they
-show up in the admin panel's **System & backups** page). Install once:
-
-```bash
-sudo cp /srv/gtasixhub/deploy/gtasixhub-backup.service /srv/gtasixhub/deploy/gtasixhub-backup.timer /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now gtasixhub-backup.timer
-sudo systemctl start gtasixhub-backup.service      # one now, to check it works
-ls -lh /var/lib/gtasixhub/backups
-```
-
-**A copy off the server.** On your Windows PC, this downloads a fresh database
-backup and every uploaded file to `Documents\gtasixhub-backups` (after the
+**Backups live on your PC, not the server.** On your Windows PC, this copies the
+database (a temporary copy on the server, deleted once downloaded) and every uploaded file to `Documents\gtasixhub-backups` (after the
 first run, only new or changed files):
 
 ```powershell

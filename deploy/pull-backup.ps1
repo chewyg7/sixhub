@@ -3,9 +3,11 @@
   Copies GTA 6 Hub's database and every uploaded file from the server to this PC.
 
 .DESCRIPTION
-  1. Makes a fresh database backup on the server.
-  2. Downloads it (keeping the newest 30 here).
+  1. Makes a temporary copy of the database on the server.
+  2. Downloads it (keeping the newest 30 here) and deletes it from the server.
   3. Downloads uploaded files that are new or changed since the last run.
+
+  Nothing is left behind on the server; the backups only live on this PC.
 
   Needs ssh, scp and tar, which Windows 10/11 include. Run it from anywhere:
 
@@ -29,16 +31,19 @@ $dbDir = Join-Path $Destination "database"
 $upDir = Join-Path $Destination "uploads"
 New-Item -ItemType Directory -Force -Path $dbDir, $upDir | Out-Null
 
-Write-Host "1/3  Making a fresh database backup on the server..."
-ssh $Server "sudo -u gtasixhub bash -c 'set -a; . /etc/gtasixhub.env; set +a; cd /srv/gtasixhub && node scripts/backup-db.mjs'"
-if ($LASTEXITCODE -ne 0) { Write-Warning "Couldn't make a fresh backup; copying the newest existing one instead." }
+$name = "gtasixhub-$(Get-Date -Format 'yyyyMMdd-HHmmss').db"
+$remoteDb = "/tmp/$name"
+Write-Host "1/3  Copying the database on the server..."
+ssh $Server "sudo -u gtasixhub bash -c 'set -a; . /etc/gtasixhub.env; set +a; cd /srv/gtasixhub && node scripts/backup-db.mjs --out $remoteDb'"
+if ($LASTEXITCODE -ne 0) { throw "Couldn't copy the database on the server." }
 
 Write-Host "2/3  Downloading the database..."
-$latest = "$(ssh $Server "ls -1t $DataDir/backups/gtasixhub-*.db 2>/dev/null | head -n 1")".Trim()
-if (-not $latest) { throw "No database backups found in $DataDir/backups on the server." }
-$name = $latest.Split("/")[-1]
-scp -q "${Server}:$latest" (Join-Path $dbDir $name)
-if ($LASTEXITCODE -ne 0) { throw "Downloading the database failed." }
+try {
+  scp -q "${Server}:$remoteDb" (Join-Path $dbDir $name)
+  if ($LASTEXITCODE -ne 0) { throw "Downloading the database failed." }
+} finally {
+  ssh $Server "rm -f $remoteDb" | Out-Null
+}
 Get-ChildItem $dbDir -Filter "gtasixhub-*.db" | Sort-Object Name -Descending | Select-Object -Skip $KeepDatabases | Remove-Item
 Write-Host "     Saved database\$name"
 

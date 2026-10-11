@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 /**
- * Database snapshot, same as the admin panel's "Back up now": a consistent
- * copy (SQLite's online backup, safe while the site runs) saved to
- * <DATA_DIR>/backups, keeping the newest 20. Run nightly by
- * deploy/gtasixhub-backup.timer, or by hand:
+ * Database snapshot: a consistent copy (SQLite's online backup, safe while the
+ * site runs).
  *
- *   sudo -u gtasixhub bash -c 'set -a; . /etc/gtasixhub.env; cd /srv/gtasixhub && npm run backup'
+ *   node scripts/backup-db.mjs --out /tmp/x.db   one copy at that path, nothing kept
+ *                                                (what deploy/pull-backup.ps1 uses)
+ *   node scripts/backup-db.mjs                   same as the admin panel's "Back up now":
+ *                                                saved to <DATA_DIR>/backups, newest 20 kept
  */
 import Database from "better-sqlite3";
 import { existsSync } from "node:fs";
@@ -22,6 +23,21 @@ const KEEP = 20;
 if (!existsSync(DB_FILE)) {
   console.error(`No database at ${DB_FILE}. Is DATA_DIR set?`);
   process.exit(1);
+}
+
+const outAt = process.argv.indexOf("--out");
+if (outAt !== -1) {
+  const out = path.resolve(process.argv[outAt + 1] ?? "");
+  if (!process.argv[outAt + 1]) {
+    console.error("--out needs a file path.");
+    process.exit(1);
+  }
+  const db = new Database(DB_FILE, { fileMustExist: true });
+  await db.backup(out);
+  db.close();
+  await chmod(out, 0o600);
+  console.log(`Backed up to ${out} (${((await stat(out)).size / 1024 / 1024).toFixed(1)} MB).`);
+  process.exit(0);
 }
 
 await mkdir(BACKUP_DIR, { recursive: true, mode: 0o700 });

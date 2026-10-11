@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Maximize, Minimize, Pause, PictureInPicture2, Play, ScanSearch, Volume1, Volume2, VolumeX } from "lucide-react";
+import { Captions, CaptionsOff, ChevronLeft, ChevronRight, Maximize, Minimize, Pause, PictureInPicture2, Play, ScanSearch, Volume1, Volume2, VolumeX } from "lucide-react";
 import type { MediaItem } from "@/types/content";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/format";
@@ -16,6 +16,10 @@ import { usePipSupported } from "@/lib/hooks/use-client";
 import { Scrubber } from "./scrubber";
 
 const RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
+const CAPTIONS_KEY = "gh:captions";
+
+/** Cue text without WebVTT markup (<i>, <c.yellow>, <v Name>…). */
+const plainCue = (t: string) => t.replace(/<[^>]+>/g, "").trim();
 
 interface Props {
   item: MediaItem;
@@ -43,6 +47,34 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
   const [started, setStarted] = useState(Boolean(autoPlay));
   const fps = item.video?.fps ?? 30;
   const pipSupported = usePipSupported();
+  const subtitles = item.subtitles ?? [];
+  const hasSubs = subtitles.length > 0;
+  // Subtitles stay on or off across videos and visits.
+  const [captionsOn, setCaptionsOn] = useState(false);
+  const [cue, setCue] = useState("");
+  useEffect(() => {
+    try {
+      setCaptionsOn(localStorage.getItem(CAPTIONS_KEY) === "1");
+    } catch {}
+  }, []);
+  const toggleCaptions = useCallback(() => {
+    setCaptionsOn((on) => {
+      try {
+        localStorage.setItem(CAPTIONS_KEY, on ? "0" : "1");
+      } catch {}
+      return !on;
+    });
+  }, []);
+  // The track runs "hidden": the browser keeps the active cues, and they're drawn in our own style above the controls.
+  useEffect(() => {
+    const track = video.current?.textTracks[0];
+    if (!track || !hasSubs) return;
+    track.mode = captionsOn ? "hidden" : "disabled";
+    const update = () => setCue(captionsOn ? Array.from(track.activeCues ?? [], (c) => plainCue((c as VTTCue).text)).join("\n") : "");
+    track.addEventListener("cuechange", update);
+    update();
+    return () => track.removeEventListener("cuechange", update);
+  }, [captionsOn, hasSubs, item.slug]);
 
   // Smooth time updates while playing.
   useEffect(() => {
@@ -120,6 +152,9 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
     } else if (k === "f") {
       e.preventDefault();
       toggleFullscreen();
+    } else if (k === "c" && hasSubs) {
+      e.preventDefault();
+      toggleCaptions();
     } else if (k === "m") {
       e.preventDefault();
       setMuted((m) => {
@@ -193,7 +228,21 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
             onError={i === sources.length - 1 ? () => setError("This video couldn't be loaded.") : undefined}
           />
         ))}
+        {subtitles.map((s) => (
+          <track key={s.url} kind="subtitles" src={s.url} srcLang={s.lang} label={s.label} />
+        ))}
       </video>
+
+      {cue && (
+        <div
+          aria-live="off"
+          className={cn("pointer-events-none absolute inset-x-0 flex justify-center px-4 transition-[bottom] duration-200 sm:px-10", controlsVisible || !playing ? "bottom-[76px]" : "bottom-6")}
+        >
+          <p className="max-w-[min(90%,900px)] rounded-md bg-black/72 px-3 py-1.5 text-center text-[clamp(13px,2.1vw,26px)] leading-snug font-semibold whitespace-pre-line text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.6)]">
+            {cue}
+          </p>
+        </div>
+      )}
 
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
@@ -288,6 +337,11 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
               </button>
             )}
           />
+          {hasSubs && (
+            <IconButton label={captionsOn ? "Turn subtitles off" : "Turn subtitles on"} shortcut="C" size="icon-sm" pressed={captionsOn} onClick={toggleCaptions}>
+              {captionsOn ? <Captions /> : <CaptionsOff />}
+            </IconButton>
+          )}
           {pipSupported && (
             <IconButton
               label="Picture in picture"

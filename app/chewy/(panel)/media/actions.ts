@@ -14,7 +14,7 @@ const MediaForm = z.object({
   description: z.string().max(4000),
   alt: z.string().max(400),
   category: z.string().min(1).max(64),
-  folderId: z.string().max(80),
+  folderId: z.string().max(300),
   sourceSlug: z.string().min(1).max(64),
   datePublished: isoDate,
   tags: z.array(z.string().max(64)).max(40),
@@ -157,7 +157,7 @@ export async function reviewMedia(slug: string, decision: "approve" | "reject"):
 const RemoteForm = z.object({
   url: httpsUrl,
   title: z.string().min(1).max(160),
-  folderId: z.string().max(80),
+  folderId: z.string().max(300),
   category: z.string().min(1).max(64),
   sourceSlug: z.string().min(1).max(64),
   datePublished: isoDate,

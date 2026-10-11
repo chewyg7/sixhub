@@ -7,7 +7,7 @@ import * as repo from "@/lib/db/content";
 import { slugify } from "@/lib/slug";
 
 const Paths = z.object({
-  parentId: z.string().max(200),
+  parentId: z.string().max(300),
   paths: z.array(z.array(z.string().trim().min(1).max(80)).min(1).max(12)).max(500),
 });
 
@@ -37,7 +37,8 @@ export async function ensureUploadFolders(input: { parentId: string; paths: stri
         let found = siblings.find((f) => f.slug === slug || f.name.toLowerCase() === name.toLowerCase());
         if (!found) {
           const wanted = parent ? `${parent}/${slug}` : slug;
-          const id = all.some((f) => f.id === wanted) ? undefined : wanted;
+          // Readable path ids while they stay short; deep or long names get a random id instead.
+          const id = wanted.length > 120 || all.some((f) => f.id === wanted) ? undefined : wanted;
           found = repo.saveFolder({ id, name, slug, description: "", parentId: parent, sort: siblings.length });
           all.push(found);
           created++;

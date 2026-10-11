@@ -114,6 +114,13 @@ export interface Storyboard {
   count: number;
 }
 
+export interface SubtitleTrack {
+  url: string;
+  /** BCP 47 language, e.g. "en". */
+  lang: string;
+  label: string;
+}
+
 /** A smaller encode of a video, for everyday playback. */
 export interface VideoRendition {
   width: number;
@@ -149,6 +156,8 @@ export interface MediaItem {
   storyboard?: Storyboard;
   /** Lighter encodes of `original` (videos), largest first. The original stays the analysis source. */
   renditions?: VideoRendition[];
+  /** WebVTT subtitle files (same-origin), shown by the video player's CC button. */
+  subtitles?: SubtitleTrack[];
   font?: FontTechnical;
   /** Folder the item is filed in (see MediaFolder). */
   folderId?: string;

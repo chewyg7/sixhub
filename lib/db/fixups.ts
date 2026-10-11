@@ -86,6 +86,35 @@ FIXUPS.push({
   },
 });
 
+/** Rockstar's official cover art for each trailer, resized on their CDN (?im=Resize=<width>). */
+export const TRAILER_ART: Record<string, string> = {
+  "gta-vi-trailer-1": "https://videos-rockstargames-com.akamaized.net/v4/rkoCtr1r/art/global.jpg",
+  "gta-vi-trailer-2": "https://videos-rockstargames-com.akamaized.net/v4/cpys7u21/art/global.jpg",
+  "gta-vi-extended-look": "https://videos-rockstargames-com.akamaized.net/v4/rk721912/art/en-us.jpg",
+};
+
+export function trailerArt(base: string) {
+  const at = (w: number) => `${base}?im=Resize=${w}`;
+  return {
+    poster: { url: at(1920), width: 1920, height: 1080, mimeType: "image/jpeg", filename: "poster.jpg" },
+    variants: [480, 960, 1920].map((w) => ({ url: at(w), width: w, height: Math.round((w * 9) / 16), format: "jpeg" as const })),
+  };
+}
+
+FIXUPS.push({
+  // Trailer thumbnails now use Rockstar's official cover art instead of frames grabbed from the video.
+  key: "fixup:trailer-art",
+  run(db: Database.Database) {
+    const t = Date.now();
+    for (const [slug, base] of Object.entries(TRAILER_ART)) {
+      const row = db.prepare("SELECT data FROM media WHERE slug = ?").get(slug) as { data: string } | undefined;
+      if (!row) continue;
+      const item = { ...JSON.parse(row.data), ...trailerArt(base) };
+      db.prepare("UPDATE media SET data = ?, updated_at = ? WHERE slug = ?").run(JSON.stringify(item), t, slug);
+    }
+  },
+});
+
 export function runFixups(db: Database.Database) {
   const done = db.prepare("SELECT 1 FROM meta WHERE key = ?");
   for (const f of FIXUPS) {

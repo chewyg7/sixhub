@@ -30,10 +30,15 @@ const MetaSchema = z.discriminatedUnion("purpose", [
   z.object({ purpose: z.literal("avatar"), userId: z.string().max(80).optional() }),
   z.object({
     purpose: z.literal("media"),
-    filename: z.string().max(200),
-    title: z.string().trim().max(160).optional(),
+    // Long names are shortened rather than refused (the end keeps the extension).
+    filename: z.string().transform((s) => (s.length > 200 ? s.slice(-200) : s)),
+    title: z
+      .string()
+      .trim()
+      .transform((s) => s.slice(0, 160))
+      .optional(),
     description: z.string().trim().max(4000).optional(),
-    folderId: z.string().max(80),
+    folderId: z.string().max(300),
     category: z.string().max(64),
     sourceSlug: z.string().max(64),
     tags: list,
@@ -51,6 +56,35 @@ const MetaSchema = z.discriminatedUnion("purpose", [
 ]);
 
 const HARD_MAX = Math.max(...Object.values(MAX_BYTES));
+
+const FIELD_NAMES: Record<string, string> = {
+  title: "Title",
+  description: "Description",
+  folderId: "Folder",
+  category: "Category",
+  sourceSlug: "Source",
+  tags: "Tags",
+  characters: "Characters",
+  locations: "Locations",
+  credit: "Credit",
+  verification: "Trust level",
+  datePublished: "Published date",
+};
+
+/** Says which detail was wrong, e.g. "Tags: each tag can be up to 64 characters." */
+function describeIssue(e: z.ZodError): string {
+  const issue = e.issues[0];
+  if (!issue) return "Some upload details were invalid.";
+  const field = FIELD_NAMES[String(issue.path[0])] ?? String(issue.path[0] ?? "Upload details");
+  if (issue.code === "too_big") {
+    const max = "maximum" in issue ? String(issue.maximum) : "";
+    if (issue.path.length > 1) return `${field}: each one can be up to ${max} characters.`;
+    return issue.origin === "array" ? `${field}: up to ${max} allowed.` : `${field} is too long (up to ${max} characters).`;
+  }
+  if (issue.code === "too_small") return `${field} can't be empty.`;
+  if (field === "Published date") return "Published date must be a full date (YYYY-MM-DD).";
+  return `${field}: ${issue.message}`;
+}
 
 /** Streams the request body to a temp file, enforcing the size limit for the detected type. */
 async function receive(request: NextRequest): Promise<{ file: string; size: number }> {
@@ -166,7 +200,7 @@ export async function POST(request: NextRequest) {
     if (status === "published" && !meta.hidden) revalidatePath("/", "layout");
     return Response.json({ slug, status });
   } catch (e) {
-    if (e instanceof z.ZodError) return Response.json({ error: "Some upload details were invalid." }, { status: 400 });
+    if (e instanceof z.ZodError) return Response.json({ error: describeIssue(e) }, { status: 400 });
     if (e instanceof SyntaxError) return Response.json({ error: "Bad upload metadata." }, { status: 400 });
     if (e instanceof Forbidden) return errorResponse(e);
     return errorResponse(e);

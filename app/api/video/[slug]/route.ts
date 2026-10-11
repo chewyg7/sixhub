@@ -1,4 +1,7 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import type { NextRequest } from "next/server";
+import { UPLOAD_DIR } from "@/lib/db";
 import trailers from "@/data/generated/trailers.json";
 
 /**
@@ -9,6 +12,9 @@ import trailers from "@/data/generated/trailers.json";
  * canvas — breaking frame capture, crop export and the pixel inspector.
  * Only slugs listed in the trailer manifest are served (never arbitrary
  * URLs), and Range requests pass straight through so seeking stays instant.
+ *
+ * If the file has been copied onto the server as <uploads>/trailers/<slug>.mp4,
+ * that copy is used instead (no dependence on the original host).
  */
 const UPSTREAM = new Map(
   Object.entries(trailers as Record<string, { url: string; proxy: boolean }>)
@@ -22,6 +28,9 @@ async function stream(request: NextRequest, ctx: RouteContext<"/api/video/[slug]
   const { slug } = await ctx.params;
   const url = UPSTREAM.get(slug);
   if (!url) return new Response("Not found", { status: 404 });
+  if (existsSync(/*turbopackIgnore: true*/ path.join(UPLOAD_DIR, "trailers", `${slug}.mp4`))) {
+    return new Response(null, { status: 307, headers: { location: `/files/trailers/${slug}.mp4`, "cache-control": "no-store" } });
+  }
 
   const range = request.headers.get("range");
   const upstream = await fetch(url, {

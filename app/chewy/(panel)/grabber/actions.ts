@@ -27,7 +27,7 @@ const Request = z.object({
   gallery: z.string().regex(/^[a-z0-9-]{1,120}$/),
   galleryTitle: z.string().max(160),
   galleryUrl: z.string().regex(/^https:\/\/www\.gtavice\.net\/galleries\/[a-z0-9-]+$/),
-  folderId: z.string().max(120),
+  folderId: z.string().max(300),
   category: z.string().min(1).max(64),
   items: z.array(Item).max(3000),
 });

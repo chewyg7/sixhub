@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Captions, CaptionsOff, ChevronLeft, ChevronRight, Maximize, Minimize, Pause, PictureInPicture2, Play, ScanSearch, Volume1, Volume2, VolumeX } from "lucide-react";
 import type { MediaItem } from "@/types/content";
 import { cn } from "@/lib/cn";
@@ -17,6 +17,33 @@ import { Scrubber } from "./scrubber";
 
 const RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
 const CAPTIONS_KEY = "gh:captions";
+
+const captionListeners = new Set<() => void>();
+const readCaptions = () => {
+  try {
+    return localStorage.getItem(CAPTIONS_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+/** Subtitles on/off, shared by every player and kept across visits. */
+function useCaptionsPref(): [boolean, () => void] {
+  const on = useSyncExternalStore(
+    (l) => {
+      captionListeners.add(l);
+      return () => captionListeners.delete(l);
+    },
+    readCaptions,
+    () => false,
+  );
+  const toggle = useCallback(() => {
+    try {
+      localStorage.setItem(CAPTIONS_KEY, readCaptions() ? "0" : "1");
+    } catch {}
+    captionListeners.forEach((l) => l());
+  }, []);
+  return [on, toggle];
+}
 
 /** Cue text without WebVTT markup (<i>, <c.yellow>, <v Name>…). */
 const plainCue = (t: string) => t.replace(/<[^>]+>/g, "").trim();
@@ -49,22 +76,8 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
   const pipSupported = usePipSupported();
   const subtitles = item.subtitles ?? [];
   const hasSubs = subtitles.length > 0;
-  // Subtitles stay on or off across videos and visits.
-  const [captionsOn, setCaptionsOn] = useState(false);
+  const [captionsOn, toggleCaptions] = useCaptionsPref();
   const [cue, setCue] = useState("");
-  useEffect(() => {
-    try {
-      setCaptionsOn(localStorage.getItem(CAPTIONS_KEY) === "1");
-    } catch {}
-  }, []);
-  const toggleCaptions = useCallback(() => {
-    setCaptionsOn((on) => {
-      try {
-        localStorage.setItem(CAPTIONS_KEY, on ? "0" : "1");
-      } catch {}
-      return !on;
-    });
-  }, []);
   // The track runs "hidden": the browser keeps the active cues, and they're drawn in our own style above the controls.
   useEffect(() => {
     const track = video.current?.textTracks[0];

@@ -11,7 +11,7 @@ import { Menu } from "@/components/ui/menu";
 import { ErrorState } from "@/components/ui/states";
 import { buttonClass } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
-import { viewerHref } from "../media-links";
+import { viewerHrefFor } from "../media-links";
 import { usePipSupported } from "@/lib/hooks/use-client";
 import { Scrubber } from "./scrubber";
 
@@ -303,7 +303,7 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
           )}
           <Tooltip content="Open in Media Viewer at this time">
             <Link
-              href={viewerHref(item.slug, { t: current })}
+              href={viewerHrefFor(item, { t: current })}
               aria-label="Open in Media Viewer at this time"
               className={buttonClass({ variant: "ghost", size: "icon-sm", className: "text-white/90 hover:bg-white/10" })}
             >

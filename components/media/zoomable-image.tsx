@@ -37,8 +37,11 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
  */
 export const ZoomableImage = forwardRef<ZoomHandle, Props>(function ZoomableImage({ item, className, controls = true, onZoomedChange }, ref) {
   const box = useRef<HTMLDivElement>(null);
-  const w = item.width ?? item.original.width ?? 1920;
-  const h = item.height ?? item.original.height ?? 1080;
+  // Repo images may not state their size; it's measured from the file before showing it.
+  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
+  const known = Boolean(item.width ?? item.original.width);
+  const w = item.width ?? item.original.width ?? natural?.w ?? 1920;
+  const h = item.height ?? item.original.height ?? natural?.h ?? 1080;
   const largest = [...item.variants].sort((a, b) => b.width - a.width)[0];
   const [size, setSize] = useState({ W: 0, H: 0 });
   const [view, setView] = useState<View | null>(null);
@@ -46,6 +49,21 @@ export const ZoomableImage = forwardRef<ZoomHandle, Props>(function ZoomableImag
   const [src, setSrc] = useState(largest?.url ?? item.original.url);
   const [loadingOriginal, setLoadingOriginal] = useState(false);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
+
+  useEffect(() => {
+    if (known) return;
+    let live = true;
+    const img = new Image();
+    img.onload = () => {
+      if (!live || !img.naturalWidth) return;
+      setNatural({ w: img.naturalWidth, h: img.naturalHeight });
+      setView(null); // refit to the real proportions
+    };
+    img.src = item.original.url;
+    return () => {
+      live = false;
+    };
+  }, [known, item.original.url]);
   const gesture = useRef<{ x: number; y: number; view: View; dist?: number; moved: boolean } | null>(null);
 
   const fitScale = useCallback((W: number, H: number) => Math.min(W / w, H / h, 1), [w, h]);
@@ -214,7 +232,7 @@ export const ZoomableImage = forwardRef<ZoomHandle, Props>(function ZoomableImag
         onPointerCancel={onPointerUp}
         onDoubleClick={onDoubleClick}
       >
-        {view && (
+        {view && (known || natural) && (
           // eslint-disable-next-line @next/next/no-img-element -- dynamic src swap to original on deep zoom
           <img
             src={src}
@@ -233,7 +251,7 @@ export const ZoomableImage = forwardRef<ZoomHandle, Props>(function ZoomableImag
           />
         )}
       </div>
-      {controls && view && (
+      {controls && view && (known || natural) && (
         <div className="glass-2 absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-0.5 rounded-lg p-1">
           <IconButton label="Zoom out" shortcut="−" size="icon-sm" onClick={api.zoomOut}>
             <Minus />

@@ -37,12 +37,14 @@ const useCanShare = () => useSyncExternalStore(noop, canShareFiles, () => false)
  */
 function useShareFile(item: MediaItem, canShare: boolean) {
   const [state, setState] = useState<{ slug: string; file: File | null; failed: boolean }>({ slug: item.slug, file: null, failed: false });
-  const sharable = item.original.url.startsWith("/") && (item.original.bytes ?? 0) <= SHARE_LIMIT;
+  // Our files when not too big; repo images straight from their host (if it allows it).
+  const ext = Boolean(item.external);
+  const sharable = ext ? item.kind === "image" : item.original.url.startsWith("/") && (item.original.bytes ?? 0) <= SHARE_LIMIT;
   useEffect(() => {
     if (!sharable || !canShare) return;
     let live = true;
     const ctl = new AbortController();
-    fetch(item.original.url, { signal: ctl.signal })
+    fetch(item.original.url, { signal: ctl.signal, ...(ext ? { credentials: "omit", referrerPolicy: "no-referrer" } : {}) })
       .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
       .then((blob) => {
         if (!live) return;
@@ -54,12 +56,14 @@ function useShareFile(item: MediaItem, canShare: boolean) {
       live = false;
       ctl.abort();
     };
-  }, [item.slug, item.original.url, item.original.filename, item.original.mimeType, sharable, canShare]);
+  }, [item.slug, item.original.url, item.original.filename, item.original.mimeType, sharable, canShare, ext]);
   const current = state.slug === item.slug ? state : { file: null, failed: false };
   return { file: current.file, preparing: sharable && canShare && !current.file && !current.failed };
 }
 
 function download(item: MediaItem) {
+  // Browsers ignore "download" on other sites' files, so a repo file opens in a new tab instead.
+  if (item.external) return void window.open(item.original.url, "_blank", "noopener,noreferrer");
   const a = document.createElement("a");
   a.href = item.original.url;
   a.download = item.original.filename;

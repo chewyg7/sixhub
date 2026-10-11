@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, ExternalLink, Info, Maximize, Minimize, ScanSearch, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Info, Maximize, Minimize, ScanSearch, ShieldAlert, X } from "lucide-react";
 import type { MediaItem } from "@/types/content";
 import { useCategory } from "@/components/site-data";
 import { cn } from "@/lib/cn";
@@ -20,7 +20,7 @@ import { FontTester, familyStyles } from "./font-tester";
 import { SaveMediaButton } from "./save-media";
 import { FavoriteButton } from "./favorite-button";
 import { MediaThumb } from "./media-thumb";
-import { viewerHref } from "./media-links";
+import { viewerHrefFor } from "./media-links";
 
 interface Props {
   items: MediaItem[];
@@ -60,7 +60,11 @@ export function Lightbox({ items, index, onIndexChange, onClose: closeNow }: Pro
     if (window.history.state?.ghLightbox) window.history.back();
     else closeNow();
   }, [closeNow]);
-  useEffect(() => library.recordView(item.slug), [item.slug]);
+  const external = item.external;
+  // Repo items aren't part of the archive, so they stay out of Recently viewed.
+  useEffect(() => {
+    if (!external) library.recordView(item.slug);
+  }, [item.slug, external]);
 
   // Preload neighbours' display variants for instant navigation.
   useEffect(() => {
@@ -156,14 +160,14 @@ export function Lightbox({ items, index, onIndexChange, onClose: closeNow }: Pro
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-semibold">{item.title}</p>
           <p className="hidden truncate text-[12px] text-white/55 sm:block">
-            {category?.singular} · {item.source.label} · {formatDate(item.datePublished)}
+            {external ? `${external.repoName} repo · from ${external.host}` : `${category?.singular} · ${item.source.label} · ${formatDate(item.datePublished)}`}
           </p>
         </div>
         <div className="flex items-center gap-0.5 [&_a]:text-white/85 [&_button]:text-white/85">
           {item.downloadable && (
             <SaveMediaButton item={item} label={false} className="flex size-10 items-center justify-center rounded-full transition-colors hover:bg-white/10" />
           )}
-          <FavoriteButton slug={item.slug} title={item.title} size="icon" />
+          {!external && <FavoriteButton slug={item.slug} title={item.title} size="icon" />}
           <IconButton label="Media information" shortcut="I" pressed={infoOpen} onClick={() => setInfoOpen((o) => !o)}>
             <Info />
           </IconButton>
@@ -172,11 +176,11 @@ export function Lightbox({ items, index, onIndexChange, onClose: closeNow }: Pro
           </IconButton>
           {item.kind !== "font" && (
             <>
-              <Link href={viewerHref(item.slug)} onClick={closeNow} className={buttonClass({ variant: "ghost", size: "sm", className: "hidden hover:bg-white/10 md:inline-flex" })}>
+              <Link href={viewerHrefFor(item)} onClick={closeNow} className={buttonClass({ variant: "ghost", size: "sm", className: "hidden hover:bg-white/10 md:inline-flex" })}>
                 <ScanSearch /> Open in Viewer
               </Link>
               <Link
-                href={viewerHref(item.slug)}
+                href={viewerHrefFor(item)}
                 onClick={closeNow}
                 aria-label="Open in Media Viewer"
                 className={buttonClass({ variant: "ghost", size: "icon", className: "md:hidden" })}
@@ -263,21 +267,32 @@ export function Lightbox({ items, index, onIndexChange, onClose: closeNow }: Pro
             aria-label="Media information"
             className="absolute inset-y-0 right-0 z-10 w-[min(100%,340px)] animate-fade-in overflow-y-auto border-l border-white/10 bg-[rgb(18_18_21/0.92)] p-5 backdrop-blur-xl lg:static"
           >
-            <div className="flex flex-wrap gap-1.5">
-              <Badge className="bg-white/10 text-white/80">{category?.singular}</Badge>
-              {item.verification === "community" && <Badge tone="sample">Community made</Badge>}
-            </div>
+            {external ? (
+              <p className="flex gap-2 rounded-lg bg-[#ffb84d]/10 px-3 py-2.5 text-[12.5px] leading-relaxed text-[#ffe2b3]">
+                <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-[#ffb84d]" />
+                <span>
+                  From the {external.repoName} repo. Loads straight from {external.host}; not hosted or checked by GTA 6 Hub.
+                </span>
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                <Badge className="bg-white/10 text-white/80">{category?.singular}</Badge>
+                {item.verification === "community" && <Badge tone="sample">Community made</Badge>}
+              </div>
+            )}
             <p className="mt-3 text-[13px] leading-relaxed text-white/70">{item.description}</p>
             <dl className="mt-5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[12.5px]">
               {(
                 [
-                  ["Published", formatDate(item.datePublished)],
-                  ["Source", item.source.label],
+                  external ? null : ["Published", formatDate(item.datePublished)],
+                  [external ? "Repo" : "Source", item.source.label],
+                  external ? ["Host", external.host] : null,
+                  item.credit ? ["Credit", item.credit] : null,
                   item.width ? ["Resolution", formatResolution(item.width, item.height)] : null,
                   item.width ? ["Aspect", aspectRatioLabel(item.width, item.height)] : null,
                   duration ? ["Duration", formatDuration(duration)] : null,
                   item.video ? ["Frame rate", formatFps(item.video.fps)] : null,
-                  ["File", `${item.original.mimeType.split("/")[1]?.toUpperCase()} · ${formatBytes(item.original.bytes)}`],
+                  external ? ["File", item.original.filename] : ["File", `${item.original.mimeType.split("/")[1]?.toUpperCase()} · ${formatBytes(item.original.bytes)}`],
                 ].filter(Boolean) as [string, string][]
               ).map(([k, v]) => (
                 <div key={k} className="contents">
@@ -287,17 +302,19 @@ export function Lightbox({ items, index, onIndexChange, onClose: closeNow }: Pro
               ))}
             </dl>
             <div className="mt-6 flex flex-col gap-2">
-              <Link
-                href={`/media/${item.slug}`}
-                onClick={closeNow}
-                className={buttonClass({ variant: "secondary", size: "sm", className: "justify-start bg-white/10 text-white hover:bg-white/15" })}
-              >
-                View details, tags &amp; related media
-              </Link>
+              {!external && (
+                <Link
+                  href={`/media/${item.slug}`}
+                  onClick={closeNow}
+                  className={buttonClass({ variant: "secondary", size: "sm", className: "justify-start bg-white/10 text-white hover:bg-white/15" })}
+                >
+                  View details, tags &amp; related media
+                </Link>
+              )}
               <a
                 href={item.original.url}
                 target="_blank"
-                rel="noopener"
+                rel={external ? "noopener noreferrer nofollow" : "noopener"}
                 className={buttonClass({ variant: "ghost", size: "sm", className: "justify-start text-white/80 hover:bg-white/10" })}
               >
                 <ExternalLink /> Open original file

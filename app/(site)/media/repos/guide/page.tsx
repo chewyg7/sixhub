@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Making a repo", robots: { index: fal
 
 const EXAMPLE = `{
   "name": "Leonida Night Drives",
-  "author": "exid",
+  "author": "Jason Duvall",
   "description": "Night-time stills I captured from Trailer 2.",
   "icon": "icon.png",
   "website": "https://example.com",

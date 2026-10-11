@@ -86,7 +86,7 @@ export function ViewerApp({ items }: { items: MediaItem[] }) {
     if (aItem) loadMedia("a", fromArchive(aItem));
     else if (u.src) {
       const m = fromUrl(u.src);
-      if (!("error" in m)) loadMedia("a", m);
+      if (!("error" in m)) loadMedia("a", { ...m, title: u.n ?? m.title, kind: u.k ?? m.kind, thumb: (u.k ?? m.kind) === "image" ? m.src : undefined });
     }
     if (u.r) useViewer.setState((st) => ({ transform: { ...st.transform, rotation: u.r! } }));
     if (u.z && (aItem || u.src)) s.setView("a", { scale: u.z, cx: u.x ?? 0.5, cy: u.y ?? 0.5, mode: "custom" });

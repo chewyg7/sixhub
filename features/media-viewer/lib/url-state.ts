@@ -3,14 +3,18 @@
  * discovery: media, timestamp, zoom/centre, rotation and comparison.
  *
  *   /viewer?m=<slug>&t=12.345&z=4&x=0.4123&y=0.5521&r=90&b=<slug>&cm=slider
- *   /viewer?src=<https url>        (remote files)
+ *   /viewer?src=<https url>&n=<title>&k=<kind>   (remote files, e.g. from a repo)
  */
+import type { MediaKind } from "@/types/content";
 import type { CompareMode, Rotation } from "../types";
 import type { ViewerState } from "../store";
 
 export interface UrlState {
   m?: string;
   src?: string;
+  /** Title and kind for a remote file (otherwise taken from its URL). */
+  n?: string;
+  k?: MediaKind;
   t?: number;
   z?: number;
   x?: number;
@@ -33,6 +37,8 @@ export function parseUrlState(sp: URLSearchParams): UrlState {
   return {
     m: sp.get("m") ?? undefined,
     src: sp.get("src") ?? undefined,
+    n: sp.get("n")?.slice(0, 160) || undefined,
+    k: ((k) => (k === "image" || k === "video" || k === "audio" ? k : undefined))(sp.get("k")),
     t: num("t"),
     z: num("z"),
     x: num("x"),
@@ -48,7 +54,11 @@ export function parseUrlState(sp: URLSearchParams): UrlState {
 export function serializeUrlState(s: ViewerState, includeTime: boolean): URLSearchParams {
   const sp = new URLSearchParams();
   if (s.a?.origin === "archive" && s.a.slug) sp.set("m", s.a.slug);
-  else if (s.a?.origin === "url") sp.set("src", s.a.src);
+  else if (s.a?.origin === "url") {
+    sp.set("src", s.a.src);
+    if (s.a.title !== s.a.meta.filename) sp.set("n", s.a.title);
+    sp.set("k", s.a.kind);
+  }
   if (includeTime && s.a && s.a.kind !== "image" && s.playback.time > 0.001) {
     const fps = s.a.meta.fps ?? 30;
     // Share the middle of the current frame so the link lands on it exactly.

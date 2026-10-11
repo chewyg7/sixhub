@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { z } from "zod";
+import type { MediaItem } from "@/types/content";
 
 /**
  * Repositories: JSON files, hosted anywhere by anyone, that list media by
@@ -186,6 +187,62 @@ export function fetchRepo(url: string, fresh = false): Promise<RepoManifest> {
   memo.set(url, run);
   run.catch(() => memo.delete(url));
   return run;
+}
+
+const MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+  avif: "image/avif",
+  svg: "image/svg+xml",
+  mp4: "video/mp4",
+  m4v: "video/mp4",
+  webm: "video/webm",
+  mov: "video/quicktime",
+  mp3: "audio/mpeg",
+  m4a: "audio/mp4",
+  wav: "audio/wav",
+  ogg: "audio/ogg",
+  flac: "audio/flac",
+};
+
+/**
+ * A repo item in the shape the site's lightbox, players and grid use. Every
+ * URL is the repo's own link: nothing is copied to or served by our server.
+ */
+export function toMediaItem(repo: { id: string; name: string; website?: string }, item: RepoItem): MediaItem {
+  const path = new URL(item.url).pathname;
+  const filename = decodeURIComponent(path.split("/").pop() || "file");
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  const thumb = item.thumbnail ? { url: item.thumbnail, width: 640, height: 360, format: "webp" as const } : undefined;
+  return {
+    id: `repo-${repo.id}-${item.id}`,
+    slug: `repo-${repo.id}-${item.id}`,
+    title: item.title,
+    kind: item.kind,
+    category: "repo",
+    description: item.description ?? "",
+    alt: item.title,
+    datePublished: "",
+    dateAdded: "",
+    source: { slug: "repo", label: repo.name, origin: "other", url: repo.website },
+    width: item.width,
+    height: item.height,
+    original: { url: item.url, mimeType: MIME[ext] ?? `${item.kind}/*`, filename, width: item.width, height: item.height },
+    // Images without a thumbnail use the file itself for previews.
+    variants: thumb ? [thumb] : item.kind === "image" ? [{ url: item.url, width: item.width ?? 1600, height: item.height ?? 900, format: "webp" }] : [],
+    poster: thumb && item.kind !== "image" ? { url: thumb.url, mimeType: "image/*", filename: "thumbnail" } : undefined,
+    tags: [],
+    characters: [],
+    locations: [],
+    collections: [],
+    downloadable: true,
+    credit: item.credit,
+    verification: "community",
+    external: { repoId: repo.id, repoName: repo.name, host: new URL(item.url).host },
+  };
 }
 
 /** A short, stable id for a repo link. */

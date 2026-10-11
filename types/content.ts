@@ -162,6 +162,18 @@ export interface MediaItem {
   downloadable: boolean;
   credit?: string;
   verification: Verification;
+  /**
+   * Set on items from a visitor's repo (see lib/repos): not part of the
+   * archive, never stored on our server, every link points at the repo's host.
+   */
+  external?: ExternalSource;
+}
+
+export interface ExternalSource {
+  repoId: string;
+  repoName: string;
+  /** Host the item's file loads from. */
+  host: string;
 }
 
 /* ------------------------------------------------------------------ */

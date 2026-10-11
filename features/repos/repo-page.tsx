@@ -6,12 +6,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Check, ExternalLink, Loader2, RefreshCw, Settings2, Share2, Trash2 } from "lucide-react";
 import { Breadcrumbs } from "@/components/layout/page";
 import { usePreferences } from "@/lib/preferences";
-import { fetchRepo, removeRepo, saveRepo, shareLink, useSavedRepos, type RepoManifest } from "@/lib/repos";
+import { fetchRepo, removeRepo, saveRepo, shareLink, toMediaItem, useSavedRepos, type RepoManifest } from "@/lib/repos";
+import { useLightbox } from "@/components/media/lightbox-context";
 import { pluralize } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { RepoIcon, RepoWarning, hostOf, shareRepoLink, useHydrated } from "./repo-bits";
 import { RepoTile } from "./repo-tile";
-import { RepoViewer } from "./repo-viewer";
 
 const PAGE = 60;
 const pill = "inline-flex h-10 items-center gap-2 rounded-full bg-white/[0.07] px-4 text-[13.5px] font-bold text-white/80 transition-colors hover:bg-white/15 hover:text-white";
@@ -38,11 +38,12 @@ export function RepoPage({ id }: { id: string }) {
   const [nonce, setNonce] = useState(0);
   const [folder, setFolder] = useState<string | null>(null);
   const [shown, setShown] = useState(PAGE);
-  const [open, setOpen] = useState<number | null>(null);
+  const lightbox = useLightbox();
   const [shared, setShared] = useState(false);
   const allowed = !!saved && (enabled || saved.viaShare);
   const url = saved?.url;
   const viaShare = saved?.viaShare ?? false;
+  const savedId = saved?.id;
 
   useEffect(() => {
     if (!allowed || !url) return;
@@ -66,7 +67,12 @@ export function RepoPage({ id }: { id: string }) {
     for (const i of m?.items ?? []) if (i.folder) counts.set(i.folder, (counts.get(i.folder) ?? 0) + 1);
     return [...counts];
   }, [m]);
-  const items = useMemo(() => (m ? (folder ? m.items.filter((i) => i.folder === folder) : m.items) : []), [m, folder]);
+  // Repo items become regular media items (still pointing at the repo's links) so the
+  // site's lightbox, zoom, players and Media Viewer all work on them.
+  const items = useMemo(
+    () => (m && savedId ? (folder ? m.items.filter((i) => i.folder === folder) : m.items).map((i) => toMediaItem({ id: savedId, name: m.name, website: m.website }, i)) : []),
+    [m, folder, savedId],
+  );
 
   if (!hydrated) return <div className="mt-16 h-64 animate-pulse rounded-[28px] bg-white/[0.03]" />;
   if (!saved) return <Gone>This repo isn’t in this browser. Repos are saved per browser, so it may have been added somewhere else.</Gone>;
@@ -165,7 +171,7 @@ export function RepoPage({ id }: { id: string }) {
             <ul className="mt-8 grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4 2xl:grid-cols-5">
               {items.slice(0, shown).map((item, i) => (
                 <li key={item.id}>
-                  <RepoTile item={item} onOpen={() => setOpen(i)} />
+                  <RepoTile item={item} onOpen={() => lightbox.open(items, i)} />
                 </li>
               ))}
             </ul>
@@ -182,7 +188,6 @@ export function RepoPage({ id }: { id: string }) {
           {m.skipped > 0 && <p className="mt-8 text-center text-[12.5px] text-white/35">{pluralize(m.skipped, "entry", "entries")} in this repo couldn’t be shown (broken or unsupported links).</p>}
         </>
       )}
-      {open !== null && items[open] && <RepoViewer items={items} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />}
     </div>
   );
 }

@@ -269,6 +269,25 @@ export function deleteFolder(id: string) {
   bumpContentVersion();
 }
 
+/**
+ * Deletes a folder, every folder inside it and every media item in any of
+ * them. Returns the removed media rows so the caller can delete their files.
+ */
+export function deleteFolderTree(id: string): { folders: number; removed: MediaRow[] } {
+  const d = db();
+  if (!getFolder(id)) return { folders: 0, removed: [] };
+  const ids = [id, ...folderDescendants(id)];
+  const marks = ids.map(() => "?").join(",");
+  const slugs = (d.prepare(`SELECT slug FROM media WHERE folder_id IN (${marks})`).all(...ids) as { slug: string }[]).map((r) => r.slug);
+  let removed: MediaRow[] = [];
+  d.transaction(() => {
+    removed = slugs.length ? deleteMedia(slugs) : [];
+    d.prepare(`DELETE FROM folders WHERE id IN (${marks})`).run(...ids);
+  })();
+  bumpContentVersion();
+  return { folders: ids.length, removed };
+}
+
 /* ------------------------------------------------------------------ */
 /* Simple JSON tables                                                  */
 /* ------------------------------------------------------------------ */

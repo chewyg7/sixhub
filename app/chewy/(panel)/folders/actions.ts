@@ -6,6 +6,7 @@ import { requireOwner } from "@/lib/auth/session";
 import { run, slugField, str, type ActionState } from "@/lib/admin/action";
 import * as repo from "@/lib/db/content";
 import { slugify } from "@/lib/slug";
+import { removeUploadedFiles } from "@/lib/media/ingest";
 
 const FolderForm = z.object({
   id: z.string().max(300).optional(),
@@ -46,6 +47,21 @@ export async function deleteFolderAction(id: string): Promise<ActionState> {
     repo.deleteFolder(id);
     await audit(user, "folder.delete", id, { name: f.name });
     return `Deleted ${f.name}. Its contents moved up a level.`;
+  });
+}
+
+/** Permanently deletes a folder with everything in it (sub-folders, items and their files). The name must be typed to confirm. */
+export async function deleteFolderWithContents(id: string, typedName: string): Promise<ActionState> {
+  return run(async () => {
+    const user = await requireOwner();
+    const f = repo.getFolder(id);
+    if (!f) throw new Error("That folder no longer exists.");
+    if (typedName.trim() !== f.name) throw new Error(`Type the folder's name exactly (${f.name}) to confirm.`);
+    const { folders, removed } = repo.deleteFolderTree(id);
+    // Only files we stored ourselves are deleted; seed files in /public stay.
+    await removeUploadedFiles(removed.flatMap((r) => [r.item.original.url, ...(r.item.variants ?? []).map((v) => v.url)]));
+    await audit(user, "folder.delete-all", id, { name: f.name, folders, items: removed.length });
+    return `Deleted ${f.name}: ${folders} folder${folders === 1 ? "" : "s"} and ${removed.length} item${removed.length === 1 ? "" : "s"}.`;
   });
 }
 

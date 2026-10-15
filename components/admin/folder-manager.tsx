@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Folder, FolderPlus, GripVertical, Pencil } from "lucide-react";
-import { applyFolderChanges, deleteFolderAction, saveFolderAction } from "@/app/chewy/(panel)/folders/actions";
+import { ChevronRight, Folder, FolderPlus, GripVertical, Pencil, Trash2, TriangleAlert } from "lucide-react";
+import { applyFolderChanges, deleteFolderAction, deleteFolderWithContents, saveFolderAction } from "@/app/chewy/(panel)/folders/actions";
 import type { ActionState } from "@/lib/admin/action";
 import type { FolderOption } from "@/lib/admin/folders";
 import type { MediaFolder } from "@/types/content";
@@ -12,6 +12,53 @@ import { cn } from "@/lib/cn";
 import { Button, Card, ConfirmButton, Field, Input, Notice, Select, SubmitButton, Textarea } from "./ui";
 
 export type FolderRow = Omit<MediaFolder, "coverSlug"> & { coverSlug: string; items: number };
+
+/** Permanent delete of a folder with everything in it. Typing the folder's name unlocks the button. */
+function DeleteAllPanel({ folder, folders, items, onDone }: { folder: FolderRow; folders: number; items: number; onDone: (msg: ActionState) => void }) {
+  const [typed, setTyped] = useState("");
+  const [busy, start] = useTransition();
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const ok = typed.trim() === folder.name;
+  return (
+    <div className="rounded-2xl border border-[#ff4d6d]/30 bg-[#ff4d6d]/[0.07] p-4">
+      <p className="flex items-center gap-2 text-[14.5px] font-bold text-[#ffb3bf]">
+        <TriangleAlert className="size-4" /> Delete {folder.name} and everything in it?
+      </p>
+      <p className="mt-1.5 text-[13.5px] leading-relaxed text-white/70">
+        This permanently deletes <strong className="text-white">{folders} folder{folders === 1 ? "" : "s"}</strong> and{" "}
+        <strong className="text-white">
+          {items} item{items === 1 ? "" : "s"}
+        </strong>
+        , including their uploaded files. It can&apos;t be undone. To keep the items instead, use <strong className="text-white">Delete</strong>, which moves them up a level.
+      </p>
+      <label className="mt-3 block text-[13px] text-white/60">
+        Type <strong className="text-white">{folder.name}</strong> to confirm
+        <Input value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" spellCheck={false} className="mt-1.5" aria-label={`Type ${folder.name} to confirm`} />
+      </label>
+      {error && <p className="mt-2 text-[13px] text-[#ff8a9a]">{error}</p>}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button
+          tone="danger"
+          disabled={!ok || busy}
+          onClick={() =>
+            start(async () => {
+              const res = await deleteFolderWithContents(folder.id, typed);
+              if (res.error) return setError(res.error);
+              onDone(res);
+              router.refresh();
+            })
+          }
+        >
+          <Trash2 /> {busy ? "Deleting…" : "Delete everything"}
+        </Button>
+        <Button tone="ghost" onClick={() => onDone({})} disabled={busy}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function FolderForm({ initial, options, onDone }: { initial: Partial<FolderRow>; options: FolderOption[]; onDone: () => void }) {
   const [state, action] = useActionState<ActionState, FormData>(saveFolderAction, {});
@@ -100,6 +147,7 @@ export function FolderManager({ rows: serverRows, items: serverItems, options }:
   const changeCount = pending.folders.length + Object.keys(pending.items).length;
 
   const [editing, setEditing] = useState<string | null>(null);
+  const [deletingAll, setDeletingAll] = useState<string | null>(null);
   const [creatingIn, setCreatingIn] = useState<string | null | undefined>(undefined);
   const [open, setOpen] = useState<Set<string>>(() => new Set(serverRows.filter((r) => !r.parentId).map((r) => r.id)));
   const [msg, setMsg] = useState<ActionState>({});
@@ -113,6 +161,7 @@ export function FolderManager({ rows: serverRows, items: serverItems, options }:
   const children = (parent: string | null) => rows.filter((r) => (r.parentId ?? null) === parent).sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name));
   const itemsIn = (folderId: string) => items.filter((i) => i.folderId === folderId);
   const total = (id: string): number => itemsIn(id).length + children(id).reduce((n, c) => n + total(c.id), 0);
+  const folderCount = (id: string): number => 1 + children(id).reduce((n, c) => n + folderCount(c.id), 0);
   const descendants = (id: string): string[] => children(id).flatMap((c) => [c.id, ...descendants(c.id)]);
   const pathOf = (r: FolderRow): string => {
     const parent = rows.find((x) => x.id === r.parentId);
@@ -361,8 +410,32 @@ export function FolderManager({ rows: serverRows, items: serverItems, options }:
                 >
                   Delete
                 </ConfirmButton>
+                <Button
+                  size="sm"
+                  tone="ghost"
+                  onClick={() => setDeletingAll(deletingAll === r.id ? null : r.id)}
+                  disabled={changeCount > 0}
+                  aria-label={`Delete ${r.name} with everything in it`}
+                  title={changeCount > 0 ? "Save or discard your moves first" : "Delete with sub-folders and items"}
+                  className="text-[#ff8a9a] hover:text-[#ffb3bf]"
+                >
+                  <Trash2 />
+                </Button>
               </span>
             </div>
+            {deletingAll === r.id && (
+              <div className="mt-2 mb-3 ml-9">
+                <DeleteAllPanel
+                  folder={r}
+                  folders={folderCount(r.id)}
+                  items={total(r.id)}
+                  onDone={(m) => {
+                    setDeletingAll(null);
+                    if (m.ok || m.error) setMsg(m);
+                  }}
+                />
+              </div>
+            )}
             {editing === r.id && (
               <div className="mt-2 mb-3 ml-9">
                 <FolderForm initial={r} options={options} onDone={() => setEditing(null)} />

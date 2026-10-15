@@ -2,9 +2,9 @@
   "gta-vi-trailer-1": {
     "kind": "video",
     "url": "https://cdn.invincible25.com/GTAVI_Trailer1.mp4",
-    "proxy": true,
+    "proxy": false,
     "original": {
-      "url": "/api/video/gta-vi-trailer-1",
+      "url": "https://cdn.invincible25.com/GTAVI_Trailer1.mp4",
       "width": 3840,
       "height": 2160,
       "bytes": 115128012,

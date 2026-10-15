@@ -5,11 +5,14 @@ import type { Pane, ViewerMedia } from "../types";
 import { useViewer } from "../store";
 import { fpsOf, frameAt, registerElement, syncB } from "../controller";
 import { snapFps } from "../lib/mp4";
+import { deviceMaxHeight, playable } from "@/lib/media/video-source";
 
 let pendingSeek: number | null = null;
-/** Seek applied once pane A's metadata loads (used by shared ?t= links). */
-export function setPendingSeek(t: number | null) {
+let pendingPlay = false;
+/** Seek applied once pane A's metadata loads (used by shared ?t= links, and switching quality). */
+export function setPendingSeek(t: number | null, play = false) {
   pendingSeek = t;
+  pendingPlay = play;
 }
 
 interface Props {
@@ -50,13 +53,19 @@ export function MediaElement({ pane, media, style, className, passive }: Props) 
       };
     }
     let id = 0;
+    let lastUi = 0;
     let lastTime = -1;
     let lastPresented = -1;
     const deltas: number[] = [];
-    const cb = (_now: number, meta: { mediaTime: number; presentedFrames: number }) => {
+    const cb = (now: number, meta: { mediaTime: number; presentedFrames: number }) => {
       const s = useViewer.getState();
       const fps = s.a?.meta.fps ?? 30;
-      s.setPlayback({ time: meta.mediaTime, frame: Math.round(meta.mediaTime * fps) });
+      // Exact frame whenever paused or stepping; while playing, ~15 updates a second is plenty for the
+      // readouts and keeps the whole viewer from re-rendering 30-60 times a second (heavy on phones).
+      if (v.paused || now - lastUi > 66) {
+        lastUi = now;
+        s.setPlayback({ time: meta.mediaTime, frame: Math.round(meta.mediaTime * fps) });
+      }
       // Measure the frame rate from consecutive presented frames when metadata doesn't provide it.
       if (!v.paused && lastPresented >= 0 && meta.presentedFrames === lastPresented + 1 && meta.mediaTime > lastTime) {
         deltas.push(meta.mediaTime - lastTime);
@@ -77,11 +86,20 @@ export function MediaElement({ pane, media, style, className, passive }: Props) 
     return () => v.cancelVideoFrameCallback?.(id);
   }, [primary, media.id]);
 
-  const onError = () => {
+  const onError = (e: React.SyntheticEvent<HTMLVideoElement | HTMLImageElement>) => {
     const s = useViewer.getState();
-    // Remote sources without CORS headers: retry without CORS (display only, pixels unreadable).
-    if (media.origin === "url" && media.cors) {
+    // Hosts without CORS headers: retry without CORS (display only, pixels unreadable).
+    if ((media.origin === "url" || media.origin === "archive") && media.cors) {
       s.setMedia(pane, { cors: false });
+      return;
+    }
+    // A file this device can't decode (e.g. 2160p on a phone): fall back to the next one down, same spot.
+    const current = media.sources?.find((x) => x.url === media.src);
+    const next = current && media.sources?.find((x) => x.height < current.height && playable(x));
+    if (next) {
+      const el = e.currentTarget;
+      if (el instanceof HTMLVideoElement && pane === "a") setPendingSeek(el.currentTime, !el.paused);
+      s.setMedia(pane, { src: next.url, cors: true });
       return;
     }
     if (!passive)
@@ -130,7 +148,8 @@ export function MediaElement({ pane, media, style, className, passive }: Props) 
       src={media.src}
       poster={media.poster}
       crossOrigin={cross}
-      preload="auto"
+      // Computers buffer ahead for smooth frame stepping; phones only load what's needed (multi-GB files).
+      preload={pane === "a" && deviceMaxHeight() === Infinity ? "auto" : "metadata"}
       playsInline
       disablePictureInPicture={passive}
       muted={pane === "b"}
@@ -157,6 +176,8 @@ export function MediaElement({ pane, media, style, className, passive }: Props) 
           if (pendingSeek !== null) {
             v.currentTime = Math.min(pendingSeek, v.duration);
             pendingSeek = null;
+            if (pendingPlay) v.play().catch(() => {});
+            pendingPlay = false;
           }
         } else syncB(true);
       }}

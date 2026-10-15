@@ -37,13 +37,14 @@ const rockstar = (id, height) => `https://videos-rockstargames-com.akamaized.net
  * `url` is the highest quality file (used by the Media Viewer); `renditions`
  * are smaller encodes of the same video for everyday playback.
  * `proxy`: the host sends no CORS headers, so the site streams the file
- * through /api/video/<slug> to keep frame capture and pixel tools working.
+ * (no longer used: every trailer host now sends CORS headers, and videos load
+ * straight from their host, never through this server).
  */
 const TRAILERS = [
   {
     slug: "gta-vi-trailer-1",
     url: "https://cdn.invincible25.com/GTAVI_Trailer1.mp4",
-    proxy: true,
+    proxy: false,
     posterAt: 14,
     interval: 2,
   },
@@ -217,7 +218,7 @@ async function buildTrailer(t) {
     url: t.url,
     proxy: t.proxy,
     original: {
-      url: t.proxy ? `/api/video/${t.slug}` : t.url,
+      url: t.url,
       width: info.width,
       height: info.height,
       bytes,

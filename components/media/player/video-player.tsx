@@ -13,6 +13,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { viewerHrefFor } from "../media-links";
 import { usePipSupported } from "@/lib/hooks/use-client";
+import { pickSource, playable, saveQuality, savedQuality, videoSources } from "@/lib/media/video-source";
 import { Scrubber } from "./scrubber";
 
 const RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -45,6 +46,28 @@ function useCaptionsPref(): [boolean, () => void] {
   return [on, toggle];
 }
 
+const qualityListeners = new Set<() => void>();
+/** The picked quality ("auto" or a height), shared by every player and kept across visits. */
+function useQualityPref(): [number | "auto", (q: number | "auto") => void] {
+  const q = useSyncExternalStore(
+    (l) => {
+      qualityListeners.add(l);
+      return () => qualityListeners.delete(l);
+    },
+    savedQuality,
+    () => "auto" as const,
+  );
+  const set = useCallback((next: number | "auto") => {
+    saveQuality(next);
+    qualityListeners.forEach((l) => l());
+  }, []);
+  return [q, set];
+}
+
+const noopSubscribe = () => () => {};
+/** False while hydrating: the file is only chosen in the browser, where the device is known. */
+const useHydrated = () => useSyncExternalStore(noopSubscribe, () => true, () => false);
+
 /** Cue text without WebVTT markup (<i>, <c.yellow>, <v Name>…). */
 const plainCue = (t: string) => t.replace(/<[^>]+>/g, "").trim();
 
@@ -74,6 +97,20 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
   const [started, setStarted] = useState(Boolean(autoPlay));
   const fps = item.video?.fps ?? 30;
   const pipSupported = usePipSupported();
+  const hydrated = useHydrated();
+  const [quality, setQuality] = useQualityPref();
+  const sources = videoSources(item);
+  // Files that failed here are skipped, so playback falls back to the next one down.
+  const [failed, setFailed] = useState<string[]>([]);
+  const usable = sources.filter((s) => !failed.includes(s.url));
+  const source = hydrated ? pickSource(usable, quality) : undefined;
+  // Where to pick up after switching quality (or falling back).
+  const resume = useRef<{ t: number; play: boolean } | null>(null);
+  const switchTo = (q: number | "auto") => {
+    const v = video.current;
+    if (v) resume.current = { t: v.currentTime, play: !v.paused };
+    setQuality(q);
+  };
   const subtitles = item.subtitles ?? [];
   const hasSubs = subtitles.length > 0;
   const [captionsOn, toggleCaptions] = useCaptionsPref();
@@ -89,12 +126,17 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
     return () => track.removeEventListener("cuechange", update);
   }, [captionsOn, hasSubs, item.slug]);
 
-  // Smooth time updates while playing.
+  // Time updates while playing, about 15 times a second: smooth enough for the clock and scrubber
+  // without re-rendering the player on every frame (heavy on phones).
   useEffect(() => {
     if (!playing) return;
     let raf = 0;
-    const tick = () => {
-      if (video.current) setCurrent(video.current.currentTime);
+    let last = 0;
+    const tick = (now: number) => {
+      if (video.current && now - last > 66) {
+        last = now;
+        setCurrent(video.current.currentTime);
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -179,8 +221,6 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
     poke();
   };
 
-  // Always the original (2160p for the official trailers); the browser streams it in ranges.
-  const sources: { url: string; media?: string }[] = [{ url: item.original.url }];
   const poster = item.variants.find((v) => v.width >= 960)?.url ?? item.poster?.url;
   const VolumeIcon = muted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
@@ -215,7 +255,33 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
           setControlsVisible(true);
           if (video.current) setCurrent(video.current.currentTime);
         }}
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        src={source?.url}
+        onLoadedMetadata={(e) => {
+          const v = e.currentTarget;
+          setDuration(v.duration);
+          const r = resume.current;
+          resume.current = null;
+          if (r) {
+            v.currentTime = Math.min(r.t, v.duration || r.t);
+            if (r.play) v.play().catch(() => {});
+          }
+        }}
+        onError={(e) => {
+          const v = e.currentTarget;
+          if (!source || !v.error) return;
+          // Try the next file down (e.g. a phone that can't decode the 2160p original), from the same spot.
+          const next = usable.find((s) => s.url !== source.url && s.height < source.height && playable(s));
+          if (next) {
+            resume.current = { t: v.currentTime, play: !v.paused || started };
+            setFailed((f) => [...f, source.url]);
+            return;
+          }
+          setError(
+            v.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
+              ? "This device can't play this video's format. Try another browser, or a lower quality."
+              : "This video couldn't be loaded. Check your connection and try again.",
+          );
+        }}
         onTimeUpdate={(e) => !playing && setCurrent(e.currentTarget.currentTime)}
         onSeeked={(e) => setCurrent(e.currentTarget.currentTime)}
         onProgress={(e) => {
@@ -231,16 +297,6 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
         }}
         onRateChange={(e) => setRate(e.currentTarget.playbackRate)}
       >
-        {sources.map((x, i) => (
-          <source
-            key={x.url}
-            src={x.url}
-            type="video/mp4"
-            media={x.media}
-            // With <source> children, errors fire on the sources; the last one failing means nothing could play.
-            onError={i === sources.length - 1 ? () => setError("This video couldn't be loaded.") : undefined}
-          />
-        ))}
         {subtitles.map((s) => (
           <track key={s.url} kind="subtitles" src={s.url} srcLang={s.lang} label={s.label} />
         ))}
@@ -265,6 +321,7 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
             description={error}
             onRetry={() => {
               setError(null);
+              setFailed([]);
               video.current?.load();
             }}
             className="border-white/10 bg-black/40"
@@ -350,6 +407,23 @@ export function VideoPlayer({ item, autoPlay, className, fill }: Props) {
               </button>
             )}
           />
+          {sources.length > 1 && (
+            <Menu
+              align="end"
+              placement="above"
+              minWidth={150}
+              items={[
+                { type: "label", label: "Quality" },
+                { label: `Auto${quality === "auto" && source ? ` (${source.label})` : ""}`, checked: quality === "auto", onSelect: () => switchTo("auto") },
+                ...sources.filter(playable).map((s) => ({ label: s.label, checked: quality === s.height, onSelect: () => switchTo(s.height) })),
+              ]}
+              trigger={(p) => (
+                <button {...p} type="button" aria-label={`Quality: ${source?.label ?? "auto"}`} className={buttonClass({ variant: "ghost", size: "xs", className: "tabular font-mono" })}>
+                  {source ? (source.height >= 2000 ? "4K" : source.label) : "Auto"}
+                </button>
+              )}
+            />
+          )}
           {hasSubs && (
             <IconButton label={captionsOn ? "Turn subtitles off" : "Turn subtitles on"} shortcut="C" size="icon-sm" pressed={captionsOn} onClick={toggleCaptions}>
               {captionsOn ? <Captions /> : <CaptionsOff />}

@@ -13,6 +13,60 @@ import { useViewer } from "../store";
 import { player } from "../controller";
 import { parseTimeInput } from "../lib/sources";
 import { useViewerActions } from "../use-actions";
+import { setPendingSeek } from "./media-element";
+import { getElement } from "../controller";
+import { playable, saveQuality } from "@/lib/media/video-source";
+
+/** Which file of the video plays (2160p original, 1080p, 720p…). Remembered for next time. */
+function QualityControl() {
+  const media = useViewer((s) => s.a);
+  const sources = media?.sources?.filter(playable);
+  if (!media || !sources || sources.length < 2) return null;
+  const current = sources.find((x) => x.url === media.src);
+  return (
+    <Popover
+      label="Quality"
+      trigger={(p) => (
+        <Tooltip content="Quality">
+          <button {...p} type="button" aria-label={`Quality: ${current?.label ?? "auto"}`} className="tabular h-8 rounded-md px-2 font-mono text-[12px] text-text transition-colors hover:bg-surface-hover">
+            {current ? (current.height >= 2000 ? "4K" : current.label) : "Auto"}
+          </button>
+        </Tooltip>
+      )}
+    >
+      {(close) => (
+        <div className="w-[200px]">
+          <p className="eyebrow px-1 pb-1.5 text-[10.5px]">Quality</p>
+          {sources.map((x) => (
+            <button
+              key={x.url}
+              type="button"
+              aria-pressed={x.url === media.src}
+              onClick={() => {
+                close();
+                saveQuality(x.height);
+                if (x.url === media.src) return;
+                const el = getElement("a");
+                if (el instanceof HTMLVideoElement) setPendingSeek(el.currentTime, !el.paused);
+                const s = useViewer.getState();
+                s.setMedia("a", { src: x.url, cors: true });
+                s.updateMeta("a", { bytes: x.bytes, width: x.width, height: x.height, ...(x.original ? {} : { bitrate: undefined }) });
+              }}
+              className={cn(
+                "flex h-9 w-full items-center justify-between rounded-md px-2.5 text-[13px] transition-colors",
+                x.url === media.src ? "bg-text text-bg" : "text-text hover:bg-surface-hover",
+              )}
+            >
+              <span className="font-semibold">{x.label}</span>
+              <span className="text-[11.5px] opacity-60">{x.original ? "Original" : x.height <= 720 ? "Data saver" : "Smooth"}</span>
+            </button>
+          ))}
+          <p className="px-1 pt-2 text-[11.5px] leading-snug text-muted">Phones start at 1080p. Frame captures use the quality that&apos;s playing.</p>
+        </div>
+      )}
+    </Popover>
+  );
+}
 
 export const SPEEDS = [0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
 
@@ -253,6 +307,7 @@ export function Transport() {
         <div className="mx-1 hidden h-4 w-px bg-divider md:block" />
         {isVideo && <FrameReadout />}
         <div className="flex-1" />
+        {isVideo && <QualityControl />}
         <SpeedControl />
         <IconButton label={loop ? "Loop on" : "Loop off"} size="icon-sm" pressed={loop} onClick={() => player.setLoop(!loop)} className="hidden sm:inline-flex">
           <Repeat />

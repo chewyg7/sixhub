@@ -1,5 +1,6 @@
 import type { MediaItem, MediaKind } from "@/types/content";
 import { smallestVariant } from "@/lib/media/variants";
+import { pickSource, savedQuality, videoSources } from "@/lib/media/video-source";
 import type { Capture, MediaMeta, ViewerMedia } from "../types";
 import { fileReader, httpReader, readContainer } from "./mp4";
 
@@ -75,11 +76,16 @@ export function fromArchive(item: MediaItem): ViewerMedia {
       channels: item.audio.channels,
     } satisfies MediaMeta);
   }
+  // Videos play the file that suits this device (1080p on phones), switchable from the transport bar.
+  const sources = item.kind === "video" ? videoSources(item) : undefined;
+  const pick = sources ? pickSource(sources, savedQuality()) : undefined;
+  if (pick && !pick.original) Object.assign(meta, { bytes: pick.bytes, bitrate: undefined, width: pick.width, height: pick.height });
   return {
     id: uid(),
     kind: item.kind,
     origin: "archive",
-    src: item.original.url,
+    src: pick?.url ?? item.original.url,
+    sources: sources && sources.length > 1 ? sources : undefined,
     title: item.title,
     slug: item.slug,
     item,

@@ -129,6 +129,19 @@ FIXUPS.push({
   },
 });
 
+FIXUPS.push({
+  // Trailer 1 used to stream through /api/video on this server; it now loads straight from its CDN.
+  key: "fixup:trailer-1-direct",
+  run(db: Database.Database) {
+    const row = db.prepare("SELECT data FROM media WHERE slug = 'gta-vi-trailer-1'").get() as { data: string } | undefined;
+    if (!row) return;
+    const item = JSON.parse(row.data);
+    if (item.original?.url !== "/api/video/gta-vi-trailer-1") return;
+    item.original.url = "https://cdn.invincible25.com/GTAVI_Trailer1.mp4";
+    db.prepare("UPDATE media SET data = ?, updated_at = ? WHERE slug = 'gta-vi-trailer-1'").run(JSON.stringify(item), Date.now());
+  },
+});
+
 export function runFixups(db: Database.Database) {
   const done = db.prepare("SELECT 1 FROM meta WHERE key = ?");
   for (const f of FIXUPS) {

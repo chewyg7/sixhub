@@ -16,8 +16,7 @@ const SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/;
 
 function resolveFile(parts: string[]): string | null {
   if (parts.length < 2 || parts.length > 4) return null;
-  // trailers/: full-quality trailer files an owner placed on the server (see app/api/video).
-  if (!["media", "avatars", "trailers"].includes(parts[0])) return null;
+  if (!["media", "avatars"].includes(parts[0])) return null;
   if (!parts.every((p) => SEGMENT.test(p) && !p.includes(".."))) return null;
   const full = path.resolve(UPLOAD_DIR, ...parts);
   if (!full.startsWith(path.resolve(UPLOAD_DIR) + path.sep)) return null;

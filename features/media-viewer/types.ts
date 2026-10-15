@@ -1,4 +1,5 @@
 import type { MediaItem, MediaKind, Storyboard } from "@/types/content";
+import type { VideoSource } from "@/lib/media/video-source";
 
 export type Pane = "a" | "b";
 export type Rotation = 0 | 90 | 180 | 270;
@@ -44,6 +45,8 @@ export interface ViewerMedia {
   storyboard?: Storyboard;
   /** Pixels are readable (same-origin or CORS-enabled): capture, crop export and colour picking work. */
   cors: boolean;
+  /** Every file of an archive video (2160p, 1080p…); `src` is the one playing. */
+  sources?: VideoSource[];
   meta: MediaMeta;
 }
 

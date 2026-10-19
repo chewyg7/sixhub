@@ -126,7 +126,8 @@ const FRAME_MATS: Record<Exclude<FrameKind, "none">, { color: number; metalness:
 export class PlateStudio {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
-  private camera = new THREE.PerspectiveCamera(28, 1, 0.01, 60);
+  // A near plane of 5 cm (nothing gets closer) keeps depth precise across the whole garage.
+  private camera = new THREE.PerspectiveCamera(28, 1, 0.05, 60);
   private controls: OrbitControls;
   private composer: EffectComposer | null = null;
   private plate = new THREE.Group();
@@ -202,6 +203,11 @@ export class PlateStudio {
       normalMap: this.normalTex,
       alphaMap: maskTex,
       alphaTest: 0.5,
+      // The face sits a hair in front of the plate body; at a distance depth precision can't
+      // separate them and the body bleeds through (washed-out print). Always draw the face on top.
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -8,
       roughness: 0.5,
       metalness: 0,
       clearcoat: 0.2,
@@ -269,7 +275,7 @@ export class PlateStudio {
       this.composer = new EffectComposer(this.renderer, target);
       this.composer.addPass(new RenderPass(this.scene, this.camera));
       // High threshold: only the tail lights glow, never reflections.
-      this.composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.45, 4.5));
+      this.composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), 0.35, 0.4, 7));
       this.composer.addPass(new OutputPass());
     }
 
@@ -375,7 +381,7 @@ export class PlateStudio {
             }
             if (!(m instanceof THREE.MeshStandardMaterial)) continue;
             // A touch of clear-coat roughness keeps reflections smooth rather than glittery.
-            if (m instanceof THREE.MeshPhysicalMaterial && m.clearcoat > 0) m.clearcoatRoughness = Math.max(m.clearcoatRoughness, 0.07);
+            if (m instanceof THREE.MeshPhysicalMaterial && m.clearcoat > 0) m.clearcoatRoughness = Math.max(m.clearcoatRoughness, 0.13);
             // Body colour: drop the flat colour texture so the paint picker drives it.
             if (m.name.startsWith("Banshee_Carpaint_1")) {
               m.map = null;
@@ -387,7 +393,7 @@ export class PlateStudio {
             if (m.name === "Banshee_Emissive") {
               m.emissiveMap = m.map;
               m.emissive.set(0xffffff);
-              m.emissiveIntensity = 7;
+              m.emissiveIntensity = 10;
               m.needsUpdate = true;
             }
           }

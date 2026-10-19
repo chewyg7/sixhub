@@ -1,10 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, Check, Download, Link2, Loader2, RotateCcw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Camera, Check, Download, Link2, Loader2, RotateCcw, Undo2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { usePreferences } from "@/lib/preferences";
-import { MAX_CHARS, PLATE_H, PLATE_W, STYLES, cleanPlateText, drawPlateBump, drawPlateFace, drawPlatePicture, loadPlateAssets, type FrameKind } from "./plate-art";
+import {
+  MAX_CHARS,
+  PLATE_H,
+  PLATE_W,
+  STYLES,
+  VARIATIONS,
+  cleanPlateText,
+  drawPlateBump,
+  drawPlateFace,
+  drawPlatePicture,
+  loadPlateAssets,
+  styleColors,
+  type FrameKind,
+  type PlateAssets,
+  type TextColors,
+  type Variation,
+} from "./plate-art";
 import type { PlateStudio, StudioView } from "./plate-studio";
 
 const FRAMES: { id: FrameKind; name: string; swatch: string }[] = [
@@ -32,6 +48,54 @@ export interface PlateInitial {
   style?: string;
   frame?: string;
   paint?: string;
+  variation?: string;
+  split?: string;
+  rounded?: string;
+  /** "rrggbb,rrggbb,rrggbb" for LEONIDA, the number and GOODTIME STATE. */
+  colors?: string;
+  linked?: string;
+}
+
+const HEX = /^[0-9a-f]{6}$/i;
+function parseColors(v?: string): TextColors | null {
+  const parts = v?.split(",") ?? [];
+  if (parts.length !== 3 || !parts.every((x) => HEX.test(x))) return null;
+  return { header: `#${parts[0]}`, number: `#${parts[1]}`, footer: `#${parts[2]}` };
+}
+
+/** An on/off row, like the creator's other switches. */
+function Toggle({ label, hint, checked, onChange }: { label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-4 py-2">
+      <span>
+        <span className="block text-[14px] font-bold text-white/90">{label}</span>
+        {hint && <span className="block text-[12.5px] text-white/45">{hint}</span>}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className={cn("relative h-7 w-12 shrink-0 rounded-full transition-colors duration-300", checked ? "bg-[#2fd6c9]" : "bg-white/15")}
+      >
+        <span className={cn("absolute top-1 left-1 size-5 rounded-full bg-white shadow transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]", checked && "translate-x-5")} />
+      </button>
+    </label>
+  );
+}
+
+/** A colour swatch that opens the system colour picker. */
+function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 px-3 py-2 transition-colors hover:border-white/25">
+      <span className="relative size-8 shrink-0 overflow-hidden rounded-full border border-white/25" style={{ background: value }}>
+        <input type="color" value={value} onChange={(e) => onChange(e.target.value)} aria-label={`${label} colour`} className="absolute inset-0 size-full cursor-pointer opacity-0" />
+      </span>
+      <span className="min-w-0 flex-1 text-[13.5px] font-bold text-white/85">{label}</span>
+      <span className="tabular font-mono text-[12px] text-white/45 uppercase">{value}</span>
+    </label>
+  );
 }
 
 /** Segmented control like the creator's 2D/3D and Plate/Car switches. */
@@ -71,38 +135,49 @@ function Section({ title, aside, children }: { title: string; aside?: React.Reac
 export function PlateCreator({ initial }: { initial: PlateInitial }) {
   const [text, setText] = useState(() => cleanPlateText(initial.text ?? "VCECTY") || "VCECTY");
   const [styleId, setStyleId] = useState(() => (STYLES.some((s) => s.id === initial.style) ? initial.style! : STYLES[0].id));
-  const [frame, setFrame] = useState<FrameKind>(() => (FRAMES.some((f) => f.id === initial.frame) ? (initial.frame as FrameKind) : "chrome"));
+  const [frame, setFrame] = useState<FrameKind>(() => (FRAMES.some((f) => f.id === initial.frame) ? (initial.frame as FrameKind) : "none"));
+  const [variation, setVariation] = useState<Variation>(() => (initial.variation === "game" ? "game" : "real"));
+  const [split, setSplit] = useState(initial.split !== "0");
+  const [rounded, setRounded] = useState(initial.rounded === "1");
+  const [linked, setLinked] = useState(initial.linked !== "0");
+  /** Custom text colours; null means the style's own. */
+  const [custom, setCustom] = useState<TextColors | null>(() => parseColors(initial.colors));
   const [paint, setPaint] = useState(() => (PAINTS.some((p) => p.hex === initial.paint) ? initial.paint! : PAINTS[0].hex));
   const [dim, setDim] = useState<Dim>("2d");
   const [view, setView] = useState<StudioView>("plate");
   const [ready, setReady] = useState(false);
   const [studioState, setStudioState] = useState<"off" | "loading" | "ready" | "error">("off");
+  const [carLoading, setCarLoading] = useState(false);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
   const { quality } = usePreferences();
 
   const style = STYLES.find((s) => s.id === styleId) ?? STYLES[0];
+  const defaults = useMemo(() => styleColors(style, variation), [style, variation]);
+  const colors = custom ?? defaults;
+  const setColor = (key: keyof TextColors, value: string) => setCustom(linked ? { header: value, number: value, footer: value } : { ...colors, [key]: value });
   const face = useRef<HTMLCanvasElement | null>(null);
   const bump = useRef<HTMLCanvasElement | null>(null);
   const picture = useRef<HTMLCanvasElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const studio = useRef<PlateStudio | null>(null);
-  const orange = useRef<HTMLImageElement | null>(null);
+  const art = useRef<PlateAssets | null>(null);
 
   // Fonts and artwork, then the style thumbnails.
   useEffect(() => {
     let live = true;
-    loadPlateAssets().then((img) => {
+    loadPlateAssets().then((loaded) => {
       if (!live) return;
-      orange.current = img;
+      art.current = loaded;
       face.current = Object.assign(document.createElement("canvas"), { width: PLATE_W, height: PLATE_H });
       bump.current = Object.assign(document.createElement("canvas"), { width: PLATE_W, height: PLATE_H });
       const t: Record<string, string> = {};
       const c = Object.assign(document.createElement("canvas"), { width: 512, height: 256 });
-      for (const s of STYLES) {
-        drawPlateFace(c.getContext("2d")!, "ABC1234", s, img, 512, 256);
-        t[s.id] = c.toDataURL("image/webp", 0.9);
-      }
+      for (const v of VARIATIONS)
+        for (const s of STYLES) {
+          drawPlateFace(c.getContext("2d")!, { text: "ABC1234", style: s, colors: styleColors(s, v.id), variation: v.id, split: true, rounded: false }, loaded, 512, 256);
+          t[`${v.id}:${s.id}`] = c.toDataURL("image/webp", 0.9);
+        }
       setThumbs(t);
       setReady(true);
     });
@@ -114,13 +189,14 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
   // Redraw on every change: face + height map (3D) + the framed picture (2D).
   const shown = text || " ";
   useEffect(() => {
-    if (!ready || !face.current || !bump.current || !orange.current) return;
-    drawPlateFace(face.current.getContext("2d")!, shown, style, orange.current);
-    drawPlateBump(bump.current.getContext("2d")!, shown);
+    if (!ready || !face.current || !bump.current || !art.current) return;
+    const design = { text: shown, style, colors, variation, split, rounded };
+    drawPlateFace(face.current.getContext("2d")!, design, art.current);
+    drawPlateBump(bump.current.getContext("2d")!, design);
     const pic = picture.current;
     if (pic) drawPlatePicture(pic.getContext("2d")!, face.current, frame, pic.width, pic.height);
     studio.current?.updatePlate();
-  }, [ready, shown, style, frame]);
+  }, [ready, shown, style, colors, variation, split, rounded, frame]);
 
   // The 3D studio is only built the first time 3D is opened.
   const openStudio = useCallback(async () => {
@@ -131,6 +207,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
       if (!stage.current) return;
       studio.current = new PlateStudio(stage.current, face.current, bump.current, { bloom: quality !== "lofi", paint });
       studio.current.setFrame(frame);
+      studio.current.onCarLoading = setCarLoading;
       setStudioState("ready");
     } catch {
       setStudioState("error");
@@ -165,11 +242,12 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
   // Keep the link shareable.
   useEffect(() => {
     const t = window.setTimeout(() => {
-      const p = new URLSearchParams({ text, style: styleId, frame, paint });
+      const p = new URLSearchParams({ text, style: styleId, variation, frame, paint, split: split ? "1" : "0", rounded: rounded ? "1" : "0", linked: linked ? "1" : "0" });
+      if (custom) p.set("colors", [custom.header, custom.number, custom.footer].map((c) => c.slice(1)).join(","));
       history.replaceState(history.state, "", `${location.pathname}?${p}`);
     }, 400);
     return () => window.clearTimeout(t);
-  }, [text, styleId, frame, paint]);
+  }, [text, styleId, variation, frame, paint, split, rounded, linked, custom]);
 
   const download = (blob: Blob | null, name: string) => {
     if (!blob) return;
@@ -214,6 +292,28 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
           <p className="mt-3 text-[13.5px] leading-relaxed text-white/55">Up to {MAX_CHARS} characters (A–Z, 0–9). The characters split either side of the oranges, like the real Leonida plate. Keep it friendly.</p>
         </Section>
 
+        <Section title="Variation">
+          <div role="radiogroup" aria-label="Variation" className="grid grid-cols-2 gap-2">
+            {VARIATIONS.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                role="radio"
+                aria-checked={v.id === variation}
+                onClick={() => setVariation(v.id)}
+                className={cn("rounded-2xl border px-3 py-3 text-left transition-colors", v.id === variation ? "border-white bg-white/[0.06]" : "border-white/10 hover:border-white/30")}
+              >
+                <span className="block text-[14.5px] font-bold">{v.name}</span>
+                <span className="block text-[12px] text-white/45">{v.id === "real" ? "The real-world Leonida plate" : "The plate as seen in GTA VI"}</span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 divide-y divide-white/8">
+            <Toggle label="Rounded characters" hint="Dealerplate Florida Rounded" checked={rounded} onChange={setRounded} />
+            <Toggle label="Split around the oranges" hint={split ? "VCE · CTY" : "One line across the plate"} checked={split} onChange={setSplit} />
+          </div>
+        </Section>
+
         <Section title="Select a style">
           <div className="grid grid-cols-2 gap-2.5">
             {STYLES.map((s) => (
@@ -226,11 +326,44 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
               >
                 <span className="block overflow-hidden rounded-[7px] shadow-[0_6px_16px_-6px_rgb(0_0_0/0.8)]" style={{ aspectRatio: "2 / 1", background: `linear-gradient(${s.swatch[0]}, ${s.swatch[0]})` }}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- generated preview */}
-                  {thumbs[s.id] && <img src={thumbs[s.id]} alt="" className="block size-full" />}
+                  {thumbs[`${variation}:${s.id}`] && <img src={thumbs[`${variation}:${s.id}`]} alt="" className="block size-full" />}
                 </span>
                 <span className="mt-2 block truncate text-[12.5px] font-bold text-white/80">{s.name}</span>
               </button>
             ))}
+          </div>
+        </Section>
+
+        <Section
+          title="Text colours"
+          aside={
+            custom && (
+              <button type="button" onClick={() => setCustom(null)} className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-white/55 transition-colors hover:text-white">
+                <Undo2 className="size-3.5" /> Reset to style
+              </button>
+            )
+          }
+        >
+          <Toggle
+            label="Linked"
+            hint={linked ? "One colour for all the text" : "Each line of text has its own colour"}
+            checked={linked}
+            onChange={(on) => {
+              setLinked(on);
+              // Linking makes everything match the plate number.
+              if (on && custom) setCustom({ header: custom.number, number: custom.number, footer: custom.number });
+            }}
+          />
+          <div className="mt-2 grid gap-2">
+            {linked ? (
+              <ColorField label="All text" value={colors.number} onChange={(v) => setColor("number", v)} />
+            ) : (
+              <>
+                <ColorField label="LEONIDA" value={colors.header} onChange={(v) => setColor("header", v)} />
+                <ColorField label="Plate number" value={colors.number} onChange={(v) => setColor("number", v)} />
+                <ColorField label="GOODTIME STATE" value={colors.footer} onChange={(v) => setColor("footer", v)} />
+              </>
+            )}
           </div>
         </Section>
 
@@ -305,6 +438,11 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
         {dim === "3d" && studioState === "loading" && (
           <span className="absolute inset-0 flex items-center justify-center gap-2 text-[13.5px] text-white/60">
             <Loader2 className="size-5 animate-spin" /> Building the garage…
+          </span>
+        )}
+        {dim === "3d" && carLoading && (
+          <span className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center gap-2 text-[13.5px] text-white/70">
+            <Loader2 className="size-5 animate-spin" /> Opening LS Customs…
           </span>
         )}
         {studioState === "error" && dim === "3d" && <p className="absolute inset-x-6 top-1/2 text-center text-[14px] text-white/70">3D needs WebGL, which this browser has turned off. The 2D plate still works.</p>}

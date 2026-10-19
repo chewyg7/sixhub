@@ -5,11 +5,13 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { CORNER, HOLES, type FrameKind } from "./plate-art";
-import { buildCar, type Car } from "./car";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 
 /**
  * The 3D side of the plate creator: a stamped aluminium plate you can turn in
- * your hands, and a garage where it's bolted to the back of a car. Renders
+ * your hands, and LS Customs, where it's bolted to the back of a Banshee
+ * (public/tools/plate/customs.glb, loaded the first time Car view opens). Renders
  * only when something changes, and pauses entirely while hidden.
  */
 
@@ -20,6 +22,11 @@ const PW = 0.305;
 const PH = 0.1525;
 const THICK = 0.0012;
 const BEVEL = 0.0006;
+
+const CAR_URL = "/tools/plate/customs.glb";
+/** Where the plate's centre sits on the Banshee's rear (found by ray-casting the model). */
+// The flat panel on the rear bumper is at z 2.218 between y 0.42 and 0.56; the plate's back sits just proud of it.
+const MOUNT = new THREE.Vector3(0, 0.49, 2.2205);
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
@@ -124,8 +131,13 @@ export class PlateStudio {
   private faceTex: THREE.CanvasTexture;
   private bumpTex: THREE.CanvasTexture;
   private faceMat: THREE.MeshPhysicalMaterial;
-  private car: Car;
   private garage = new THREE.Group();
+  private mount = new THREE.Object3D();
+  private paintMats: THREE.MeshStandardMaterial[] = [];
+  private paint: string;
+  private carLoad: Promise<void> | null = null;
+  /** Told when the car starts and finishes loading (for a loading message). */
+  onCarLoading?: (loading: boolean) => void;
   /** 0 = plate on its own, 1 = garage fully lit. */
   private carMix = 0;
   private plateLights: THREE.Light[] = [];
@@ -155,7 +167,6 @@ export class PlateStudio {
     container.appendChild(this.renderer.domElement);
 
     this.scene.background = new THREE.Color(0x060607);
-    this.scene.fog = new THREE.Fog(0x060607, 7, 16);
     this.scene.environment = studioEnvironment(this.renderer);
     this.scene.environmentIntensity = 0.9;
 
@@ -182,15 +193,10 @@ export class PlateStudio {
     this.plateLights = [key, rim];
     this.scene.add(key, rim);
 
-    // The garage: car, glossy floor, soft contact shadow, overhead lights.
-    this.car = buildCar(opts.paint);
-    this.garage.add(this.car.group);
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(14, 64), new THREE.MeshStandardMaterial({ color: 0x0b0b0d, roughness: 0.28, metalness: 0.1 }));
-    floor.rotation.x = -Math.PI / 2;
-    this.garage.add(floor);
-    this.garage.add(this.contactShadow());
-    // Showroom lighting: a big soft top light for the paint, a key on the rear and plate,
-    // a cool fill, and Leonida pink / teal kickers low on each side.
+    // LS Customs: the scene file brings the car, floor and walls; these lights shape the paint.
+    this.paint = opts.paint;
+    this.mount.position.copy(MOUNT);
+    this.garage.add(this.mount);
     const top = new THREE.SpotLight(0xffffff, 0, 14, 0.75, 0.85, 2);
     top.position.set(0, 5.5, 2.6);
     top.target.position.set(0, 0.4, 1.4);
@@ -209,10 +215,8 @@ export class PlateStudio {
       { light: top, full: 50 },
       { light: rearKey, full: 26 },
       { light: fill, full: 12 },
-      { light: pink, full: 5 },
-      { light: teal, full: 5 },
-      { light: this.car.lights[0], full: 0.6 },
-      { light: this.car.lights[1], full: 0.35 },
+      { light: pink, full: 3 },
+      { light: teal, full: 3 },
     ];
     this.garage.visible = false;
     this.scene.add(this.garage);
@@ -232,7 +236,7 @@ export class PlateStudio {
     }
 
     this.applyView("plate");
-    if (process.env.NODE_ENV === "development") Object.assign(window, { __plateStudio: { camera: this.camera, controls: this.controls, studio: this } });
+    if (process.env.NODE_ENV === "development") Object.assign(window, { __plateStudio: { camera: this.camera, controls: this.controls, studio: this, THREE } });
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(container);
     this.resize();
@@ -302,8 +306,47 @@ export class PlateStudio {
   }
 
   setPaint(color: string) {
-    this.car.paint.color.set(color);
+    this.paint = color;
+    for (const m of this.paintMats) m.color.set(color);
     this.dirty = true;
+  }
+
+  /** Loads LS Customs and the Banshee once; resolves when they're in the scene. */
+  loadCar(): Promise<void> {
+    if (this.carLoad) return this.carLoad;
+    this.onCarLoading?.(true);
+    // The scene file is meshopt-compressed with WebP textures (gltf-transform optimize), ~1.8 MB.
+    this.carLoad = new GLTFLoader()
+      .setMeshoptDecoder(MeshoptDecoder)
+      .loadAsync(CAR_URL)
+      .then((gltf) => {
+        if (this.disposed) return;
+        gltf.scene.traverse((o) => {
+          if (!(o instanceof THREE.Mesh)) return;
+          for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+            if (!(m instanceof THREE.MeshStandardMaterial)) continue;
+            // Body colour: drop the flat colour texture so the paint picker drives it.
+            if (m.name.startsWith("Banshee_Carpaint_1")) {
+              m.map = null;
+              m.color.set(this.paint);
+              m.needsUpdate = true;
+              this.paintMats.push(m);
+            }
+            // Light up the tail lights.
+            if (m.name === "Banshee_Emissive") {
+              m.emissiveMap = m.map;
+              m.emissive.set(0xffffff);
+              m.emissiveIntensity = 2.2;
+              m.needsUpdate = true;
+            }
+          }
+        });
+        this.garage.add(gltf.scene);
+        this.dirty = true;
+      })
+      .finally(() => this.onCarLoading?.(false));
+    this.carLoad.catch(() => (this.carLoad = null));
+    return this.carLoad;
   }
 
   /* ---------- Views ---------- */
@@ -322,16 +365,16 @@ export class PlateStudio {
     // From behind and a little to the left, low, sized so the rear fills most of the frame.
     const aspect = this.camera.aspect || 1;
     const half = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2);
-    const dist = Math.max(2.9 / 2 / (half * aspect), 2.0 / 2 / half) + 1.2;
-    const target = new THREE.Vector3(0, 0.6, 1.9);
+    const dist = Math.max(2.5 / 2 / (half * aspect), 1.6 / 2 / half) + 0.7;
+    const target = new THREE.Vector3(0, 0.58, 1.7);
     const dir = new THREE.Vector3(-0.34, 0.13, 0.93).normalize();
     return { cam: target.clone().addScaledVector(dir, dist), target };
   }
 
   private plateMatrixFor(view: StudioView) {
     if (view === "plate") return new THREE.Matrix4();
-    this.car.group.updateMatrixWorld(true);
-    return this.car.mount.matrixWorld.clone();
+    this.garage.updateMatrixWorld(true);
+    return this.mount.matrixWorld.clone();
   }
 
   private applyView(view: StudioView) {
@@ -382,6 +425,11 @@ export class PlateStudio {
   /** Fly between "plate in hand" and "plate on the car". */
   setView(view: StudioView) {
     if (view === this.view && !this.anim) return;
+    // The car arrives with its own file; fly over once it's in.
+    if (view === "car" && !this.paintMats.length) {
+      void this.loadCar().then(() => this.view !== "car" && this.setView("car"));
+      return;
+    }
     const poseFrom = { cam: this.camera.position.clone(), target: this.controls.target.clone() };
     const poseTo = view === "plate" ? this.platePose() : this.carPose();
     this.anim = { from: this.carMix, to: view === "car" ? 1 : 0, start: performance.now(), dur: 1500, poseFrom, poseTo, plateFrom: this.plate.matrix.clone().compose(this.plate.position, this.plate.quaternion, this.plate.scale), plateTo: this.plateMatrixFor(view) };
@@ -455,23 +503,6 @@ export class PlateStudio {
     else this.renderer.render(this.scene, this.camera);
   };
 
-  private contactShadow() {
-    const c = document.createElement("canvas");
-    c.width = c.height = 128;
-    const g = c.getContext("2d")!;
-    const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
-    grad.addColorStop(0, "rgba(0,0,0,0.85)");
-    grad.addColorStop(0.55, "rgba(0,0,0,0.5)");
-    grad.addColorStop(1, "rgba(0,0,0,0)");
-    g.fillStyle = grad;
-    g.fillRect(0, 0, 128, 128);
-    const tex = new THREE.CanvasTexture(c);
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 5.6), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
-    m.rotation.x = -Math.PI / 2;
-    m.position.y = 0.002;
-    return m;
-  }
-
   private resize() {
     const w = this.container.clientWidth;
     const h = this.container.clientHeight;
@@ -504,7 +535,12 @@ export class PlateStudio {
     this.ro.disconnect();
     this.controls.dispose();
     this.setFrame("none");
-    this.car.dispose();
+    this.garage.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        for (const v of Object.values(m)) if (v instanceof THREE.Texture) v.dispose();
+      }
+    });
     this.faceTex.dispose();
     this.bumpTex.dispose();
     this.scene.environment?.dispose();

@@ -19,7 +19,19 @@ export default async function PlatePage({ searchParams }: PageProps<"/tools/plat
         title="Leonida Plate Creator"
         lede="Make it yours in the Goodtime State. Type your plate, pick a style, then flip to 3D to turn it in your hands or see it bolted to your ride."
       />
-      <PlateCreator initial={{ text: one(sp.text), style: one(sp.style), frame: one(sp.frame), paint: one(sp.paint) }} />
+      <PlateCreator
+        initial={{
+          text: one(sp.text),
+          style: one(sp.style),
+          frame: one(sp.frame),
+          paint: one(sp.paint),
+          variation: one(sp.variation),
+          split: one(sp.split),
+          rounded: one(sp.rounded),
+          colors: one(sp.colors),
+          linked: one(sp.linked),
+        }}
+      />
     </Container>
   );
 }

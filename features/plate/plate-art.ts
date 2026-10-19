@@ -41,27 +41,76 @@ export const cleanPlateText = (s: string) =>
     .replace(/[^A-Z0-9]/g, "")
     .slice(0, MAX_CHARS);
 
+/* ---------- Design ---------- */
+
+/** "Real" follows the real-world plate photo; "Game" the plate as seen in GTA VI, with its own oranges. */
+export type Variation = "real" | "game";
+export const VARIATIONS: { id: Variation; name: string }[] = [
+  { id: "real", name: "Real" },
+  { id: "game", name: "Game" },
+];
+
+export interface TextColors {
+  /** LEONIDA */
+  header: string;
+  /** The plate number. */
+  number: string;
+  /** GOODTIME STATE */
+  footer: string;
+}
+
+/** The in-game official plate uses dark lettering instead of teal. */
+const GAME_COLORS: Record<string, TextColors> = {
+  goodtime: { header: "#26302c", number: "#1b231f", footer: "#2f6b5c" },
+};
+
+/** A style's own colours (what "Reset" goes back to). */
+export function styleColors(style: PlateStyle, variation: Variation): TextColors {
+  return (variation === "game" && GAME_COLORS[style.id]) || { header: style.print, number: style.text, footer: style.print };
+}
+
+export interface PlateDesign {
+  text: string;
+  style: PlateStyle;
+  colors: TextColors;
+  variation: Variation;
+  /** Characters split either side of the oranges ("VCE 🍊 CTY") or centred across the plate. */
+  split: boolean;
+  /** Dealerplate Florida (Rounded) instead of the regular cut. */
+  rounded: boolean;
+}
+
 /* ---------- Assets ---------- */
 
-const FONT = { leonida: "PlateLeonida", goodtime: "PlateGoodtime", number: "PlateNumber" } as const;
-let assets: Promise<HTMLImageElement> | null = null;
+const FONT = { leonida: "PlateLeonida", goodtime: "PlateGoodtime", number: "PlateNumber", numberRounded: "PlateNumberRounded" } as const;
+const ORANGES: Record<Variation, string> = { real: "/tools/plate/orange.webp", game: "/tools/plate/orange-game.webp" };
 
-/** Loads the three plate fonts and the oranges once. Resolves with the oranges image. */
-export function loadPlateAssets(): Promise<HTMLImageElement> {
-  if (assets) return assets;
-  const fonts = [
-    new FontFace(FONT.leonida, "url(/tools/plate/leonida.otf)"),
-    new FontFace(FONT.goodtime, "url(/tools/plate/goodtime.woff)"),
-    new FontFace(FONT.number, "url(/tools/plate/plate-number.woff)"),
-  ];
-  const img = new Promise<HTMLImageElement>((resolve, reject) => {
+export type PlateAssets = Record<Variation, HTMLImageElement>;
+let assets: Promise<PlateAssets> | null = null;
+
+function image(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
     const i = new Image();
     i.decoding = "async";
     i.onload = () => resolve(i);
     i.onerror = reject;
-    i.src = "/tools/plate/orange.webp";
+    i.src = src;
   });
-  assets = Promise.all([...fonts.map((f) => f.load().then((ff) => document.fonts.add(ff))), img]).then(() => img);
+}
+
+/** Loads the plate fonts and both sets of oranges once. */
+export function loadPlateAssets(): Promise<PlateAssets> {
+  if (assets) return assets;
+  const fonts = [
+    new FontFace(FONT.leonida, "url(/tools/plate/leonida.otf)"),
+    new FontFace(FONT.goodtime, "url(/tools/plate/goodtime.woff)"),
+    new FontFace(FONT.number, "url(/tools/plate/number.woff)"),
+    new FontFace(FONT.numberRounded, "url(/tools/plate/number-rounded.woff)"),
+  ];
+  assets = Promise.all([...fonts.map((f) => f.load().then((ff) => document.fonts.add(ff))), image(ORANGES.real), image(ORANGES.game)]).then((r) => ({
+    real: r[r.length - 2] as HTMLImageElement,
+    game: r[r.length - 1] as HTMLImageElement,
+  }));
   assets.catch(() => (assets = null));
   return assets;
 }
@@ -91,20 +140,22 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-/** Writes `text` with extra tracking, centred on x, fitted to a cap height (and a max width). */
+/**
+ * Writes `text` with extra tracking, centred on x, fitted to a cap height (and a max width).
+ * With `arc` (a radius), the letters follow a gentle upward curve, like the stamped LEONIDA.
+ */
 function drawTracked(
   ctx: CanvasRenderingContext2D,
   text: string,
   family: string,
-  opts: { cx: number; baseline: number; cap: number; tracking: number; maxWidth: number; align?: "center" | "left" | "right"; weight?: string },
+  opts: { cx: number; baseline: number; cap: number; tracking: number; maxWidth: number; align?: "center" | "left" | "right"; arc?: number },
   paint: (ch: string, x: number, y: number) => void,
 ) {
   // Size the font so the capitals are exactly `cap` tall.
-  ctx.font = `${opts.weight ?? "normal"} 100px ${family}`;
-  const m = ctx.measureText("H");
-  const capAt100 = m.actualBoundingBoxAscent || 72;
+  ctx.font = `100px ${family}`;
+  const capAt100 = ctx.measureText("H").actualBoundingBoxAscent || 72;
   const size = (opts.cap / capAt100) * 100;
-  ctx.font = `${opts.weight ?? "normal"} ${size}px ${family}`;
+  ctx.font = `${size}px ${family}`;
   const chars = [...text];
   const widths = chars.map((c) => ctx.measureText(c).width);
   const track = opts.tracking * size;
@@ -114,12 +165,20 @@ function drawTracked(
   const total = natural * sx;
   const align = opts.align ?? "center";
   let x = align === "center" ? opts.cx - total / 2 : align === "left" ? opts.cx : opts.cx - total;
+  const mid = align === "center" ? opts.cx : x + total / 2;
   ctx.save();
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
   chars.forEach((c, i) => {
+    const w = widths[i] * sx;
     ctx.save();
-    ctx.translate(x, opts.baseline);
+    if (opts.arc) {
+      // Place the letter's centre on the circle and turn it to follow the curve.
+      const a = (x + w / 2 - mid) / opts.arc;
+      ctx.translate(mid + Math.sin(a) * opts.arc, opts.baseline + opts.arc * (1 - Math.cos(a)));
+      ctx.rotate(a);
+      ctx.translate(-w / 2, 0);
+    } else ctx.translate(x, opts.baseline);
     ctx.scale(sx, 1);
     paint(c, 0, 0);
     ctx.restore();
@@ -128,25 +187,28 @@ function drawTracked(
   ctx.restore();
 }
 
-/** Where the characters go: split either side of the oranges, like "VCE 🍊 CTY". */
-function characterGroups(text: string) {
-  const n = text.length;
-  const leftN = Math.floor(n / 2);
-  return { left: text.slice(0, leftN), right: text.slice(leftN) };
-}
-
 const NUMBER = { cap: 0.47, baseline: 0.735, tracking: 0.04, leftEnd: 0.418, rightStart: 0.645, leftMin: 0.055, rightMax: 0.945 };
 
-function eachCharacter(ctx: CanvasRenderingContext2D, W: number, H: number, text: string, paint: (ch: string, x: number, y: number) => void) {
-  const { left, right } = characterGroups(text);
+function eachCharacter(ctx: CanvasRenderingContext2D, W: number, H: number, d: Pick<PlateDesign, "text" | "split" | "rounded">, paint: (ch: string, x: number, y: number) => void) {
+  const family = d.rounded ? FONT.numberRounded : FONT.number;
   const common = { cap: NUMBER.cap * H, baseline: NUMBER.baseline * H, tracking: NUMBER.tracking };
-  if (left) drawTracked(ctx, left, FONT.number, { ...common, cx: NUMBER.leftEnd * W, maxWidth: (NUMBER.leftEnd - NUMBER.leftMin) * W, align: "right" }, paint);
-  if (right) drawTracked(ctx, right, FONT.number, { ...common, cx: NUMBER.rightStart * W, maxWidth: (NUMBER.rightMax - NUMBER.rightStart) * W, align: "left" }, paint);
+  if (!d.split) {
+    // One line across the whole plate, over the oranges.
+    drawTracked(ctx, d.text, family, { ...common, cx: W / 2, maxWidth: (NUMBER.rightMax - NUMBER.leftMin) * W }, paint);
+    return;
+  }
+  // Split either side of the oranges, like "VCE 🍊 CTY".
+  const leftN = Math.floor(d.text.length / 2);
+  const left = d.text.slice(0, leftN);
+  const right = d.text.slice(leftN);
+  if (left) drawTracked(ctx, left, family, { ...common, cx: NUMBER.leftEnd * W, maxWidth: (NUMBER.leftEnd - NUMBER.leftMin) * W, align: "right" }, paint);
+  if (right) drawTracked(ctx, right, family, { ...common, cx: NUMBER.rightStart * W, maxWidth: (NUMBER.rightMax - NUMBER.rightStart) * W, align: "left" }, paint);
 }
 
 /* ---------- Face ---------- */
 
-export function drawPlateFace(ctx: CanvasRenderingContext2D, text: string, style: PlateStyle, orange: HTMLImageElement, W = PLATE_W, H = PLATE_H) {
+export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art: PlateAssets, W = PLATE_W, H = PLATE_H) {
+  const { style, colors } = d;
   ctx.clearRect(0, 0, W, H);
   ctx.save();
   roundRect(ctx, 0, 0, W, H, CORNER * H);
@@ -167,24 +229,26 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, text: string, style
   grain(ctx, W, H);
 
   // The oranges sit behind the characters.
-  const ow = 0.46 * W;
+  const orange = art[d.variation];
+  const ow = (d.variation === "game" ? 0.4 : 0.46) * W;
   const oh = (ow * orange.naturalHeight) / orange.naturalWidth;
   ctx.globalAlpha = style.orangeAlpha;
   ctx.drawImage(orange, 0.535 * W - ow / 2, 0.5 * H - oh / 2, ow, oh);
   ctx.globalAlpha = 1;
 
-  // LEONIDA and GOODTIME STATE are screen printed (flat).
-  ctx.fillStyle = style.print;
-  drawTracked(ctx, "LEONIDA", FONT.leonida, { cx: W / 2, baseline: 0.225 * H, cap: 0.125 * H, tracking: 0.05, maxWidth: 0.5 * W }, (c, x, y) => ctx.fillText(c, x, y));
+  // LEONIDA (gently arched) and GOODTIME STATE are screen printed (flat).
+  ctx.fillStyle = colors.header;
+  drawTracked(ctx, "LEONIDA", FONT.leonida, { cx: W / 2, baseline: 0.225 * H, cap: 0.125 * H, tracking: 0.05, maxWidth: 0.5 * W, arc: 2.3 * W }, (c, x, y) => ctx.fillText(c, x, y));
+  ctx.fillStyle = colors.footer;
   drawTracked(ctx, "GOODTIME STATE", FONT.goodtime, { cx: W / 2, baseline: 0.9 * H, cap: 0.088 * H, tracking: 0.02, maxWidth: 0.47 * W }, (c, x, y) => ctx.fillText(c, x, y));
 
   // Stamped characters, with a whisper of shadow so they read as raised in 2D too.
-  ctx.fillStyle = style.text;
+  ctx.fillStyle = colors.number;
   ctx.shadowColor = "rgba(0,0,0,0.22)";
   ctx.shadowBlur = 0.008 * H;
   ctx.shadowOffsetX = 0.004 * H;
   ctx.shadowOffsetY = 0.006 * H;
-  eachCharacter(ctx, W, H, text, (c, x, y) => ctx.fillText(c, x, y));
+  eachCharacter(ctx, W, H, d, (c, x, y) => ctx.fillText(c, x, y));
   ctx.shadowColor = "transparent";
 
   // Stamped rim: light catches the top edge, shade on the bottom.
@@ -202,7 +266,7 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, text: string, style
 }
 
 /** Height map for 3D: black is flat sheet, white is fully raised (characters and rim). */
-export function drawPlateBump(ctx: CanvasRenderingContext2D, text: string, W = PLATE_W, H = PLATE_H) {
+export function drawPlateBump(ctx: CanvasRenderingContext2D, d: Pick<PlateDesign, "text" | "split" | "rounded">, W = PLATE_W, H = PLATE_H) {
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, W, H);
   // Rounded profile: widest and darkest first, narrowest and brightest last.
@@ -223,7 +287,7 @@ export function drawPlateBump(ctx: CanvasRenderingContext2D, text: string, W = P
     ctx.strokeStyle = `rgb(${v},${v},${v})`;
     ctx.fillStyle = ctx.strokeStyle;
     ctx.lineWidth = 0.02 * H * (1 - t);
-    eachCharacter(ctx, W, H, text, (c, x, y) => {
+    eachCharacter(ctx, W, H, d, (c, x, y) => {
       if (ctx.lineWidth > 0.5) ctx.strokeText(c, x, y);
       if (i === steps - 1) ctx.fillText(c, x, y);
     });

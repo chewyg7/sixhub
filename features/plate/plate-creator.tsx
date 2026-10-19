@@ -7,6 +7,7 @@ import {
   MAX_CHARS,
   PLATE_H,
   PLATE_W,
+  DEFAULT_LAYOUT,
   STYLES,
   VARIATIONS,
   cleanPlateText,
@@ -17,6 +18,7 @@ import {
   styleColors,
   type FrameKind,
   type PlateAssets,
+  type PlateLayout,
   type TextColors,
   type Variation,
 } from "./plate-art";
@@ -53,6 +55,26 @@ export interface PlateInitial {
   /** "rrggbb,rrggbb,rrggbb" for LEONIDA, the number and GOODTIME STATE. */
   colors?: string;
   linked?: string;
+  /** Spacing: split point, gap, letter spacing, nudge. */
+  at?: string;
+  gap?: string;
+  track?: string;
+  shift?: string;
+}
+
+const LIMITS = { gap: [-0.06, 0.08], tracking: [-0.04, 0.3], shift: [-0.08, 0.08] } as const;
+const clampNum = (v: string | undefined, [lo, hi]: readonly [number, number], fallback: number) => {
+  const n = Number(v);
+  return v !== undefined && Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : fallback;
+};
+function parseLayout(i: PlateInitial): PlateLayout {
+  const at = Number(i.at);
+  return {
+    splitAt: i.at !== undefined && Number.isInteger(at) && at >= 0 && at <= MAX_CHARS ? at : null,
+    gap: clampNum(i.gap, LIMITS.gap, DEFAULT_LAYOUT.gap),
+    tracking: clampNum(i.track, LIMITS.tracking, DEFAULT_LAYOUT.tracking),
+    shift: clampNum(i.shift, LIMITS.shift, DEFAULT_LAYOUT.shift),
+  };
 }
 
 const HEX = /^[0-9a-f]{6}$/i;
@@ -130,6 +152,27 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   );
 }
 
+/** A labelled slider, styled like the rest of the site's tools. */
+function Slider({ label, value, display, min, max, step, onChange }: { label: string; value: number; display: string; min: number; max: number; step: number; onChange: (v: number) => void }) {
+  return (
+    <label className="block py-2.5">
+      <span className="mb-2 flex justify-between text-[13px] font-bold tracking-[0.14em] text-white/70 uppercase">
+        {label} <span className="tabular font-medium tracking-normal text-white/50 normal-case">{display}</span>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="font-range h-5 w-full cursor-pointer appearance-none bg-transparent"
+        style={{ "--pct": `${((value - min) / (max - min)) * 100}%` } as React.CSSProperties}
+      />
+    </label>
+  );
+}
+
 /** Segmented glass control (2D/3D, Plate/Car, Real/Game). */
 function Segmented<T extends string>({ value, options, onChange, label, className }: { value: T; options: { id: T; label: string }[]; onChange: (v: T) => void; label: string; className?: string }) {
   const i = options.findIndex((o) => o.id === value);
@@ -171,6 +214,9 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
   const [linked, setLinked] = useState(initial.linked !== "0");
   /** Custom text colours; null means the style's own. */
   const [custom, setCustom] = useState<TextColors | null>(() => parseColors(initial.colors));
+  const [layout, setLayout] = useState<PlateLayout>(() => parseLayout(initial));
+  const patchLayout = (p: Partial<PlateLayout>) => setLayout((l) => ({ ...l, ...p }));
+  const customLayout = JSON.stringify(layout) !== JSON.stringify(DEFAULT_LAYOUT);
   const [paint, setPaint] = useState(() => (PAINTS.some((p) => p.hex === initial.paint) ? initial.paint! : PAINTS[0].hex));
   const [dim, setDim] = useState<Dim>("2d");
   const [view, setView] = useState<StudioView>("plate");
@@ -203,7 +249,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
       const c = Object.assign(document.createElement("canvas"), { width: 512, height: 256 });
       for (const v of VARIATIONS)
         for (const s of STYLES) {
-          drawPlateFace(c.getContext("2d")!, { text: "ABC1234", style: s, colors: styleColors(s, v.id), variation: v.id, split: true, rounded: false }, loaded, 512, 256);
+          drawPlateFace(c.getContext("2d")!, { text: "ABC1234", style: s, colors: styleColors(s, v.id), variation: v.id, split: true, rounded: false, layout: DEFAULT_LAYOUT }, loaded, 512, 256);
           t[`${v.id}:${s.id}`] = c.toDataURL("image/webp", 0.9);
         }
       setThumbs(t);
@@ -218,13 +264,13 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
   const shown = text || " ";
   useEffect(() => {
     if (!ready || !face.current || !bump.current || !art.current) return;
-    const design = { text: shown, style, colors, variation, split, rounded };
+    const design = { text: shown, style, colors, variation, split, rounded, layout };
     drawPlateFace(face.current.getContext("2d")!, design, art.current);
     drawPlateBump(bump.current.getContext("2d")!, design);
     const pic = picture.current;
     if (pic) drawPlatePicture(pic.getContext("2d")!, face.current, frame, pic.width, pic.height);
     studio.current?.updatePlate();
-  }, [ready, shown, style, colors, variation, split, rounded, frame]);
+  }, [ready, shown, style, colors, variation, split, rounded, layout, frame]);
 
   // The 3D studio is only built the first time 3D is opened.
   const openStudio = useCallback(async () => {
@@ -272,10 +318,14 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
     const t = window.setTimeout(() => {
       const p = new URLSearchParams({ text, style: styleId, variation, frame, paint, split: split ? "1" : "0", rounded: rounded ? "1" : "0", linked: linked ? "1" : "0" });
       if (custom) p.set("colors", [custom.header, custom.number, custom.footer].map((c) => c.slice(1)).join(","));
+      if (layout.splitAt !== null) p.set("at", String(layout.splitAt));
+      if (layout.gap !== DEFAULT_LAYOUT.gap) p.set("gap", layout.gap.toFixed(3));
+      if (layout.tracking !== DEFAULT_LAYOUT.tracking) p.set("track", layout.tracking.toFixed(3));
+      if (layout.shift !== DEFAULT_LAYOUT.shift) p.set("shift", layout.shift.toFixed(3));
       history.replaceState(history.state, "", `${location.pathname}?${p}`);
     }, 400);
     return () => window.clearTimeout(t);
-  }, [text, styleId, variation, frame, paint, split, rounded, linked, custom]);
+  }, [text, styleId, variation, frame, paint, split, rounded, linked, custom, layout]);
 
   const download = (blob: Blob | null, name: string) => {
     if (!blob) return;
@@ -435,6 +485,57 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
             <Toggle label="Split around the oranges" checked={split} onChange={setSplit} />
           </div>
         </Panel>
+
+        <Collapsible title="Spacing" summary={customLayout ? "Custom" : "Auto"}>
+          {split && (
+            <>
+              <Slider
+                label="Split after"
+                value={layout.splitAt ?? -1}
+                display={layout.splitAt === null ? `Auto (${Math.floor(text.length / 2)} | ${text.length - Math.floor(text.length / 2)})` : `${layout.splitAt} | ${Math.max(0, text.length - layout.splitAt)}`}
+                min={-1}
+                max={Math.max(1, text.length)}
+                step={1}
+                onChange={(v) => patchLayout({ splitAt: v < 0 ? null : v })}
+              />
+              <Slider
+                label="Gap around the oranges"
+                value={layout.gap}
+                display={`${layout.gap > 0 ? "+" : ""}${Math.round(layout.gap * 1000) / 10}%`}
+                min={LIMITS.gap[0]}
+                max={LIMITS.gap[1]}
+                step={0.002}
+                onChange={(v) => patchLayout({ gap: v })}
+              />
+            </>
+          )}
+          <Slider
+            label="Letter spacing"
+            value={layout.tracking}
+            display={`${Math.round(layout.tracking * 100)}`}
+            min={LIMITS.tracking[0]}
+            max={LIMITS.tracking[1]}
+            step={0.01}
+            onChange={(v) => patchLayout({ tracking: v })}
+          />
+          <Slider
+            label="Nudge"
+            value={layout.shift}
+            display={layout.shift === 0 ? "Centred" : `${layout.shift < 0 ? "←" : "→"} ${Math.abs(Math.round(layout.shift * 1000) / 10)}%`}
+            min={LIMITS.shift[0]}
+            max={LIMITS.shift[1]}
+            step={0.002}
+            onChange={(v) => patchLayout({ shift: v })}
+          />
+          <button
+            type="button"
+            onClick={() => setLayout(DEFAULT_LAYOUT)}
+            disabled={!customLayout}
+            className="mt-2 inline-flex h-10 items-center gap-2 rounded-full bg-white/[0.07] px-4 text-[13px] font-bold text-white/75 transition-colors hover:bg-white/12 hover:text-white disabled:opacity-35"
+          >
+            <Undo2 className="size-4" /> Reset spacing
+          </button>
+        </Collapsible>
 
         <Collapsible title="Text colours" summary={custom ? (linked ? "Custom" : "Custom, per line") : "Style colours"}>
           <Toggle

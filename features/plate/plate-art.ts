@@ -78,7 +78,25 @@ export interface PlateDesign {
   split: boolean;
   /** Dealerplate Florida (Rounded) instead of the regular cut. */
   rounded: boolean;
+  /** Fine-tuning of the plate number's placement. */
+  layout: PlateLayout;
 }
+
+export interface PlateLayout {
+  /** Characters before the oranges; null splits evenly (fewer on the left). */
+  splitAt: number | null;
+  /** Extra space around the oranges, as a fraction of the plate's width (negative tucks in). */
+  gap: number;
+  /** Space between characters, as a fraction of the font size. */
+  tracking: number;
+  /** Slides all the characters left or right, as a fraction of the plate's width. */
+  shift: number;
+}
+
+export const DEFAULT_LAYOUT: PlateLayout = { splitAt: null, gap: 0, tracking: 0.04, shift: 0 };
+
+/** Where each variation's oranges are centred across the plate (the art isn't symmetric). */
+export const ORANGE_X: Record<Variation, number> = { real: 0.535, game: 0.518 };
 
 /* ---------- Assets ---------- */
 
@@ -187,22 +205,32 @@ function drawTracked(
   ctx.restore();
 }
 
-const NUMBER = { cap: 0.47, baseline: 0.735, tracking: 0.04, leftEnd: 0.418, rightStart: 0.645, leftMin: 0.055, rightMax: 0.945 };
+/** The plate number: cap height, baseline, half the gap left for the oranges, and the side margins (plate fractions). */
+const NUMBER = { cap: 0.47, baseline: 0.735, halfGap: 0.1135, leftMin: 0.055, rightMax: 0.945 };
 
-function eachCharacter(ctx: CanvasRenderingContext2D, W: number, H: number, d: Pick<PlateDesign, "text" | "split" | "rounded">, paint: (ch: string, x: number, y: number) => void) {
+type CharacterDesign = Pick<PlateDesign, "text" | "split" | "rounded" | "variation" | "layout">;
+
+function eachCharacter(ctx: CanvasRenderingContext2D, W: number, H: number, d: CharacterDesign, paint: (ch: string, x: number, y: number) => void) {
   const family = d.rounded ? FONT.numberRounded : FONT.number;
-  const common = { cap: NUMBER.cap * H, baseline: NUMBER.baseline * H, tracking: NUMBER.tracking };
+  const { gap, tracking, shift } = d.layout;
+  const common = { cap: NUMBER.cap * H, baseline: NUMBER.baseline * H, tracking };
+  const minX = NUMBER.leftMin + Math.min(0, shift);
+  const maxX = NUMBER.rightMax + Math.max(0, shift);
   if (!d.split) {
     // One line across the whole plate, over the oranges.
-    drawTracked(ctx, d.text, family, { ...common, cx: W / 2, maxWidth: (NUMBER.rightMax - NUMBER.leftMin) * W }, paint);
+    drawTracked(ctx, d.text, family, { ...common, cx: (0.5 + shift) * W, maxWidth: (NUMBER.rightMax - NUMBER.leftMin) * W }, paint);
     return;
   }
-  // Split either side of the oranges, like "VCE 🍊 CTY".
-  const leftN = Math.floor(d.text.length / 2);
+  // Split either side of the oranges, like "VCE 🍊 CTY", hugging them with an even gap.
+  const n = d.text.length;
+  const leftN = d.layout.splitAt === null ? Math.floor(n / 2) : Math.max(0, Math.min(n, d.layout.splitAt));
   const left = d.text.slice(0, leftN);
   const right = d.text.slice(leftN);
-  if (left) drawTracked(ctx, left, family, { ...common, cx: NUMBER.leftEnd * W, maxWidth: (NUMBER.leftEnd - NUMBER.leftMin) * W, align: "right" }, paint);
-  if (right) drawTracked(ctx, right, family, { ...common, cx: NUMBER.rightStart * W, maxWidth: (NUMBER.rightMax - NUMBER.rightStart) * W, align: "left" }, paint);
+  const centre = ORANGE_X[d.variation] - 0.0035 + shift;
+  const leftEnd = centre - NUMBER.halfGap - gap;
+  const rightStart = centre + NUMBER.halfGap + gap;
+  if (left) drawTracked(ctx, left, family, { ...common, cx: leftEnd * W, maxWidth: Math.max(0.05, leftEnd - minX) * W, align: "right" }, paint);
+  if (right) drawTracked(ctx, right, family, { ...common, cx: rightStart * W, maxWidth: Math.max(0.05, maxX - rightStart) * W, align: "left" }, paint);
 }
 
 /* ---------- Face ---------- */
@@ -234,7 +262,7 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art
   const oh = (ow * orange.naturalHeight) / orange.naturalWidth;
   ctx.globalAlpha = style.orangeAlpha;
   // The game art's fruit sits further right in its image, so it's nudged left to look centred.
-  const ox = d.variation === "game" ? 0.518 : 0.535;
+  const ox = ORANGE_X[d.variation];
   ctx.drawImage(orange, ox * W - ow / 2, 0.5 * H - oh / 2, ow, oh);
   ctx.globalAlpha = 1;
 
@@ -268,7 +296,7 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art
 }
 
 /** Height map for 3D: black is flat sheet, white is fully raised (characters and rim). */
-export function drawPlateBump(ctx: CanvasRenderingContext2D, d: Pick<PlateDesign, "text" | "split" | "rounded">, W = PLATE_W, H = PLATE_H) {
+export function drawPlateBump(ctx: CanvasRenderingContext2D, d: CharacterDesign, W = PLATE_W, H = PLATE_H) {
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, W, H);
   // Rounded profile: widest and darkest first, narrowest and brightest last.

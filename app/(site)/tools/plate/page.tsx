@@ -30,6 +30,10 @@ export default async function PlatePage({ searchParams }: PageProps<"/tools/plat
           rounded: one(sp.rounded),
           colors: one(sp.colors),
           linked: one(sp.linked),
+          at: one(sp.at),
+          gap: one(sp.gap),
+          track: one(sp.track),
+          shift: one(sp.shift),
         }}
       />
     </Container>

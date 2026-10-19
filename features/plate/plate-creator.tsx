@@ -1,0 +1,328 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Camera, Check, Download, Link2, Loader2, RotateCcw } from "lucide-react";
+import { cn } from "@/lib/cn";
+import { usePreferences } from "@/lib/preferences";
+import { MAX_CHARS, PLATE_H, PLATE_W, STYLES, cleanPlateText, drawPlateBump, drawPlateFace, drawPlatePicture, loadPlateAssets, type FrameKind } from "./plate-art";
+import type { PlateStudio, StudioView } from "./plate-studio";
+
+const FRAMES: { id: FrameKind; name: string; swatch: string }[] = [
+  { id: "none", name: "None", swatch: "transparent" },
+  { id: "chrome", name: "Chrome", swatch: "linear-gradient(135deg,#ffffff,#8f989f 55%,#e5e9ec)" },
+  { id: "black", name: "Black", swatch: "linear-gradient(135deg,#46494c,#0c0d0e)" },
+  { id: "gold", name: "Gold", swatch: "linear-gradient(135deg,#fbe8a6,#a8802f 55%,#ecc96d)" },
+];
+
+const PAINTS = [
+  { name: "Vice Pink", hex: "#ff4f8b" },
+  { name: "Midnight", hex: "#0d0e10" },
+  { name: "Gulf Teal", hex: "#1aa59e" },
+  { name: "Grapefruit", hex: "#ff6a2b" },
+  { name: "Glacier", hex: "#e9ecef" },
+  { name: "Sunshine", hex: "#ffc53a" },
+  { name: "Royal", hex: "#2546c8" },
+  { name: "Gunmetal", hex: "#4a5057" },
+];
+
+type Dim = "2d" | "3d";
+
+export interface PlateInitial {
+  text?: string;
+  style?: string;
+  frame?: string;
+  paint?: string;
+}
+
+/** Segmented control like the creator's 2D/3D and Plate/Car switches. */
+function Switch<T extends string>({ value, options, onChange, label }: { value: T; options: { id: T; label: string }[]; onChange: (v: T) => void; label: string }) {
+  const i = options.findIndex((o) => o.id === value);
+  return (
+    <div role="radiogroup" aria-label={label} className="relative grid rounded-full bg-black/55 p-1 shadow-[0_10px_30px_-10px_rgb(0_0_0/0.8),inset_0_0_0_1px_rgb(255_255_255/0.1)] backdrop-blur-xl" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+      <span aria-hidden className="absolute top-1 bottom-1 left-1 rounded-full bg-white transition-transform duration-500 ease-[cubic-bezier(0.34,1.3,0.64,1)]" style={{ width: `calc((100% - 8px) / ${options.length})`, transform: `translateX(${i * 100}%)` }} />
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          role="radio"
+          aria-checked={o.id === value}
+          onClick={() => onChange(o.id)}
+          className={cn("relative z-10 h-9 rounded-full px-4 text-[12.5px] font-bold tracking-wide uppercase transition-colors duration-300 sm:px-5", o.id === value ? "text-[#0b0b0c]" : "text-white/60 hover:text-white")}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Section({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="border-t border-white/10 py-6 first:border-t-0 first:pt-0">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h2 className="display text-[22px] leading-none">{title}</h2>
+        {aside}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function PlateCreator({ initial }: { initial: PlateInitial }) {
+  const [text, setText] = useState(() => cleanPlateText(initial.text ?? "VCECTY") || "VCECTY");
+  const [styleId, setStyleId] = useState(() => (STYLES.some((s) => s.id === initial.style) ? initial.style! : STYLES[0].id));
+  const [frame, setFrame] = useState<FrameKind>(() => (FRAMES.some((f) => f.id === initial.frame) ? (initial.frame as FrameKind) : "chrome"));
+  const [paint, setPaint] = useState(() => (PAINTS.some((p) => p.hex === initial.paint) ? initial.paint! : PAINTS[0].hex));
+  const [dim, setDim] = useState<Dim>("2d");
+  const [view, setView] = useState<StudioView>("plate");
+  const [ready, setReady] = useState(false);
+  const [studioState, setStudioState] = useState<"off" | "loading" | "ready" | "error">("off");
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  const [copied, setCopied] = useState(false);
+  const { quality } = usePreferences();
+
+  const style = STYLES.find((s) => s.id === styleId) ?? STYLES[0];
+  const face = useRef<HTMLCanvasElement | null>(null);
+  const bump = useRef<HTMLCanvasElement | null>(null);
+  const picture = useRef<HTMLCanvasElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  const studio = useRef<PlateStudio | null>(null);
+  const orange = useRef<HTMLImageElement | null>(null);
+
+  // Fonts and artwork, then the style thumbnails.
+  useEffect(() => {
+    let live = true;
+    loadPlateAssets().then((img) => {
+      if (!live) return;
+      orange.current = img;
+      face.current = Object.assign(document.createElement("canvas"), { width: PLATE_W, height: PLATE_H });
+      bump.current = Object.assign(document.createElement("canvas"), { width: PLATE_W, height: PLATE_H });
+      const t: Record<string, string> = {};
+      const c = Object.assign(document.createElement("canvas"), { width: 512, height: 256 });
+      for (const s of STYLES) {
+        drawPlateFace(c.getContext("2d")!, "ABC1234", s, img, 512, 256);
+        t[s.id] = c.toDataURL("image/webp", 0.9);
+      }
+      setThumbs(t);
+      setReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  // Redraw on every change: face + height map (3D) + the framed picture (2D).
+  const shown = text || " ";
+  useEffect(() => {
+    if (!ready || !face.current || !bump.current || !orange.current) return;
+    drawPlateFace(face.current.getContext("2d")!, shown, style, orange.current);
+    drawPlateBump(bump.current.getContext("2d")!, shown);
+    const pic = picture.current;
+    if (pic) drawPlatePicture(pic.getContext("2d")!, face.current, frame, pic.width, pic.height);
+    studio.current?.updatePlate();
+  }, [ready, shown, style, frame]);
+
+  // The 3D studio is only built the first time 3D is opened.
+  const openStudio = useCallback(async () => {
+    if (studio.current || !stage.current || !face.current || !bump.current) return;
+    setStudioState("loading");
+    try {
+      const { PlateStudio } = await import("./plate-studio");
+      if (!stage.current) return;
+      studio.current = new PlateStudio(stage.current, face.current, bump.current, { bloom: quality !== "lofi", paint });
+      studio.current.setFrame(frame);
+      setStudioState("ready");
+    } catch {
+      setStudioState("error");
+    }
+    // Only the first open matters; later changes are pushed by the effects below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => () => studio.current?.dispose(), []);
+  useEffect(() => studio.current?.setFrame(frame), [frame]);
+  useEffect(() => studio.current?.setPaint(paint), [paint]);
+  useEffect(() => {
+    studio.current?.setActive(dim === "3d");
+  }, [dim]);
+
+  const go3d = async () => {
+    setDim("3d");
+    if (!studio.current) await openStudio();
+    else studio.current.setActive(true);
+    if (view === "plate") studio.current?.intro();
+  };
+  const changeDim = (d: Dim) => {
+    if (d === "3d") void go3d();
+    else setDim("2d");
+  };
+  const changeView = async (v: StudioView) => {
+    setView(v);
+    if (dim !== "3d") await go3d();
+    studio.current?.setView(v);
+  };
+
+  // Keep the link shareable.
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const p = new URLSearchParams({ text, style: styleId, frame, paint });
+      history.replaceState(history.state, "", `${location.pathname}?${p}`);
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [text, styleId, frame, paint]);
+
+  const download = (blob: Blob | null, name: string) => {
+    if (!blob) return;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+  const fileBase = `leonida-plate-${(text || "blank").toLowerCase()}`;
+  const savePng = () => {
+    if (!face.current) return;
+    const c = Object.assign(document.createElement("canvas"), { width: 2400, height: frame === "none" ? 1200 : 1380 });
+    drawPlatePicture(c.getContext("2d")!, face.current, frame, c.width, c.height);
+    c.toBlob((b) => download(b, `${fileBase}.png`), "image/png");
+  };
+  const saveShot = async () => download((await studio.current?.snapshot()) ?? null, `${fileBase}-${view}.png`);
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {}
+  };
+
+  return (
+    <div className="grid overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0b0d] lg:min-h-[min(820px,calc(100dvh-180px))] lg:grid-cols-[400px_minmax(0,1fr)]">
+      {/* Controls */}
+      <aside className="order-2 bg-[#121214] px-5 py-6 sm:px-7 lg:order-1 lg:max-h-[min(820px,calc(100dvh-180px))] lg:overflow-y-auto" data-lenis-prevent>
+        <Section title="Enter your text" aside={<span className="tabular font-mono text-[12.5px] text-white/45">{text.length}/{MAX_CHARS}</span>}>
+          <input
+            value={text}
+            onChange={(e) => setText(cleanPlateText(e.target.value))}
+            maxLength={MAX_CHARS}
+            spellCheck={false}
+            autoCapitalize="characters"
+            autoComplete="off"
+            aria-label="Plate text"
+            placeholder="VCECTY"
+            className="h-16 w-full rounded-2xl border border-white/15 bg-black px-5 text-center font-[PlateNumber,var(--font-deco-condensed)] text-[34px] tracking-[0.12em] text-white uppercase outline-none placeholder:text-white/20 focus:border-[#2fd6c9]/70 focus:shadow-[0_0_0_4px_rgb(47_214_201/0.15)]"
+          />
+          <p className="mt-3 text-[13.5px] leading-relaxed text-white/55">Up to {MAX_CHARS} characters (A–Z, 0–9). The characters split either side of the oranges, like the real Leonida plate. Keep it friendly.</p>
+        </Section>
+
+        <Section title="Select a style">
+          <div className="grid grid-cols-2 gap-2.5">
+            {STYLES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setStyleId(s.id)}
+                aria-pressed={s.id === styleId}
+                className={cn("group rounded-2xl border p-2.5 text-left transition-[border-color,background-color] duration-300", s.id === styleId ? "border-white bg-white/[0.06]" : "border-white/10 hover:border-white/30")}
+              >
+                <span className="block overflow-hidden rounded-[7px] shadow-[0_6px_16px_-6px_rgb(0_0_0/0.8)]" style={{ aspectRatio: "2 / 1", background: `linear-gradient(${s.swatch[0]}, ${s.swatch[0]})` }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- generated preview */}
+                  {thumbs[s.id] && <img src={thumbs[s.id]} alt="" className="block size-full" />}
+                </span>
+                <span className="mt-2 block truncate text-[12.5px] font-bold text-white/80">{s.name}</span>
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Frame">
+          <div className="grid grid-cols-4 gap-2">
+            {FRAMES.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFrame(f.id)}
+                aria-pressed={f.id === frame}
+                className={cn("flex flex-col items-center gap-1.5 rounded-xl border py-2.5 text-[12px] font-bold transition-colors", f.id === frame ? "border-white bg-white/[0.06] text-white" : "border-white/10 text-white/60 hover:border-white/30")}
+              >
+                <span className="size-7 rounded-full border border-white/20" style={{ background: f.swatch === "transparent" ? "repeating-linear-gradient(45deg,#2a2a2e 0 4px,#16161a 4px 8px)" : f.swatch }} />
+                {f.name}
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Car paint" aside={<span className="text-[12.5px] text-white/45">{PAINTS.find((p) => p.hex === paint)?.name}</span>}>
+          <div className="flex flex-wrap gap-2.5">
+            {PAINTS.map((p) => (
+              <button
+                key={p.hex}
+                type="button"
+                onClick={() => {
+                  setPaint(p.hex);
+                  if (view !== "car") void changeView("car");
+                }}
+                aria-label={p.name}
+                aria-pressed={p.hex === paint}
+                title={p.name}
+                className={cn("size-10 rounded-full border-2 transition-transform duration-300 hover:scale-110", p.hex === paint ? "scale-110 border-white" : "border-transparent")}
+                style={{ background: `radial-gradient(circle at 35% 30%, rgb(255 255 255/0.45), transparent 45%), ${p.hex}` }}
+              />
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Save & share">
+          <div className="grid gap-2">
+            <button type="button" onClick={savePng} disabled={!ready} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-white text-[14.5px] font-bold text-[#0b0b0c] transition-opacity disabled:opacity-40">
+              <Download className="size-4" /> Download plate (PNG)
+            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={saveShot} disabled={studioState !== "ready" || dim !== "3d"} title={dim !== "3d" ? "Switch to 3D first" : undefined} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white/[0.08] text-[13.5px] font-bold text-white transition-colors hover:bg-white/15 disabled:opacity-40">
+                <Camera className="size-4" /> 3D shot
+              </button>
+              <button type="button" onClick={copyLink} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white/[0.08] text-[13.5px] font-bold text-white transition-colors hover:bg-white/15">
+                {copied ? <Check className="size-4 text-[#7ee8ae]" /> : <Link2 className="size-4" />} {copied ? "Copied" : "Copy link"}
+              </button>
+            </div>
+          </div>
+          <p className="mt-4 text-[12px] leading-relaxed text-white/35">A fan-made tool. Not affiliated with Rockstar Games.</p>
+        </Section>
+      </aside>
+
+      {/* Stage */}
+      <div className="relative order-1 aspect-[4/3] overflow-hidden bg-[radial-gradient(120%_90%_at_50%_10%,#1d1d22,#060607_70%)] sm:aspect-[16/10] lg:order-2 lg:aspect-auto">
+        {/* 2D */}
+        <div className={cn("absolute inset-0 flex items-center justify-center p-[6%] transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]", dim === "2d" ? "opacity-100" : "pointer-events-none scale-95 opacity-0")}>
+          <canvas ref={picture} width={1600} height={920} aria-label={`Leonida plate reading ${text || "nothing yet"}`} role="img" className="h-auto max-h-full w-full max-w-[880px] drop-shadow-[0_40px_60px_rgb(0_0_0/0.65)]" />
+          {!ready && (
+            <span className="absolute inset-0 flex items-center justify-center text-white/50">
+              <Loader2 className="size-6 animate-spin" />
+            </span>
+          )}
+        </div>
+        {/* 3D */}
+        <div ref={stage} className={cn("absolute inset-0 transition-opacity duration-700", dim === "3d" ? "opacity-100" : "pointer-events-none opacity-0")} />
+        {dim === "3d" && studioState === "loading" && (
+          <span className="absolute inset-0 flex items-center justify-center gap-2 text-[13.5px] text-white/60">
+            <Loader2 className="size-5 animate-spin" /> Building the garage…
+          </span>
+        )}
+        {studioState === "error" && dim === "3d" && <p className="absolute inset-x-6 top-1/2 text-center text-[14px] text-white/70">3D needs WebGL, which this browser has turned off. The 2D plate still works.</p>}
+
+        {dim === "3d" && studioState === "ready" && (
+          <button type="button" onClick={() => studio.current?.resetView()} aria-label="Reset view" title="Reset view" className="absolute top-4 right-4 flex size-11 items-center justify-center rounded-full bg-black/55 text-white/80 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12)] backdrop-blur-xl transition-colors hover:text-white">
+            <RotateCcw className="size-[18px]" />
+          </button>
+        )}
+        {dim === "3d" && studioState === "ready" && (
+          <p className="pointer-events-none absolute top-5 left-5 text-[12px] font-bold tracking-[0.14em] text-white/40 uppercase">Drag to rotate · scroll to zoom</p>
+        )}
+
+        <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 sm:inset-x-5 sm:bottom-5">
+          <Switch<Dim> label="Dimension" value={dim} onChange={changeDim} options={[{ id: "2d", label: "2D" }, { id: "3d", label: "3D" }]} />
+          <Switch<StudioView> label="View" value={view} onChange={(v) => void changeView(v)} options={[{ id: "plate", label: "Plate view" }, { id: "car", label: "Car view" }]} />
+        </div>
+      </div>
+    </div>
+  );
+}

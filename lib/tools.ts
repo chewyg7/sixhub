@@ -13,6 +13,14 @@ export interface Tool {
 
 export const TOOLS: Tool[] = [
   {
+    slug: "plate",
+    href: "/tools/plate",
+    name: "Leonida Plate Creator",
+    blurb: "Your own Goodtime State licence plate, in 3D",
+    description: "Type your plate, pick a style and a frame, then flip to 3D to turn the stamped plate in your hands or see it bolted to the back of a car. Save it as a PNG.",
+    image: "/tools/plate/preview.webp",
+  },
+  {
     slug: "text-generator",
     href: "/tools/text-generator",
     name: "VI Text Generator",

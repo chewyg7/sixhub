@@ -233,7 +233,9 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art
   const ow = (d.variation === "game" ? 0.4 : 0.46) * W;
   const oh = (ow * orange.naturalHeight) / orange.naturalWidth;
   ctx.globalAlpha = style.orangeAlpha;
-  ctx.drawImage(orange, 0.535 * W - ow / 2, 0.5 * H - oh / 2, ow, oh);
+  // The game art's fruit sits further right in its image, so it's nudged left to look centred.
+  const ox = d.variation === "game" ? 0.518 : 0.535;
+  ctx.drawImage(orange, ox * W - ow / 2, 0.5 * H - oh / 2, ow, oh);
   ctx.globalAlpha = 1;
 
   // LEONIDA (gently arched) and GOODTIME STATE are screen printed (flat).

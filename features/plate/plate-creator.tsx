@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Check, ChevronDown, Download, Link2, Loader2, RotateCcw, Undo2 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { usePreferences } from "@/lib/preferences";
 import {
   MAX_CHARS,
   PLATE_H,
@@ -180,7 +179,6 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
   const [carLoading, setCarLoading] = useState(false);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
-  const { quality } = usePreferences();
 
   const style = STYLES.find((s) => s.id === styleId) ?? STYLES[0];
   const defaults = useMemo(() => styleColors(style, variation), [style, variation]);
@@ -235,7 +233,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
     try {
       const { PlateStudio } = await import("./plate-studio");
       if (!stage.current) return;
-      studio.current = new PlateStudio(stage.current, face.current, bump.current, { bloom: quality !== "lofi", paint });
+      studio.current = new PlateStudio(stage.current, face.current, bump.current, { paint });
       studio.current.setFrame(frame);
       studio.current.onCarLoading = setCarLoading;
       setStudioState("ready");

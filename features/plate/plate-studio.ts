@@ -1,9 +1,5 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
-import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
-import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { CORNER, HOLES, drawPlateMask, drawPlateNormals, type FrameKind } from "./plate-art";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
@@ -129,7 +125,6 @@ export class PlateStudio {
   // A near plane of 5 cm (nothing gets closer) keeps depth precise across the whole garage.
   private camera = new THREE.PerspectiveCamera(28, 1, 0.05, 60);
   private controls: OrbitControls;
-  private composer: EffectComposer | null = null;
   private plate = new THREE.Group();
   private frame = new THREE.Group();
   private faceTex: THREE.CanvasTexture;
@@ -163,7 +158,7 @@ export class PlateStudio {
     private container: HTMLElement,
     face: HTMLCanvasElement,
     bump: HTMLCanvasElement,
-    opts: { bloom: boolean; paint: string },
+    opts: { paint: string },
   ) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -233,7 +228,9 @@ export class PlateStudio {
     this.plateLights = [key, rim];
     this.scene.add(key, rim);
 
-    // 6 Hub Customs: the scene file brings the car, floor and walls; these lights shape the paint.
+    // 6 Hub Customs: the scene file brings the car, floor and walls (its textures carry baked
+    // lighting). Like the GTA Online creator, the gloss comes from soft studio reflections; these
+    // few broad, gentle lights only add shape, so there are no hot spots on the paint.
     this.paint = opts.paint;
     this.mount.position.copy(MOUNT);
     this.garage.add(this.mount);
@@ -246,17 +243,11 @@ export class PlateStudio {
     const fill = new THREE.SpotLight(0xa7c8ff, 0, 12, 0.6, 0.9, 2);
     fill.position.set(-3.4, 1.8, 5.2);
     fill.target.position.set(0, 0.6, 2);
-    const pink = new THREE.PointLight(0xff4f9a, 0, 9, 2);
-    pink.position.set(3.2, 0.6, 3.2);
-    const teal = new THREE.PointLight(0x2fd6c9, 0, 9, 2);
-    teal.position.set(-3.2, 0.6, 3.2);
-    this.garage.add(top, top.target, rearKey, rearKey.target, fill, fill.target, pink, teal);
+    this.garage.add(top, top.target, rearKey, rearKey.target, fill, fill.target);
     this.garageLights = [
-      { light: top, full: 50 },
-      { light: rearKey, full: 26 },
-      { light: fill, full: 12 },
-      { light: pink, full: 3 },
-      { light: teal, full: 3 },
+      { light: top, full: 22 },
+      { light: rearKey, full: 9 },
+      { light: fill, full: 5 },
     ];
     this.garage.visible = false;
     this.scene.add(this.garage);
@@ -267,17 +258,6 @@ export class PlateStudio {
     this.controls.enablePan = false;
     this.controls.addEventListener("change", () => (this.dirty = true));
     this.controls.addEventListener("start", () => (this.lastInteract = performance.now()));
-
-    if (opts.bloom) {
-      // A multisampled target: without it, post-processing drops antialiasing and fine
-      // highlights shimmer ("sparkle") as the camera moves.
-      const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
-      this.composer = new EffectComposer(this.renderer, target);
-      this.composer.addPass(new RenderPass(this.scene, this.camera));
-      // High threshold: only the tail lights glow, never reflections.
-      this.composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), 0.35, 0.4, 7));
-      this.composer.addPass(new OutputPass());
-    }
 
     this.applyView("plate");
     if (process.env.NODE_ENV === "development") Object.assign(window, { __plateStudio: { camera: this.camera, controls: this.controls, studio: this, THREE } });
@@ -393,7 +373,7 @@ export class PlateStudio {
             if (m.name === "Banshee_Emissive") {
               m.emissiveMap = m.map;
               m.emissive.set(0xffffff);
-              m.emissiveIntensity = 10;
+              m.emissiveIntensity = 2.5;
               m.needsUpdate = true;
             }
           }
@@ -565,8 +545,7 @@ export class PlateStudio {
     }
     if (!this.dirty) return;
     this.dirty = false;
-    if (this.composer) this.composer.render();
-    else this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this.scene, this.camera);
   };
 
   private resize() {
@@ -574,7 +553,6 @@ export class PlateStudio {
     const h = this.container.clientHeight;
     if (!w || !h) return;
     this.renderer.setSize(w, h, false);
-    this.composer?.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     if (!this.anim) this.applyView(this.view);
@@ -589,8 +567,7 @@ export class PlateStudio {
 
   /** The current 3D view as a PNG. */
   snapshot(): Promise<Blob | null> {
-    if (this.composer) this.composer.render();
-    else this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this.scene, this.camera);
     const url = this.renderer.domElement.toDataURL("image/png");
     return fetch(url).then((r) => r.blob());
   }
@@ -617,7 +594,6 @@ export class PlateStudio {
         (Array.isArray(m) ? m : [m]).forEach((x) => x.dispose());
       }
     });
-    this.composer?.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }

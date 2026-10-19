@@ -327,7 +327,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
           <div aria-hidden className={cn("pointer-events-none absolute inset-0 bg-[radial-gradient(120%_100%_at_50%_45%,transparent_55%,rgb(0_0_0/0.55))] transition-opacity duration-700", dim === "3d" ? "opacity-100" : "opacity-0")} />
           {dim === "3d" && (studioState === "loading" || carLoading) && (
             <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 text-[13.5px] text-white/70">
-              <Loader2 className="size-5 animate-spin" /> {carLoading ? "Opening LS Customs…" : "Building the garage…"}
+              <Loader2 className="size-5 animate-spin" /> {carLoading ? "Opening 6 Hub Customs…" : "Building the garage…"}
             </span>
           )}
           {studioState === "error" && dim === "3d" && <p className="absolute inset-x-6 top-1/2 text-center text-[14px] text-white/70">3D needs WebGL, which this browser has turned off. The 2D plate still works.</p>}

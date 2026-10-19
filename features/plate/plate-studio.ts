@@ -10,7 +10,7 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 
 /**
  * The 3D side of the plate creator: a stamped aluminium plate you can turn in
- * your hands, and LS Customs, where it's bolted to the back of a Banshee
+ * your hands, and 6 Hub Customs, where it's bolted to the back of a Banshee
  * (public/tools/plate/customs.glb, loaded the first time Car view opens). Renders
  * only when something changes, and pauses entirely while hidden.
  */
@@ -227,7 +227,7 @@ export class PlateStudio {
     this.plateLights = [key, rim];
     this.scene.add(key, rim);
 
-    // LS Customs: the scene file brings the car, floor and walls; these lights shape the paint.
+    // 6 Hub Customs: the scene file brings the car, floor and walls; these lights shape the paint.
     this.paint = opts.paint;
     this.mount.position.copy(MOUNT);
     this.garage.add(this.mount);
@@ -347,7 +347,7 @@ export class PlateStudio {
     this.dirty = true;
   }
 
-  /** Loads LS Customs and the Banshee once; resolves when they're in the scene. */
+  /** Loads 6 Hub Customs and the Banshee once; resolves when they're in the scene. */
   loadCar(): Promise<void> {
     if (this.carLoad) return this.carLoad;
     this.onCarLoading?.(true);

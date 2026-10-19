@@ -204,8 +204,8 @@ export class PlateStudio {
       alphaTest: 0.5,
       roughness: 0.5,
       metalness: 0,
-      clearcoat: 0.4,
-      clearcoatRoughness: 0.25,
+      clearcoat: 0.2,
+      clearcoatRoughness: 0.35,
       envMapIntensity: 0.6,
     });
     const edge = new THREE.MeshStandardMaterial({ color: 0xd7dbde, metalness: 1, roughness: 0.32 });
@@ -263,9 +263,13 @@ export class PlateStudio {
     this.controls.addEventListener("start", () => (this.lastInteract = performance.now()));
 
     if (opts.bloom) {
-      this.composer = new EffectComposer(this.renderer);
+      // A multisampled target: without it, post-processing drops antialiasing and fine
+      // highlights shimmer ("sparkle") as the camera moves.
+      const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+      this.composer = new EffectComposer(this.renderer, target);
       this.composer.addPass(new RenderPass(this.scene, this.camera));
-      this.composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), 0.45, 0.4, 3.4));
+      // High threshold: only the tail lights glow, never reflections.
+      this.composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.45, 4.5));
       this.composer.addPass(new OutputPass());
     }
 
@@ -357,10 +361,21 @@ export class PlateStudio {
       .loadAsync(CAR_URL)
       .then((gltf) => {
         if (this.disposed) return;
+        const backdrop = gltf.scene.getObjectByName("Environment_BiasedUVs_Unlit");
         gltf.scene.traverse((o) => {
           if (!(o instanceof THREE.Mesh)) return;
+          // The workshop behind the car stays clear of the fog; only the floor fades out.
+          let inBackdrop = false;
+          o.traverseAncestors((a) => (inBackdrop ||= a === backdrop));
           for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+            if (inBackdrop) {
+              m.fog = false;
+              // Its baked lighting is dim; lift it so the workshop reads behind the car.
+              if (m instanceof THREE.MeshBasicMaterial && m.name !== "Unlit_Black") m.color.multiplyScalar(1.45);
+            }
             if (!(m instanceof THREE.MeshStandardMaterial)) continue;
+            // A touch of clear-coat roughness keeps reflections smooth rather than glittery.
+            if (m instanceof THREE.MeshPhysicalMaterial && m.clearcoat > 0) m.clearcoatRoughness = Math.max(m.clearcoatRoughness, 0.07);
             // Body colour: drop the flat colour texture so the paint picker drives it.
             if (m.name.startsWith("Banshee_Carpaint_1")) {
               m.map = null;
@@ -372,7 +387,7 @@ export class PlateStudio {
             if (m.name === "Banshee_Emissive") {
               m.emissiveMap = m.map;
               m.emissive.set(0xffffff);
-              m.emissiveIntensity = 2.2;
+              m.emissiveIntensity = 7;
               m.needsUpdate = true;
             }
           }
@@ -536,10 +551,10 @@ export class PlateStudio {
     // Fog starts just past the car and is black a few metres behind it, wherever the camera is.
     const fog = this.scene.fog as THREE.Fog;
     const reach = this.camera.position.distanceTo(this.controls.target);
-    const near = this.carMix > 0.01 ? reach + 0.6 / this.carMix : 1000;
+    const near = this.carMix > 0.01 ? reach + 1.5 / this.carMix : 1000;
     if (Math.abs(fog.near - near) > 0.01) {
       fog.near = near;
-      fog.far = near + 4.5;
+      fog.far = near + 9;
       this.dirty = true;
     }
     if (!this.dirty) return;

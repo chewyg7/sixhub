@@ -294,6 +294,52 @@ export function drawPlateBump(ctx: CanvasRenderingContext2D, d: Pick<PlateDesign
   }
 }
 
+/** The plate's outline for 3D: white where there's metal, black for the rounded corners and bolt holes. */
+export function drawPlateMask(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#fff";
+  roundRect(ctx, 0, 0, W, H, CORNER * H);
+  ctx.fill();
+  ctx.fillStyle = "#000";
+  for (const h of HOLES.round) {
+    ctx.beginPath();
+    ctx.arc(h.x * W, h.y * H, h.r * H, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (const s of HOLES.slots) {
+    roundRect(ctx, (s.x - s.w / 2) * W, (s.y - s.h / 2) * H, s.w * W, s.h * H, (s.h * H) / 2);
+    ctx.fill();
+  }
+}
+
+/**
+ * Surface directions from the height map (a normal map), so the 3D plate
+ * shades its stamped letters correctly. Drawn at half size: plenty for light.
+ */
+export function drawPlateNormals(target: HTMLCanvasElement, height: HTMLCanvasElement, strength = 6) {
+  const W = target.width;
+  const H = target.height;
+  const ctx = target.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(height, 0, 0, W, H);
+  const src = ctx.getImageData(0, 0, W, H).data;
+  const out = ctx.createImageData(W, H);
+  const h = (x: number, y: number) => src[((Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))) << 2)] / 255;
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      // Sobel slope, x to the right and y up (normal maps use OpenGL's convention).
+      const dx = (h(x + 1, y - 1) + 2 * h(x + 1, y) + h(x + 1, y + 1) - h(x - 1, y - 1) - 2 * h(x - 1, y) - h(x - 1, y + 1)) * strength;
+      const dy = (h(x - 1, y + 1) + 2 * h(x, y + 1) + h(x + 1, y + 1) - h(x - 1, y - 1) - 2 * h(x, y - 1) - h(x + 1, y - 1)) * strength;
+      const len = Math.hypot(dx, dy, 1);
+      const i = (y * W + x) << 2;
+      out.data[i] = ((-dx / len) * 0.5 + 0.5) * 255;
+      out.data[i + 1] = ((dy / len) * 0.5 + 0.5) * 255;
+      out.data[i + 2] = ((1 / len) * 0.5 + 0.5) * 255;
+      out.data[i + 3] = 255;
+    }
+  ctx.putImageData(out, 0, 0);
+}
+
 /* ---------- 2D frame (PNG export and 2D view) ---------- */
 
 const FRAME_COLORS: Record<Exclude<FrameKind, "none">, [string, string, string]> = {

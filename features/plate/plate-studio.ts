@@ -4,7 +4,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import { CORNER, HOLES, type FrameKind } from "./plate-art";
+import { CORNER, HOLES, drawPlateMask, drawPlateNormals, type FrameKind } from "./plate-art";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 
@@ -25,8 +25,11 @@ const BEVEL = 0.0006;
 
 const CAR_URL = "/tools/plate/customs.glb";
 /** Where the plate's centre sits on the Banshee's rear (found by ray-casting the model). */
-// The flat panel on the rear bumper is at z 2.218 between y 0.42 and 0.56; the plate's back sits just proud of it.
-const MOUNT = new THREE.Vector3(0, 0.49, 2.2205);
+// Between the tail lights, like the GTA Online creator. The bodywork behind the plate's
+// footprint peaks at z 2.124, so the plate's back (1.8 mm behind its centre) clears it.
+const MOUNT = new THREE.Vector3(0, 0.72, 2.1265);
+/** How far the stamped characters and rim stand out of the plate (metres). */
+const EMBOSS = 0.0012;
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
@@ -131,6 +134,9 @@ export class PlateStudio {
   private faceTex: THREE.CanvasTexture;
   private bumpTex: THREE.CanvasTexture;
   private faceMat: THREE.MeshPhysicalMaterial;
+  private bumpCanvas: HTMLCanvasElement;
+  private normalCanvas = Object.assign(document.createElement("canvas"), { width: 1024, height: 512 });
+  private normalTex: THREE.CanvasTexture;
   private garage = new THREE.Group();
   private mount = new THREE.Object3D();
   private paintMats: THREE.MeshStandardMaterial[] = [];
@@ -166,7 +172,9 @@ export class PlateStudio {
     this.renderer.domElement.style.cssText = "display:block;width:100%;height:100%;touch-action:none;outline:none";
     container.appendChild(this.renderer.domElement);
 
-    this.scene.background = new THREE.Color(0x060607);
+    this.scene.background = new THREE.Color(0x020203);
+    // Car view: black fog closes in behind the car so the garage dissolves into darkness.
+    this.scene.fog = new THREE.Fog(0x020203, 1000, 1001);
     this.scene.environment = studioEnvironment(this.renderer);
     this.scene.environmentIntensity = 0.9;
 
@@ -174,13 +182,39 @@ export class PlateStudio {
     this.faceTex = new THREE.CanvasTexture(face);
     this.faceTex.colorSpace = THREE.SRGBColorSpace;
     this.faceTex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    this.bumpCanvas = bump;
     this.bumpTex = new THREE.CanvasTexture(bump);
     this.bumpTex.anisotropy = this.faceTex.anisotropy;
+    drawPlateNormals(this.normalCanvas, bump);
+    this.normalTex = new THREE.CanvasTexture(this.normalCanvas);
+    this.normalTex.anisotropy = this.faceTex.anisotropy;
+    const mask = Object.assign(document.createElement("canvas"), { width: 2048, height: 1024 });
+    drawPlateMask(mask.getContext("2d")!, mask.width, mask.height);
+    const maskTex = new THREE.CanvasTexture(mask);
     // Painted sheeting: bright, satin, with just a hint of clear-coat gloss.
-    this.faceMat = new THREE.MeshPhysicalMaterial({ map: this.faceTex, bumpMap: this.bumpTex, bumpScale: 7, roughness: 0.55, metalness: 0, clearcoat: 0.35, clearcoatRoughness: 0.3, envMapIntensity: 0.55 });
+// The face is real relief: a finely divided surface pushed out by the height map (so letters
+    // stand up and show their edges at an angle), shaded by the matching normal map, and cut to
+    // the plate's outline and bolt holes by the mask.
+    this.faceMat = new THREE.MeshPhysicalMaterial({
+      map: this.faceTex,
+      displacementMap: this.bumpTex,
+      displacementScale: EMBOSS,
+      normalMap: this.normalTex,
+      alphaMap: maskTex,
+      alphaTest: 0.5,
+      roughness: 0.5,
+      metalness: 0,
+      clearcoat: 0.4,
+      clearcoatRoughness: 0.25,
+      envMapIntensity: 0.6,
+    });
     const edge = new THREE.MeshStandardMaterial({ color: 0xd7dbde, metalness: 1, roughness: 0.32 });
-    const plateMesh = new THREE.Mesh(plateGeometry(), [this.faceMat, edge]);
-    this.plate.add(plateMesh, this.frame);
+    const sheet = new THREE.MeshStandardMaterial({ color: 0xe8e8e4, roughness: 0.6 });
+    const plateMesh = new THREE.Mesh(plateGeometry(), [sheet, edge]);
+    const fine = window.matchMedia("(pointer: coarse)").matches ? 1 : 2;
+    const relief = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH, 320 * fine, 160 * fine), this.faceMat);
+    relief.position.z = BEVEL + 0.00005;
+    this.plate.add(plateMesh, relief, this.frame);
     this.addBolts();
     this.scene.add(this.plate);
 
@@ -263,6 +297,8 @@ export class PlateStudio {
 
   /** New artwork (text or style changed). */
   updatePlate() {
+    drawPlateNormals(this.normalCanvas, this.bumpCanvas);
+    this.normalTex.needsUpdate = true;
     this.faceTex.needsUpdate = true;
     this.bumpTex.needsUpdate = true;
     this.dirty = true;
@@ -497,6 +533,15 @@ export class PlateStudio {
       this.dirty = true;
     }
     if (this.controls.update()) this.dirty = true;
+    // Fog starts just past the car and is black a few metres behind it, wherever the camera is.
+    const fog = this.scene.fog as THREE.Fog;
+    const reach = this.camera.position.distanceTo(this.controls.target);
+    const near = this.carMix > 0.01 ? reach + 0.6 / this.carMix : 1000;
+    if (Math.abs(fog.near - near) > 0.01) {
+      fog.near = near;
+      fog.far = near + 4.5;
+      this.dirty = true;
+    }
     if (!this.dirty) return;
     this.dirty = false;
     if (this.composer) this.composer.render();

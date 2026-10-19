@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Check, Download, Link2, Loader2, RotateCcw, Undo2 } from "lucide-react";
+import { Camera, Check, ChevronDown, Download, Link2, Loader2, RotateCcw, Undo2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { usePreferences } from "@/lib/preferences";
 import {
@@ -63,13 +63,46 @@ function parseColors(v?: string): TextColors | null {
   return { header: `#${parts[0]}`, number: `#${parts[1]}`, footer: `#${parts[2]}` };
 }
 
-/** An on/off row, like the creator's other switches. */
+/** Frosted glass panels, matching the rest of the site. */
+const GLASS = "rounded-[28px] border border-white/10 bg-white/[0.04] shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_30px_60px_-30px_rgb(0_0_0/0.8)] backdrop-blur-2xl";
+
+function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <section className={cn(GLASS, "p-4 sm:p-5", className)}>{children}</section>;
+}
+
+/** A panel that folds away, like the VI Text Generator's Backgrounds. */
+function Collapsible({ title, summary, children }: { title: string; summary?: React.ReactNode; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className={cn(GLASS, "px-4 sm:px-5")}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 py-5 text-[13px] font-bold tracking-[0.18em] text-white/50 uppercase transition-colors hover:text-white/80"
+      >
+        {title}
+        <span className="flex items-center gap-2 tracking-normal normal-case">
+          {summary && <span className="text-[13px] font-medium text-white/55">{summary}</span>}
+          <ChevronDown className={cn("size-4 transition-transform duration-300", open && "rotate-180")} />
+        </span>
+      </button>
+      <div className={cn("grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+        <div className="min-h-0 overflow-hidden">
+          <div className="pb-5">{children}</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** An on/off row. */
 function Toggle({ label, hint, checked, onChange }: { label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-4 py-2">
-      <span>
-        <span className="block text-[14px] font-bold text-white/90">{label}</span>
-        {hint && <span className="block text-[12.5px] text-white/45">{hint}</span>}
+    <div className="flex items-center justify-between gap-4 py-3">
+      <span className="min-w-0">
+        <span className="block text-[13px] font-bold tracking-[0.14em] text-white/70 uppercase">{label}</span>
+        {hint && <span className="mt-0.5 block text-[12.5px] text-white/40">{hint}</span>}
       </span>
       <button
         type="button"
@@ -77,19 +110,19 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
         aria-checked={checked}
         aria-label={label}
         onClick={() => onChange(!checked)}
-        className={cn("relative h-7 w-12 shrink-0 rounded-full transition-colors duration-300", checked ? "bg-[#2fd6c9]" : "bg-white/15")}
+        className={cn("relative h-7 w-12 shrink-0 rounded-full transition-colors duration-300", checked ? "bg-accent" : "bg-white/15")}
       >
-        <span className={cn("absolute top-1 left-1 size-5 rounded-full bg-white shadow transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]", checked && "translate-x-5")} />
+        <span className={cn("absolute top-1 left-1 size-5 rounded-full bg-white shadow-[0_2px_6px_rgb(0_0_0/0.35)] transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]", checked && "translate-x-5")} />
       </button>
-    </label>
+    </div>
   );
 }
 
 /** A colour swatch that opens the system colour picker. */
 function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
-    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/10 px-3 py-2 transition-colors hover:border-white/25">
-      <span className="relative size-8 shrink-0 overflow-hidden rounded-full border border-white/25" style={{ background: value }}>
+    <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 transition-colors hover:border-white/25">
+      <span className="relative size-8 shrink-0 overflow-hidden rounded-full border border-white/25 shadow-[inset_0_1px_2px_rgb(255_255_255/0.3)]" style={{ background: value }}>
         <input type="color" value={value} onChange={(e) => onChange(e.target.value)} aria-label={`${label} colour`} className="absolute inset-0 size-full cursor-pointer opacity-0" />
       </span>
       <span className="min-w-0 flex-1 text-[13.5px] font-bold text-white/85">{label}</span>
@@ -98,12 +131,21 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   );
 }
 
-/** Segmented control like the creator's 2D/3D and Plate/Car switches. */
-function Switch<T extends string>({ value, options, onChange, label }: { value: T; options: { id: T; label: string }[]; onChange: (v: T) => void; label: string }) {
+/** Segmented glass control (2D/3D, Plate/Car, Real/Game). */
+function Segmented<T extends string>({ value, options, onChange, label, className }: { value: T; options: { id: T; label: string }[]; onChange: (v: T) => void; label: string; className?: string }) {
   const i = options.findIndex((o) => o.id === value);
   return (
-    <div role="radiogroup" aria-label={label} className="relative grid rounded-full bg-black/55 p-1 shadow-[0_10px_30px_-10px_rgb(0_0_0/0.8),inset_0_0_0_1px_rgb(255_255_255/0.1)] backdrop-blur-xl" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
-      <span aria-hidden className="absolute top-1 bottom-1 left-1 rounded-full bg-white transition-transform duration-500 ease-[cubic-bezier(0.34,1.3,0.64,1)]" style={{ width: `calc((100% - 8px) / ${options.length})`, transform: `translateX(${i * 100}%)` }} />
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className={cn("relative grid rounded-full border border-white/12 bg-black/40 p-1 shadow-[0_12px_30px_-12px_rgb(0_0_0/0.8),inset_0_1px_0_rgb(255_255_255/0.08)] backdrop-blur-xl", className)}
+      style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+    >
+      <span
+        aria-hidden
+        className="absolute top-1 bottom-1 left-1 rounded-full bg-[image:var(--sunset)] shadow-[0_8px_24px_-8px_rgb(255_79_163/0.9)] transition-transform duration-500 ease-[cubic-bezier(0.34,1.3,0.64,1)]"
+        style={{ width: `calc((100% - 8px) / ${options.length})`, transform: `translateX(${i * 100}%)` }}
+      />
       {options.map((o) => (
         <button
           key={o.id}
@@ -111,24 +153,12 @@ function Switch<T extends string>({ value, options, onChange, label }: { value: 
           role="radio"
           aria-checked={o.id === value}
           onClick={() => onChange(o.id)}
-          className={cn("relative z-10 h-9 rounded-full px-4 text-[12.5px] font-bold tracking-wide uppercase transition-colors duration-300 sm:px-5", o.id === value ? "text-[#0b0b0c]" : "text-white/60 hover:text-white")}
+          className={cn("relative z-10 h-9 rounded-full px-4 text-[12.5px] font-bold tracking-wide whitespace-nowrap uppercase transition-colors duration-300 sm:px-5", o.id === value ? "text-white" : "text-white/55 hover:text-white")}
         >
           {o.label}
         </button>
       ))}
     </div>
-  );
-}
-
-function Section({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <section className="border-t border-white/10 py-6 first:border-t-0 first:pt-0">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 className="display text-[22px] leading-none">{title}</h2>
-        {aside}
-      </div>
-      {children}
-    </section>
   );
 }
 
@@ -274,79 +304,144 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
   };
 
   return (
-    <div className="grid overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0b0d] lg:min-h-[min(820px,calc(100dvh-180px))] lg:grid-cols-[400px_minmax(0,1fr)]">
-      {/* Controls */}
-      <aside className="order-2 bg-[#121214] px-5 py-6 sm:px-7 lg:order-1 lg:max-h-[min(820px,calc(100dvh-180px))] lg:overflow-y-auto" data-lenis-prevent>
-        <Section title="Enter your text" aside={<span className="tabular font-mono text-[12.5px] text-white/45">{text.length}/{MAX_CHARS}</span>}>
-          <input
-            value={text}
-            onChange={(e) => setText(cleanPlateText(e.target.value))}
-            maxLength={MAX_CHARS}
-            spellCheck={false}
-            autoCapitalize="characters"
-            autoComplete="off"
-            aria-label="Plate text"
-            placeholder="VCECTY"
-            className="h-16 w-full rounded-2xl border border-white/15 bg-black px-5 text-center font-[PlateNumber,var(--font-deco-condensed)] text-[34px] tracking-[0.12em] text-white uppercase outline-none placeholder:text-white/20 focus:border-[#2fd6c9]/70 focus:shadow-[0_0_0_4px_rgb(47_214_201/0.15)]"
-          />
-          <p className="mt-3 text-[13.5px] leading-relaxed text-white/55">Up to {MAX_CHARS} characters (A–Z, 0–9). The characters split either side of the oranges, like the real Leonida plate. Keep it friendly.</p>
-        </Section>
-
-        <Section title="Variation">
-          <div role="radiogroup" aria-label="Variation" className="grid grid-cols-2 gap-2">
-            {VARIATIONS.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                role="radio"
-                aria-checked={v.id === variation}
-                onClick={() => setVariation(v.id)}
-                className={cn("rounded-2xl border px-3 py-3 text-left transition-colors", v.id === variation ? "border-white bg-white/[0.06]" : "border-white/10 hover:border-white/30")}
-              >
-                <span className="block text-[14.5px] font-bold">{v.name}</span>
-                <span className="block text-[12px] text-white/45">{v.id === "real" ? "The real-world Leonida plate" : "The plate as seen in GTA VI"}</span>
-              </button>
-            ))}
-          </div>
-          <div className="mt-3 divide-y divide-white/8">
-            <Toggle label="Rounded characters" hint="Dealerplate Florida Rounded" checked={rounded} onChange={setRounded} />
-            <Toggle label="Split around the oranges" hint={split ? "VCE · CTY" : "One line across the plate"} checked={split} onChange={setSplit} />
-          </div>
-        </Section>
-
-        <Section title="Select a style">
-          <div className="grid grid-cols-2 gap-2.5">
-            {STYLES.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setStyleId(s.id)}
-                aria-pressed={s.id === styleId}
-                className={cn("group rounded-2xl border p-2.5 text-left transition-[border-color,background-color] duration-300", s.id === styleId ? "border-white bg-white/[0.06]" : "border-white/10 hover:border-white/30")}
-              >
-                <span className="block overflow-hidden rounded-[7px] shadow-[0_6px_16px_-6px_rgb(0_0_0/0.8)]" style={{ aspectRatio: "2 / 1", background: `linear-gradient(${s.swatch[0]}, ${s.swatch[0]})` }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- generated preview */}
-                  {thumbs[`${variation}:${s.id}`] && <img src={thumbs[`${variation}:${s.id}`]} alt="" className="block size-full" />}
-                </span>
-                <span className="mt-2 block truncate text-[12.5px] font-bold text-white/80">{s.name}</span>
-              </button>
-            ))}
-          </div>
-        </Section>
-
-        <Section
-          title="Text colours"
-          aside={
-            custom && (
-              <button type="button" onClick={() => setCustom(null)} className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-white/55 transition-colors hover:text-white">
-                <Undo2 className="size-3.5" /> Reset to style
-              </button>
-            )
-          }
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start xl:grid-cols-[minmax(0,1fr)_460px]">
+      {/* Stage and text bar */}
+      <div className="grid gap-4 lg:sticky lg:top-28">
+        <div
+          className={cn(GLASS, "relative h-[52svh] min-h-[300px] overflow-hidden overscroll-contain bg-[radial-gradient(120%_90%_at_50%_0%,rgb(255_79_163/0.10),transparent_55%),radial-gradient(90%_70%_at_50%_100%,rgb(110_60_160/0.12),transparent_60%)] lg:h-[min(74vh,760px)]")}
+          // In 3D the wheel zooms the scene instead of scrolling the page.
+          data-lenis-prevent={dim === "3d" ? "" : undefined}
         >
+          {/* 2D */}
+          <div className={cn("absolute inset-0 flex items-center justify-center p-[7%] transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]", dim === "2d" ? "opacity-100" : "pointer-events-none scale-95 opacity-0")}>
+            <canvas ref={picture} width={1600} height={920} aria-label={`Leonida plate reading ${text || "nothing yet"}`} role="img" className="h-auto max-h-full w-full max-w-[920px] drop-shadow-[0_40px_60px_rgb(0_0_0/0.65)]" />
+            {!ready && (
+              <span className="absolute inset-0 flex items-center justify-center text-white/50">
+                <Loader2 className="size-6 animate-spin" />
+              </span>
+            )}
+          </div>
+          {/* 3D */}
+          <div ref={stage} className={cn("absolute inset-0 bg-black transition-opacity duration-700", dim === "3d" ? "opacity-100" : "pointer-events-none opacity-0")} />
+          {/* A soft vignette over the 3D scene, like a lens. */}
+          <div aria-hidden className={cn("pointer-events-none absolute inset-0 bg-[radial-gradient(120%_100%_at_50%_45%,transparent_55%,rgb(0_0_0/0.55))] transition-opacity duration-700", dim === "3d" ? "opacity-100" : "opacity-0")} />
+          {dim === "3d" && (studioState === "loading" || carLoading) && (
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 text-[13.5px] text-white/70">
+              <Loader2 className="size-5 animate-spin" /> {carLoading ? "Opening LS Customs…" : "Building the garage…"}
+            </span>
+          )}
+          {studioState === "error" && dim === "3d" && <p className="absolute inset-x-6 top-1/2 text-center text-[14px] text-white/70">3D needs WebGL, which this browser has turned off. The 2D plate still works.</p>}
+
+          {dim === "3d" && studioState === "ready" && (
+            <button
+              type="button"
+              onClick={() => studio.current?.resetView()}
+              aria-label="Reset view"
+              title="Reset view"
+              className="absolute top-4 right-4 flex size-11 items-center justify-center rounded-full border border-white/12 bg-black/40 text-white/80 backdrop-blur-xl transition-colors hover:text-white"
+            >
+              <RotateCcw className="size-[18px]" />
+            </button>
+          )}
+
+          <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 sm:inset-x-5 sm:bottom-5">
+            <Segmented<Dim> label="Dimension" value={dim} onChange={changeDim} options={[{ id: "2d", label: "2D" }, { id: "3d", label: "3D" }]} />
+            <Segmented<StudioView> label="View" value={view} onChange={(v) => void changeView(v)} options={[{ id: "plate", label: "Plate view" }, { id: "car", label: "Car view" }]} />
+          </div>
+        </div>
+
+        {/* Text, download and share */}
+        <div className={cn(GLASS, "flex flex-col gap-3 p-3 sm:flex-row sm:items-center")}>
+          <div className="relative flex-1">
+            <input
+              value={text}
+              onChange={(e) => setText(cleanPlateText(e.target.value))}
+              maxLength={MAX_CHARS}
+              spellCheck={false}
+              autoCapitalize="characters"
+              autoComplete="off"
+              aria-label="Plate text"
+              placeholder="VCECTY"
+              className="h-14 w-full rounded-2xl border border-white/10 bg-black/30 pr-14 pl-5 font-[PlateNumber,var(--font-deco-condensed)] text-[30px] tracking-[0.14em] text-white uppercase outline-none placeholder:text-white/25 focus:border-accent"
+            />
+            <span className="tabular pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-mono text-[12px] text-white/40">
+              {text.length}/{MAX_CHARS}
+            </span>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={copyLink}
+              aria-label="Copy link to this plate"
+              title={copied ? "Link copied" : "Copy link"}
+              className="flex size-14 items-center justify-center rounded-2xl bg-white/[0.07] text-white/75 transition-colors hover:bg-white/12 hover:text-white"
+            >
+              {copied ? <Check className="size-5 text-[#7ee8ae]" /> : <Link2 className="size-5" />}
+            </button>
+            <button
+              type="button"
+              onClick={saveShot}
+              disabled={studioState !== "ready" || dim !== "3d"}
+              aria-label="Save a 3D shot"
+              title={dim !== "3d" ? "Switch to 3D to save a shot" : "Save a 3D shot"}
+              className="flex size-14 items-center justify-center rounded-2xl bg-white/[0.07] text-white/75 transition-colors hover:bg-white/12 hover:text-white disabled:opacity-35"
+            >
+              <Camera className="size-5" />
+            </button>
+            <button
+              type="button"
+              onClick={savePng}
+              disabled={!ready}
+              className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-[image:var(--sunset)] px-6 text-[15.5px] font-bold text-white shadow-[0_12px_32px_-12px_rgb(255_79_163/0.9)] transition-transform duration-300 hover:scale-[1.03] active:scale-95 disabled:pointer-events-none disabled:opacity-40 sm:flex-none"
+            >
+              <Download className="size-5" /> Download PNG
+            </button>
+          </div>
+        </div>
+        <p className="px-2 text-[12.5px] text-white/40">Up to {MAX_CHARS} characters, A–Z and 0–9. Keep it friendly. A fan-made tool, not affiliated with Rockstar Games.</p>
+      </div>
+
+      {/* Controls */}
+      <div className="grid gap-4">
+        <Panel>
+          <div role="radiogroup" aria-label="Plate style" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+            {STYLES.map((s) => {
+              const active = s.id === styleId;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setStyleId(s.id)}
+                  className={cn(
+                    "flex flex-col items-center gap-2 rounded-2xl border p-2 pb-2.5 transition-[border-color,background-color,opacity]",
+                    active ? "border-accent bg-accent/10" : "border-white/10 opacity-60 hover:border-white/25 hover:opacity-100",
+                  )}
+                >
+                  <span className="block w-full overflow-hidden rounded-[7px] shadow-[0_6px_16px_-6px_rgb(0_0_0/0.8)]" style={{ aspectRatio: "2 / 1", background: s.swatch[0] }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- generated preview */}
+                    {thumbs[`${variation}:${s.id}`] && <img src={thumbs[`${variation}:${s.id}`]} alt="" className="block size-full" />}
+                  </span>
+                  <span className="text-[12px] font-bold">{s.name}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-3 divide-y divide-white/8 border-t border-white/8">
+            <div className="flex items-center justify-between gap-4 py-3">
+              <span className="text-[13px] font-bold tracking-[0.14em] text-white/70 uppercase">Variation</span>
+              <Segmented<Variation> label="Variation" value={variation} onChange={setVariation} options={VARIATIONS.map((v) => ({ id: v.id, label: v.name }))} className="w-[180px]" />
+            </div>
+            <Toggle label="Rounded characters" checked={rounded} onChange={setRounded} />
+            <Toggle label="Split around the oranges" checked={split} onChange={setSplit} />
+          </div>
+        </Panel>
+
+        <Collapsible title="Text colours" summary={custom ? (linked ? "Custom" : "Custom, per line") : "Style colours"}>
           <Toggle
             label="Linked"
-            hint={linked ? "One colour for all the text" : "Each line of text has its own colour"}
+            hint={linked ? "One colour for all the text" : "Each line has its own colour"}
             checked={linked}
             onChange={(on) => {
               setLinked(on);
@@ -354,7 +449,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
               if (on && custom) setCustom({ header: custom.number, number: custom.number, footer: custom.number });
             }}
           />
-          <div className="mt-2 grid gap-2">
+          <div className="mt-1 grid gap-2">
             {linked ? (
               <ColorField label="All text" value={colors.number} onChange={(v) => setColor("number", v)} />
             ) : (
@@ -365,9 +460,17 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
               </>
             )}
           </div>
-        </Section>
+          <button
+            type="button"
+            onClick={() => setCustom(null)}
+            disabled={!custom}
+            className="mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-white/[0.07] px-4 text-[13px] font-bold text-white/75 transition-colors hover:bg-white/12 hover:text-white disabled:opacity-35"
+          >
+            <Undo2 className="size-4" /> Reset to style colours
+          </button>
+        </Collapsible>
 
-        <Section title="Frame">
+        <Collapsible title="Frame" summary={FRAMES.find((f) => f.id === frame)?.name}>
           <div className="grid grid-cols-4 gap-2">
             {FRAMES.map((f) => (
               <button
@@ -375,16 +478,19 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
                 type="button"
                 onClick={() => setFrame(f.id)}
                 aria-pressed={f.id === frame}
-                className={cn("flex flex-col items-center gap-1.5 rounded-xl border py-2.5 text-[12px] font-bold transition-colors", f.id === frame ? "border-white bg-white/[0.06] text-white" : "border-white/10 text-white/60 hover:border-white/30")}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 rounded-2xl border py-3 text-[12px] font-bold transition-colors",
+                  f.id === frame ? "border-accent bg-accent/10 text-white" : "border-white/10 text-white/60 hover:border-white/25",
+                )}
               >
-                <span className="size-7 rounded-full border border-white/20" style={{ background: f.swatch === "transparent" ? "repeating-linear-gradient(45deg,#2a2a2e 0 4px,#16161a 4px 8px)" : f.swatch }} />
+                <span className="size-8 rounded-full border border-white/20" style={{ background: f.swatch === "transparent" ? "repeating-linear-gradient(45deg,#2a2a2e 0 4px,#16161a 4px 8px)" : f.swatch }} />
                 {f.name}
               </button>
             ))}
           </div>
-        </Section>
+        </Collapsible>
 
-        <Section title="Car paint" aside={<span className="text-[12.5px] text-white/45">{PAINTS.find((p) => p.hex === paint)?.name}</span>}>
+        <Collapsible title="Car paint" summary={PAINTS.find((p) => p.hex === paint)?.name}>
           <div className="flex flex-wrap gap-2.5">
             {PAINTS.map((p) => (
               <button
@@ -402,64 +508,8 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
               />
             ))}
           </div>
-        </Section>
-
-        <Section title="Save & share">
-          <div className="grid gap-2">
-            <button type="button" onClick={savePng} disabled={!ready} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-white text-[14.5px] font-bold text-[#0b0b0c] transition-opacity disabled:opacity-40">
-              <Download className="size-4" /> Download plate (PNG)
-            </button>
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={saveShot} disabled={studioState !== "ready" || dim !== "3d"} title={dim !== "3d" ? "Switch to 3D first" : undefined} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white/[0.08] text-[13.5px] font-bold text-white transition-colors hover:bg-white/15 disabled:opacity-40">
-                <Camera className="size-4" /> 3D shot
-              </button>
-              <button type="button" onClick={copyLink} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white/[0.08] text-[13.5px] font-bold text-white transition-colors hover:bg-white/15">
-                {copied ? <Check className="size-4 text-[#7ee8ae]" /> : <Link2 className="size-4" />} {copied ? "Copied" : "Copy link"}
-              </button>
-            </div>
-          </div>
-          <p className="mt-4 text-[12px] leading-relaxed text-white/35">A fan-made tool. Not affiliated with Rockstar Games.</p>
-        </Section>
-      </aside>
-
-      {/* Stage */}
-      <div className="relative order-1 aspect-[4/3] overflow-hidden bg-[radial-gradient(120%_90%_at_50%_10%,#1d1d22,#060607_70%)] sm:aspect-[16/10] lg:order-2 lg:aspect-auto">
-        {/* 2D */}
-        <div className={cn("absolute inset-0 flex items-center justify-center p-[6%] transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]", dim === "2d" ? "opacity-100" : "pointer-events-none scale-95 opacity-0")}>
-          <canvas ref={picture} width={1600} height={920} aria-label={`Leonida plate reading ${text || "nothing yet"}`} role="img" className="h-auto max-h-full w-full max-w-[880px] drop-shadow-[0_40px_60px_rgb(0_0_0/0.65)]" />
-          {!ready && (
-            <span className="absolute inset-0 flex items-center justify-center text-white/50">
-              <Loader2 className="size-6 animate-spin" />
-            </span>
-          )}
-        </div>
-        {/* 3D */}
-        <div ref={stage} className={cn("absolute inset-0 transition-opacity duration-700", dim === "3d" ? "opacity-100" : "pointer-events-none opacity-0")} />
-        {dim === "3d" && studioState === "loading" && (
-          <span className="absolute inset-0 flex items-center justify-center gap-2 text-[13.5px] text-white/60">
-            <Loader2 className="size-5 animate-spin" /> Building the garage…
-          </span>
-        )}
-        {dim === "3d" && carLoading && (
-          <span className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center gap-2 text-[13.5px] text-white/70">
-            <Loader2 className="size-5 animate-spin" /> Opening LS Customs…
-          </span>
-        )}
-        {studioState === "error" && dim === "3d" && <p className="absolute inset-x-6 top-1/2 text-center text-[14px] text-white/70">3D needs WebGL, which this browser has turned off. The 2D plate still works.</p>}
-
-        {dim === "3d" && studioState === "ready" && (
-          <button type="button" onClick={() => studio.current?.resetView()} aria-label="Reset view" title="Reset view" className="absolute top-4 right-4 flex size-11 items-center justify-center rounded-full bg-black/55 text-white/80 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12)] backdrop-blur-xl transition-colors hover:text-white">
-            <RotateCcw className="size-[18px]" />
-          </button>
-        )}
-        {dim === "3d" && studioState === "ready" && (
-          <p className="pointer-events-none absolute top-5 left-5 text-[12px] font-bold tracking-[0.14em] text-white/40 uppercase">Drag to rotate · scroll to zoom</p>
-        )}
-
-        <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 sm:inset-x-5 sm:bottom-5">
-          <Switch<Dim> label="Dimension" value={dim} onChange={changeDim} options={[{ id: "2d", label: "2D" }, { id: "3d", label: "3D" }]} />
-          <Switch<StudioView> label="View" value={view} onChange={(v) => void changeView(v)} options={[{ id: "plate", label: "Plate view" }, { id: "car", label: "Car view" }]} />
-        </div>
+          <p className="mt-3 text-[12.5px] text-white/40">Picking a colour takes you to Car view.</p>
+        </Collapsible>
       </div>
     </div>
   );

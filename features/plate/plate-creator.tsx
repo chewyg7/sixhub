@@ -380,271 +380,274 @@ export function PlateCreator({ initial, discord }: { initial: PlateInitial; disc
   };
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start xl:grid-cols-[minmax(0,1fr)_460px]">
-      {/* Stage and text bar */}
-      <div className="grid gap-4 lg:sticky lg:top-28">
-        <div
-          className={cn(GLASS, "relative h-[52svh] min-h-[300px] overflow-hidden overscroll-contain bg-[radial-gradient(120%_90%_at_50%_0%,rgb(255_79_163/0.10),transparent_55%),radial-gradient(90%_70%_at_50%_100%,rgb(110_60_160/0.12),transparent_60%)] lg:h-[min(74vh,760px)]")}
-          // In 3D the wheel zooms the scene instead of scrolling the page.
-          data-lenis-prevent={dim === "3d" ? "" : undefined}
-        >
-          {/* 2D */}
-          <div className={cn("absolute inset-0 flex items-center justify-center p-[7%] transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]", dim === "2d" ? "opacity-100" : "pointer-events-none scale-95 opacity-0")}>
-            <canvas ref={picture} width={1600} height={920} aria-label={`${plate.name} plate reading ${text || "nothing yet"}`} role="img" className="h-auto max-h-full w-full max-w-[920px] drop-shadow-[0_40px_60px_rgb(0_0_0/0.65)]" />
-            {!ready && (
-              <span className="absolute inset-0 flex items-center justify-center text-white/50">
-                <Loader2 className="size-6 animate-spin" />
+    <>
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start xl:grid-cols-[minmax(0,1fr)_460px]">
+        {/* Stage and text bar */}
+        <div className="grid gap-4 lg:sticky lg:top-28">
+          <div
+            className={cn(GLASS, "relative h-[52svh] min-h-[300px] overflow-hidden overscroll-contain bg-[radial-gradient(120%_90%_at_50%_0%,rgb(255_79_163/0.10),transparent_55%),radial-gradient(90%_70%_at_50%_100%,rgb(110_60_160/0.12),transparent_60%)] lg:h-[min(74vh,760px)]")}
+            // In 3D the wheel zooms the scene instead of scrolling the page.
+            data-lenis-prevent={dim === "3d" ? "" : undefined}
+          >
+            {/* 2D */}
+            <div className={cn("absolute inset-0 flex items-center justify-center p-[7%] transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]", dim === "2d" ? "opacity-100" : "pointer-events-none scale-95 opacity-0")}>
+              <canvas ref={picture} width={1600} height={920} aria-label={`${plate.name} plate reading ${text || "nothing yet"}`} role="img" className="h-auto max-h-full w-full max-w-[920px] drop-shadow-[0_40px_60px_rgb(0_0_0/0.65)]" />
+              {!ready && (
+                <span className="absolute inset-0 flex items-center justify-center text-white/50">
+                  <Loader2 className="size-6 animate-spin" />
+                </span>
+              )}
+            </div>
+            {/* 3D */}
+            <div ref={stage} className={cn("absolute inset-0 bg-black transition-opacity duration-700", dim === "3d" ? "opacity-100" : "pointer-events-none opacity-0")} />
+            {/* A soft vignette over the 3D scene, like a lens. */}
+            <div aria-hidden className={cn("pointer-events-none absolute inset-0 bg-[radial-gradient(120%_100%_at_50%_45%,transparent_55%,rgb(0_0_0/0.55))] transition-opacity duration-700", dim === "3d" ? "opacity-100" : "opacity-0")} />
+            {dim === "3d" && (studioState === "loading" || carLoading) && (
+              <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 text-[13.5px] text-white/70">
+                <Loader2 className="size-5 animate-spin" /> {carLoading ? "Opening 6 Hub Customs…" : "Building the garage…"}
               </span>
             )}
-          </div>
-          {/* 3D */}
-          <div ref={stage} className={cn("absolute inset-0 bg-black transition-opacity duration-700", dim === "3d" ? "opacity-100" : "pointer-events-none opacity-0")} />
-          {/* A soft vignette over the 3D scene, like a lens. */}
-          <div aria-hidden className={cn("pointer-events-none absolute inset-0 bg-[radial-gradient(120%_100%_at_50%_45%,transparent_55%,rgb(0_0_0/0.55))] transition-opacity duration-700", dim === "3d" ? "opacity-100" : "opacity-0")} />
-          {dim === "3d" && (studioState === "loading" || carLoading) && (
-            <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 text-[13.5px] text-white/70">
-              <Loader2 className="size-5 animate-spin" /> {carLoading ? "Opening 6 Hub Customs…" : "Building the garage…"}
-            </span>
-          )}
-          {studioState === "error" && dim === "3d" && <p className="absolute inset-x-6 top-1/2 text-center text-[14px] text-white/70">3D needs WebGL, which this browser has turned off. The 2D plate still works.</p>}
+            {studioState === "error" && dim === "3d" && <p className="absolute inset-x-6 top-1/2 text-center text-[14px] text-white/70">3D needs WebGL, which this browser has turned off. The 2D plate still works.</p>}
 
-          {dim === "3d" && studioState === "ready" && (
-            <button
-              type="button"
-              onClick={() => studio.current?.resetView()}
-              aria-label="Reset view"
-              title="Reset view"
-              className="absolute top-4 right-4 flex size-11 items-center justify-center rounded-full border border-white/12 bg-black/40 text-white/80 backdrop-blur-xl transition-colors hover:text-white"
-            >
-              <RotateCcw className="size-[18px]" />
-            </button>
-          )}
-
-          <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 sm:inset-x-5 sm:bottom-5">
-            <Segmented<Dim> label="Dimension" value={dim} onChange={changeDim} options={[{ id: "2d", label: "2D" }, { id: "3d", label: "3D" }]} />
-            <Segmented<StudioView> label="View" value={view} onChange={(v) => void changeView(v)} options={[{ id: "plate", label: "Plate view" }, { id: "car", label: "Car view" }]} />
-          </div>
-        </div>
-
-        {/* Text, download and share */}
-        <div className={cn(GLASS, "flex flex-col gap-3 p-3 sm:flex-row sm:items-center")}>
-          <div className="relative flex-1">
-            <input
-              value={text}
-              onChange={(e) => setText(cleanPlateText(e.target.value))}
-              maxLength={MAX_CHARS}
-              spellCheck={false}
-              autoCapitalize="characters"
-              autoComplete="off"
-              aria-label="Plate text"
-              placeholder="VCECTY"
-              className="h-14 w-full rounded-2xl border border-white/10 bg-black/30 pr-14 pl-5 font-[PlateNumber,var(--font-deco-condensed)] text-[30px] tracking-[0.14em] text-white uppercase outline-none placeholder:text-white/25 focus:border-accent"
-            />
-            <span className="tabular pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-mono text-[12px] text-white/40">
-              {text.length}/{MAX_CHARS}
-            </span>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <button
-              type="button"
-              onClick={copyLink}
-              aria-label="Copy link to this plate"
-              title={copied ? "Link copied" : "Copy link"}
-              className="flex size-14 items-center justify-center rounded-2xl bg-white/[0.07] text-white/75 transition-colors hover:bg-white/12 hover:text-white"
-            >
-              {copied ? <Check className="size-5 text-[#7ee8ae]" /> : <Link2 className="size-5" />}
-            </button>
-            <button
-              type="button"
-              onClick={saveShot}
-              disabled={studioState !== "ready" || dim !== "3d"}
-              aria-label="Save a 3D shot"
-              title={dim !== "3d" ? "Switch to 3D to save a shot" : "Save a 3D shot"}
-              className="flex size-14 items-center justify-center rounded-2xl bg-white/[0.07] text-white/75 transition-colors hover:bg-white/12 hover:text-white disabled:opacity-35"
-            >
-              <Camera className="size-5" />
-            </button>
-            <button
-              type="button"
-              onClick={savePng}
-              disabled={!ready}
-              className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-[image:var(--sunset)] px-6 text-[15.5px] font-bold text-white shadow-[0_12px_32px_-12px_rgb(255_79_163/0.9)] transition-transform duration-300 hover:scale-[1.03] active:scale-95 disabled:pointer-events-none disabled:opacity-40 sm:flex-none"
-            >
-              <Download className="size-5" /> Download PNG
-            </button>
-          </div>
-        </div>
-        <p className="px-2 text-[12.5px] text-white/40">Up to {MAX_CHARS} characters, A–Z and 0–9. Keep it friendly. A fan-made tool, not affiliated with Rockstar Games.</p>
-      </div>
-
-      {/* Controls */}
-      <div className="grid gap-4">
-        {/* Styles: the plate, its variation and colour style. */}
-        <Panel>
-          <Segmented<PlateKind> label="Plate" value={plate.id} onChange={changePlate} options={PLATES.map((p) => ({ id: p.id, label: p.name }))} className="mb-4" />
-          <div role="radiogroup" aria-label="Plate style" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
-            {STYLES.map((s) => ({ id: s.id, name: styleName(s, plate.id), thumb: `${variation}:${s.id}`, active: s.id === styleId, pick: () => setStyleId(s.id) })).map((t) => (
+            {dim === "3d" && studioState === "ready" && (
               <button
-                key={t.id}
                 type="button"
-                role="radio"
-                aria-checked={t.active}
-                onClick={t.pick}
-                className={cn(
-                  "flex flex-col items-center gap-2 rounded-2xl border p-2 pb-2.5 transition-[border-color,background-color,opacity]",
-                  t.active ? "border-accent bg-accent/10" : "border-white/10 opacity-60 hover:border-white/25 hover:opacity-100",
-                )}
+                onClick={() => studio.current?.resetView()}
+                aria-label="Reset view"
+                title="Reset view"
+                className="absolute top-4 right-4 flex size-11 items-center justify-center rounded-full border border-white/12 bg-black/40 text-white/80 backdrop-blur-xl transition-colors hover:text-white"
               >
-                <span className="block w-full overflow-hidden rounded-[7px] bg-white/10 shadow-[0_6px_16px_-6px_rgb(0_0_0/0.8)]" style={{ aspectRatio: "2 / 1" }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- generated preview */}
-                  {thumbs[t.thumb] && <img src={thumbs[t.thumb]} alt="" className="block size-full" />}
-                </span>
-                <span className="text-[12px] font-bold">{t.name}</span>
+                <RotateCcw className="size-[18px]" />
               </button>
-            ))}
-          </div>
-          <div className="mt-4 flex items-center justify-between gap-4 border-t border-white/8 pt-4">
-            <span className="text-[13px] font-bold tracking-[0.14em] text-white/70 uppercase">Variation</span>
-            <Segmented<Variation> label="Variation" value={variation} onChange={setVariation} options={plate.variations.map((v) => ({ id: v.id, label: v.name }))} className="w-[220px]" />
-          </div>
-        </Panel>
+            )}
 
-        {/* Lettering */}
-        <section className={cn(GLASS, "px-4 py-1 sm:px-5")}>
-          <div className="divide-y divide-white/8">
-            <Toggle label="Rounded characters" checked={rounded} onChange={setRounded} />
-            <Toggle label={`Split around the ${look.artName}`} checked={split} onChange={setSplit} />
-            <Toggle label="Embossed 2D" hint="Raised lettering on the flat plate (3D always is)" checked={emboss} onChange={setEmboss} />
+            <div className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 sm:inset-x-5 sm:bottom-5">
+              <Segmented<Dim> label="Dimension" value={dim} onChange={changeDim} options={[{ id: "2d", label: "2D" }, { id: "3d", label: "3D" }]} />
+              <Segmented<StudioView> label="View" value={view} onChange={(v) => void changeView(v)} options={[{ id: "plate", label: "Plate view" }, { id: "car", label: "Car view" }]} />
+            </div>
           </div>
-        </section>
 
-        <Collapsible title="Spacing" summary={customLayout ? "Custom" : "Auto"}>
-          {split && (
-            <>
-              <Slider
-                label="Split after"
-                value={layout.splitAt ?? -1}
-                display={layout.splitAt === null ? `Auto (${Math.floor(text.length / 2)} | ${text.length - Math.floor(text.length / 2)})` : `${layout.splitAt} | ${Math.max(0, text.length - layout.splitAt)}`}
-                min={-1}
-                max={Math.max(1, text.length)}
-                step={1}
-                onChange={(v) => patchLayout({ splitAt: v < 0 ? null : v })}
+          {/* Text, download and share */}
+          <div className={cn(GLASS, "flex flex-col gap-3 p-3 sm:flex-row sm:items-center")}>
+            <div className="relative flex-1">
+              <input
+                value={text}
+                onChange={(e) => setText(cleanPlateText(e.target.value))}
+                maxLength={MAX_CHARS}
+                spellCheck={false}
+                autoCapitalize="characters"
+                autoComplete="off"
+                aria-label="Plate text"
+                placeholder="VCECTY"
+                className="h-14 w-full rounded-2xl border border-white/10 bg-black/30 pr-14 pl-5 font-[PlateNumber,var(--font-deco-condensed)] text-[30px] tracking-[0.14em] text-white uppercase outline-none placeholder:text-white/25 focus:border-accent"
               />
-              <Slider
-                label={`Gap around the ${look.artName}`}
-                value={layout.gap}
-                display={`${layout.gap > 0 ? "+" : ""}${Math.round(layout.gap * 1000) / 10}%`}
-                min={LIMITS.gap[0]}
-                max={LIMITS.gap[1]}
-                step={0.002}
-                onChange={(v) => patchLayout({ gap: v })}
-              />
-            </>
-          )}
-          <Slider
-            label="Letter spacing"
-            value={layout.tracking}
-            display={`${Math.round(layout.tracking * 100)}`}
-            min={LIMITS.tracking[0]}
-            max={LIMITS.tracking[1]}
-            step={0.01}
-            onChange={(v) => patchLayout({ tracking: v })}
-          />
-          <Slider
-            label="Nudge"
-            value={layout.shift}
-            display={layout.shift === 0 ? "Centred" : `${layout.shift < 0 ? "←" : "→"} ${Math.abs(Math.round(layout.shift * 1000) / 10)}%`}
-            min={LIMITS.shift[0]}
-            max={LIMITS.shift[1]}
-            step={0.002}
-            onChange={(v) => patchLayout({ shift: v })}
-          />
-          <button
-            type="button"
-            onClick={() => setLayout(DEFAULT_LAYOUT)}
-            disabled={!customLayout}
-            className="mt-2 inline-flex h-10 items-center gap-2 rounded-full bg-white/[0.07] px-4 text-[13px] font-bold text-white/75 transition-colors hover:bg-white/12 hover:text-white disabled:opacity-35"
-          >
-            <Undo2 className="size-4" /> Reset spacing
-          </button>
-        </Collapsible>
+              <span className="tabular pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 font-mono text-[12px] text-white/40">
+                {text.length}/{MAX_CHARS}
+              </span>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button
+                type="button"
+                onClick={copyLink}
+                aria-label="Copy link to this plate"
+                title={copied ? "Link copied" : "Copy link"}
+                className="flex size-14 items-center justify-center rounded-2xl bg-white/[0.07] text-white/75 transition-colors hover:bg-white/12 hover:text-white"
+              >
+                {copied ? <Check className="size-5 text-[#7ee8ae]" /> : <Link2 className="size-5" />}
+              </button>
+              <button
+                type="button"
+                onClick={saveShot}
+                disabled={studioState !== "ready" || dim !== "3d"}
+                aria-label="Save a 3D shot"
+                title={dim !== "3d" ? "Switch to 3D to save a shot" : "Save a 3D shot"}
+                className="flex size-14 items-center justify-center rounded-2xl bg-white/[0.07] text-white/75 transition-colors hover:bg-white/12 hover:text-white disabled:opacity-35"
+              >
+                <Camera className="size-5" />
+              </button>
+              <button
+                type="button"
+                onClick={savePng}
+                disabled={!ready}
+                className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl bg-[image:var(--sunset)] px-6 text-[15.5px] font-bold text-white shadow-[0_12px_32px_-12px_rgb(255_79_163/0.9)] transition-transform duration-300 hover:scale-[1.03] active:scale-95 disabled:pointer-events-none disabled:opacity-40 sm:flex-none"
+              >
+                <Download className="size-5" /> Download PNG
+              </button>
+            </div>
+          </div>
+          <p className="px-2 text-[12.5px] text-white/40">Up to {MAX_CHARS} characters, A–Z and 0–9. Keep it friendly. A fan-made tool, not affiliated with Rockstar Games.</p>
+        </div>
 
-        <Collapsible title="Text colours" summary={custom ? (linked ? "Custom" : "Custom, per line") : "Style colours"}>
-          <Toggle
-            label="Linked"
-            hint={linked ? "One colour for all the text" : "Each line has its own colour"}
-            checked={linked}
-            onChange={(on) => {
-              setLinked(on);
-              // Linking makes everything match the plate number.
-              if (on && custom) setCustom({ header: custom.number, number: custom.number, footer: custom.number });
-            }}
-          />
-          <div className="mt-1 grid gap-2">
-            {linked ? (
-              <ColorField label="All text" value={colors.number} onChange={(v) => setColor("number", v)} />
-            ) : (
+        {/* Controls */}
+        <div className="grid gap-4">
+          {/* Styles: the plate, its variation and colour style. */}
+          <Panel>
+            <Segmented<PlateKind> label="Plate" value={plate.id} onChange={changePlate} options={PLATES.map((p) => ({ id: p.id, label: p.name }))} className="mb-4" />
+            <div role="radiogroup" aria-label="Plate style" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+              {STYLES.map((s) => ({ id: s.id, name: styleName(s, plate.id), thumb: `${variation}:${s.id}`, active: s.id === styleId, pick: () => setStyleId(s.id) })).map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={t.active}
+                  onClick={t.pick}
+                  className={cn(
+                    "flex flex-col items-center gap-2 rounded-2xl border p-2 pb-2.5 transition-[border-color,background-color,opacity]",
+                    t.active ? "border-accent bg-accent/10" : "border-white/10 opacity-60 hover:border-white/25 hover:opacity-100",
+                  )}
+                >
+                  <span className="block w-full overflow-hidden rounded-[7px] bg-white/10 shadow-[0_6px_16px_-6px_rgb(0_0_0/0.8)]" style={{ aspectRatio: "2 / 1" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- generated preview */}
+                    {thumbs[t.thumb] && <img src={thumbs[t.thumb]} alt="" className="block size-full" />}
+                  </span>
+                  <span className="text-[12px] font-bold">{t.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-4 border-t border-white/8 pt-4">
+              <span className="text-[13px] font-bold tracking-[0.14em] text-white/70 uppercase">Variation</span>
+              <Segmented<Variation> label="Variation" value={variation} onChange={setVariation} options={plate.variations.map((v) => ({ id: v.id, label: v.name }))} className="w-[220px]" />
+            </div>
+          </Panel>
+
+          {/* Lettering */}
+          <section className={cn(GLASS, "px-4 py-1 sm:px-5")}>
+            <div className="divide-y divide-white/8">
+              <Toggle label="Rounded characters" checked={rounded} onChange={setRounded} />
+              <Toggle label={`Split around the ${look.artName}`} checked={split} onChange={setSplit} />
+              <Toggle label="Embossed 2D" hint="Raised lettering on the flat plate (3D always is)" checked={emboss} onChange={setEmboss} />
+            </div>
+          </section>
+
+          <Collapsible title="Spacing" summary={customLayout ? "Custom" : "Auto"}>
+            {split && (
               <>
-                <ColorField label={look.header.toUpperCase()} value={colors.header} onChange={(v) => setColor("header", v)} />
-                <ColorField label="Plate number" value={colors.number} onChange={(v) => setColor("number", v)} />
-                <ColorField label={look.footer} value={colors.footer} onChange={(v) => setColor("footer", v)} />
+                <Slider
+                  label="Split after"
+                  value={layout.splitAt ?? -1}
+                  display={layout.splitAt === null ? `Auto (${Math.floor(text.length / 2)} | ${text.length - Math.floor(text.length / 2)})` : `${layout.splitAt} | ${Math.max(0, text.length - layout.splitAt)}`}
+                  min={-1}
+                  max={Math.max(1, text.length)}
+                  step={1}
+                  onChange={(v) => patchLayout({ splitAt: v < 0 ? null : v })}
+                />
+                <Slider
+                  label={`Gap around the ${look.artName}`}
+                  value={layout.gap}
+                  display={`${layout.gap > 0 ? "+" : ""}${Math.round(layout.gap * 1000) / 10}%`}
+                  min={LIMITS.gap[0]}
+                  max={LIMITS.gap[1]}
+                  step={0.002}
+                  onChange={(v) => patchLayout({ gap: v })}
+                />
               </>
             )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setCustom(null)}
-            disabled={!custom}
-            className="mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-white/[0.07] px-4 text-[13px] font-bold text-white/75 transition-colors hover:bg-white/12 hover:text-white disabled:opacity-35"
-          >
-            <Undo2 className="size-4" /> Reset to style colours
-          </button>
-        </Collapsible>
+            <Slider
+              label="Letter spacing"
+              value={layout.tracking}
+              display={`${Math.round(layout.tracking * 100)}`}
+              min={LIMITS.tracking[0]}
+              max={LIMITS.tracking[1]}
+              step={0.01}
+              onChange={(v) => patchLayout({ tracking: v })}
+            />
+            <Slider
+              label="Nudge"
+              value={layout.shift}
+              display={layout.shift === 0 ? "Centred" : `${layout.shift < 0 ? "←" : "→"} ${Math.abs(Math.round(layout.shift * 1000) / 10)}%`}
+              min={LIMITS.shift[0]}
+              max={LIMITS.shift[1]}
+              step={0.002}
+              onChange={(v) => patchLayout({ shift: v })}
+            />
+            <button
+              type="button"
+              onClick={() => setLayout(DEFAULT_LAYOUT)}
+              disabled={!customLayout}
+              className="mt-2 inline-flex h-10 items-center gap-2 rounded-full bg-white/[0.07] px-4 text-[13px] font-bold text-white/75 transition-colors hover:bg-white/12 hover:text-white disabled:opacity-35"
+            >
+              <Undo2 className="size-4" /> Reset spacing
+            </button>
+          </Collapsible>
 
-        <Collapsible title="Frame" summary={FRAMES.find((f) => f.id === frame)?.name}>
-          <div className="grid grid-cols-4 gap-2">
-            {FRAMES.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setFrame(f.id)}
-                aria-pressed={f.id === frame}
-                className={cn(
-                  "flex flex-col items-center gap-1.5 rounded-2xl border py-3 text-[12px] font-bold transition-colors",
-                  f.id === frame ? "border-accent bg-accent/10 text-white" : "border-white/10 text-white/60 hover:border-white/25",
-                )}
-              >
-                <span className="size-8 rounded-full border border-white/20" style={{ background: f.swatch === "transparent" ? "repeating-linear-gradient(45deg,#2a2a2e 0 4px,#16161a 4px 8px)" : f.swatch }} />
-                {f.name}
-              </button>
-            ))}
-          </div>
-        </Collapsible>
+          <Collapsible title="Text colours" summary={custom ? (linked ? "Custom" : "Custom, per line") : "Style colours"}>
+            <Toggle
+              label="Linked"
+              hint={linked ? "One colour for all the text" : "Each line has its own colour"}
+              checked={linked}
+              onChange={(on) => {
+                setLinked(on);
+                // Linking makes everything match the plate number.
+                if (on && custom) setCustom({ header: custom.number, number: custom.number, footer: custom.number });
+              }}
+            />
+            <div className="mt-1 grid gap-2">
+              {linked ? (
+                <ColorField label="All text" value={colors.number} onChange={(v) => setColor("number", v)} />
+              ) : (
+                <>
+                  <ColorField label={look.header.toUpperCase()} value={colors.header} onChange={(v) => setColor("header", v)} />
+                  <ColorField label="Plate number" value={colors.number} onChange={(v) => setColor("number", v)} />
+                  <ColorField label={look.footer} value={colors.footer} onChange={(v) => setColor("footer", v)} />
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setCustom(null)}
+              disabled={!custom}
+              className="mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-white/[0.07] px-4 text-[13px] font-bold text-white/75 transition-colors hover:bg-white/12 hover:text-white disabled:opacity-35"
+            >
+              <Undo2 className="size-4" /> Reset to style colours
+            </button>
+          </Collapsible>
 
-        <Collapsible title="Car paint" summary={PAINTS.find((p) => p.hex === paint)?.name}>
-          <div className="flex flex-wrap gap-2.5">
-            {PAINTS.map((p) => (
-              <button
-                key={p.hex}
-                type="button"
-                onClick={() => {
-                  setPaint(p.hex);
-                  if (view !== "car") void changeView("car");
-                }}
-                aria-label={p.name}
-                aria-pressed={p.hex === paint}
-                title={p.name}
-                className={cn("size-10 rounded-full border-2 transition-transform duration-300 hover:scale-110", p.hex === paint ? "scale-110 border-white" : "border-transparent")}
-                style={{ background: `radial-gradient(circle at 35% 30%, rgb(255 255 255/0.45), transparent 45%), ${p.hex}` }}
-              />
-            ))}
-          </div>
-          <p className="mt-3 text-[12.5px] text-white/40">Picking a colour takes you to Car view.</p>
-        </Collapsible>
+          <Collapsible title="Frame" summary={FRAMES.find((f) => f.id === frame)?.name}>
+            <div className="grid grid-cols-4 gap-2">
+              {FRAMES.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setFrame(f.id)}
+                  aria-pressed={f.id === frame}
+                  className={cn(
+                    "flex flex-col items-center gap-1.5 rounded-2xl border py-3 text-[12px] font-bold transition-colors",
+                    f.id === frame ? "border-accent bg-accent/10 text-white" : "border-white/10 text-white/60 hover:border-white/25",
+                  )}
+                >
+                  <span className="size-8 rounded-full border border-white/20" style={{ background: f.swatch === "transparent" ? "repeating-linear-gradient(45deg,#2a2a2e 0 4px,#16161a 4px 8px)" : f.swatch }} />
+                  {f.name}
+                </button>
+              ))}
+            </div>
+          </Collapsible>
+
+          <Collapsible title="Car paint" summary={PAINTS.find((p) => p.hex === paint)?.name}>
+            <div className="flex flex-wrap gap-2.5">
+              {PAINTS.map((p) => (
+                <button
+                  key={p.hex}
+                  type="button"
+                  onClick={() => {
+                    setPaint(p.hex);
+                    if (view !== "car") void changeView("car");
+                  }}
+                  aria-label={p.name}
+                  aria-pressed={p.hex === paint}
+                  title={p.name}
+                  className={cn("size-10 rounded-full border-2 transition-transform duration-300 hover:scale-110", p.hex === paint ? "scale-110 border-white" : "border-transparent")}
+                  style={{ background: `radial-gradient(circle at 35% 30%, rgb(255 255 255/0.45), transparent 45%), ${p.hex}` }}
+                />
+              ))}
+            </div>
+            <p className="mt-3 text-[12.5px] text-white/40">Picking a colour takes you to Car view.</p>
+          </Collapsible>
+        </div>
+
       </div>
 
-      {/* Full width, under both columns. */}
-      {discord && <DiscordShare discord={discord} getImage={currentImage} fileName={`${fileBase}.png`} className="lg:col-span-2" />}
-    </div>
+      {/* Below the grid (not in it), so the pinned plate is released before the banner arrives. */}
+      {discord && <DiscordShare discord={discord} getImage={currentImage} fileName={`${fileBase}.png`} />}
+    </>
   );
 }

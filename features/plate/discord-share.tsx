@@ -41,11 +41,10 @@ export function DiscordShare({ discord, getImage, fileName, className }: { disco
     setTimeout(() => setState("idle"), 4000);
   };
 
-  const fans = discord.members ? `${discord.members.toLocaleString("en-US")} fans` : "The community";
   return (
     <section
       aria-labelledby="plate-discord-h"
-      className={cn("relative mt-3 overflow-hidden rounded-[32px] border border-white/10 bg-[#100d1a] shadow-[0_30px_80px_-40px_rgb(88_101_242/0.7)]", className)}
+      className={cn("relative mt-8 overflow-hidden rounded-[32px] border border-white/10 bg-[#100d1a] shadow-[0_30px_80px_-40px_rgb(88_101_242/0.7)]", className)}
     >
       <div aria-hidden className="absolute inset-0 bg-[linear-gradient(110deg,rgb(16_13_26)_20%,rgb(43_32_110/0.9)_60%,rgb(255_79_163/0.6))]" />
       <div aria-hidden className="absolute -right-24 -bottom-40 size-[420px] rounded-full bg-[radial-gradient(closest-side,rgb(88_101_242/0.55),transparent)]" />
@@ -55,23 +54,14 @@ export function DiscordShare({ discord, getImage, fileName, className }: { disco
             <DiscordIcon className="size-8 text-white" />
           </span>
           <div className="min-w-0">
+            <p className="kicker mb-2 text-[#ffc3e1]">Win prizes</p>
             <h2 id="plate-discord-h" className="display-xl text-[38px] leading-[0.92] sm:text-[52px]">
-              Show it off on Discord
+              Share your plate
             </h2>
             <p className="mt-2 max-w-xl text-[15.5px] leading-relaxed text-white/75">
-              {fans} in the GTA 6 Hub Discord want to see your plate. Copy it, open the server and paste it into the chat.
+              Post your design in our Discord for a chance to win.
+              {discord.members ? ` ${discord.members.toLocaleString("en-US")} fans are already in.` : ""}
             </p>
-            <ol className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[13px] font-semibold text-white/55">
-              <li>
-                <span className="text-white">1</span> Copy your plate
-              </li>
-              <li>
-                <span className="text-white">2</span> Open the Discord
-              </li>
-              <li>
-                <span className="text-white">3</span> Paste it in the chat
-              </li>
-            </ol>
           </div>
         </div>
         <div className="flex shrink-0 flex-col gap-2.5 sm:flex-row">
@@ -93,7 +83,7 @@ export function DiscordShare({ discord, getImage, fileName, className }: { disco
             ) : (
               <ClipboardCopy className="size-5" />
             )}
-            {state === "copied" ? "Copied, now paste it" : state === "saved" ? "Saved, drop it in Discord" : "Copy my plate"}
+            {state === "copied" ? "Copied" : state === "saved" ? "Saved as PNG" : "Copy plate"}
           </button>
           <a
             href={discord.invite}
@@ -101,7 +91,7 @@ export function DiscordShare({ discord, getImage, fileName, className }: { disco
             rel="noopener noreferrer"
             className="group inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-[#5865F2] px-6 text-[15.5px] font-bold text-white shadow-[0_14px_40px_-12px_rgb(88_101_242/0.9)] transition-[transform,background-color] duration-300 hover:scale-[1.03] hover:bg-[#6b77f5] active:scale-95"
           >
-            <DiscordIcon className="size-5" /> Open the Discord
+            <DiscordIcon className="size-5" /> Join the Discord
             <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </a>
         </div>

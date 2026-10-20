@@ -306,13 +306,13 @@ function eachCharacter(ctx: CanvasRenderingContext2D, W: number, H: number, d: C
 
 /** Sheeting colours for the Gloriana plates, top → bottom. */
 const GLORIANA_BG: Partial<Record<Variation, [number, string][]>> = {
-  // White, warming into the sunset band along the bottom.
+  // White, with a short fade into a vintage-yellow band along the bottom.
   vintage: [
     [0, "#fbfbf7"],
-    [0.56, "#f6f3ea"],
-    [0.72, "#f4dc93"],
-    [0.86, "#eaa944"],
-    [1, "#cf7a28"],
+    [0.62, "#f6f3ea"],
+    [0.7, "#e2ab45"],
+    [0.85, "#d99a35"],
+    [1, "#c9852a"],
   ],
   modern: [
     [0, "#fbfaf4"],
@@ -375,9 +375,9 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art
   } else if (d.variation === "vintage") {
     // "Gloriana" over UNITED STATES on the sunset band.
     ctx.fillStyle = colors.header;
-    drawTracked(ctx, look.header, FONT.leonida, { cx: W / 2, baseline: 0.215 * H, cap: 0.112 * H, tracking: 0.015, maxWidth: 0.44 * W }, fill);
+    drawTracked(ctx, look.header, FONT.leonida, { cx: W / 2, baseline: 0.215 * H, cap: 0.112 * H, tracking: -0.035, maxWidth: 0.44 * W }, fill);
     ctx.fillStyle = colors.footer;
-    drawTracked(ctx, look.footer, FONT.leonida, { cx: W / 2, baseline: 0.9 * H, cap: 0.08 * H, tracking: 0.02, maxWidth: 0.49 * W }, fill);
+    drawTracked(ctx, look.footer, FONT.leonida, { cx: W / 2, baseline: 0.9 * H, cap: 0.08 * H, tracking: -0.04, maxWidth: 0.49 * W }, fill);
     sticker(ctx, W, H, { x: 0.885, y: 0.135, w: 0.075, h: 0.125, bg: "#3d4450", ink: "#e9ecef" });
   } else {
     // Red serif GLORIANA over AMERICA.

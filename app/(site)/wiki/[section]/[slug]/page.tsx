@@ -28,7 +28,12 @@ export const dynamicParams = true;
 /** The admin panel's entry and/or the wiki article behind a URL. */
 async function resolve(section: string, slug: string) {
   const entry = await getInfoEntry(section as InfoSectionSlug, slug);
-  const member = wikiSection(section) ? ((await memberBySlug(section, slug)) ?? (entry ? await memberBySlug(section, wikiSlug(entry.name)) : null)) : null;
+  let member = wikiSection(section) ? ((await memberBySlug(section, slug)) ?? (entry ? await memberBySlug(section, wikiSlug(entry.name)) : null)) : null;
+  // An admin entry whose wiki article lives in another section (Real Dimez is filed under Organizations).
+  if (!member && entry) {
+    const elsewhere = (await wikiIndex()).get(entry.name);
+    if (elsewhere) member = await memberBySlug(elsewhere.section, elsewhere.slug);
+  }
   return { entry, member };
 }
 

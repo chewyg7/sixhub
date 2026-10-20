@@ -19,7 +19,7 @@ import { getAllMedia, getCollection, getFaq, getInfoEntries, getSettings, getTim
 import { byNewest } from "@/lib/content/relations";
 import { fetchRockstarIntel } from "@/lib/news/rockstarintel";
 import { formatDate } from "@/lib/format";
-import { imageUrl, isViFile, sectionMembers, wikiSlug } from "@/lib/wiki/api";
+import { WIKI_SECTIONS, imageUrl, isViFile, sectionMembers, wikiSlug } from "@/lib/wiki/api";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
@@ -45,10 +45,12 @@ export default async function HomePage() {
     getCollection(home.galleryCollection),
     getFaq(),
   ]);
-  // GTA Wiki portraits for the cast (falls back to the archive's own picture).
-  const wikiPortraits = new Map(
-    (await sectionMembers("characters").catch(() => [])).filter((m) => m.image && isViFile(m.image)).map((m) => [m.slug, imageUrl(m.image!, 640)]),
-  );
+  // GTA Wiki portraits for the cast (falls back to the archive's own picture). Characters first; some of the
+  // cast are filed elsewhere on the wiki (Real Dimez is a duo, under Organizations).
+  const wikiPortraits = new Map<string, string>();
+  for (const s of ["characters", ...WIKI_SECTIONS.map((w) => w.slug).filter((w) => w !== "characters")])
+    for (const m of await sectionMembers(s).catch(() => []))
+      if (m.image && isViFile(m.image) && !wikiPortraits.has(m.slug)) wikiPortraits.set(m.slug, imageUrl(m.image, 640));
   const bySlug = new Map(all.map((m) => [m.slug, m]));
   const images = all.filter((m) => m.kind === "image" && !m.original.hasAlpha);
   const tagged = (key: "characters" | "locations", slug: string) => all.filter((m) => m[key].includes(slug));

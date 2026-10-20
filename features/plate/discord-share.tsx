@@ -12,6 +12,9 @@ export interface DiscordInvite {
 
 type State = "idle" | "working" | "copied" | "saved";
 
+/** The server's channel for plate designs. */
+const PLATE_CHANNEL = "https://discord.com/channels/1480360488876638313/1562086122681667745";
+
 /**
  * "Show it off" banner under the plate creator: copies the plate (as you see
  * it, 2D or 3D) to the clipboard and opens the Discord, so posting it is a
@@ -64,35 +67,46 @@ export function DiscordShare({ discord, getImage, fileName, className }: { disco
             </p>
           </div>
         </div>
-        <div className="flex shrink-0 flex-col gap-2.5 sm:flex-row">
-          <button
-            type="button"
-            onClick={copy}
-            disabled={state === "working"}
-            className={cn(
-              "inline-flex h-14 items-center justify-center gap-2 rounded-full px-6 text-[15.5px] font-bold transition-[transform,background-color] duration-300 hover:scale-[1.03] active:scale-95",
-              state === "copied" || state === "saved" ? "bg-[#23a55a] text-white" : "bg-white text-[#1e1b3a] hover:bg-white/90",
-            )}
-          >
-            {state === "working" ? (
-              <Loader2 className="size-5 animate-spin" />
-            ) : state === "copied" ? (
-              <Check className="size-5" />
-            ) : state === "saved" ? (
-              <Download className="size-5" />
-            ) : (
-              <ClipboardCopy className="size-5" />
-            )}
-            {state === "copied" ? "Copied" : state === "saved" ? "Saved as PNG" : "Copy plate"}
-          </button>
+        <div className="flex shrink-0 flex-col gap-3 lg:items-end">
+          <div className="flex flex-col gap-2.5 sm:flex-row">
+            <button
+              type="button"
+              onClick={copy}
+              disabled={state === "working"}
+              className={cn(
+                "inline-flex h-14 items-center justify-center gap-2 rounded-full px-6 text-[15.5px] font-bold transition-[transform,background-color] duration-300 hover:scale-[1.03] active:scale-95",
+                state === "copied" || state === "saved" ? "bg-[#23a55a] text-white" : "bg-white text-[#1e1b3a] hover:bg-white/90",
+              )}
+            >
+              {state === "working" ? (
+                <Loader2 className="size-5 animate-spin" />
+              ) : state === "copied" ? (
+                <Check className="size-5" />
+              ) : state === "saved" ? (
+                <Download className="size-5" />
+              ) : (
+                <ClipboardCopy className="size-5" />
+              )}
+              {state === "copied" ? "Copied" : state === "saved" ? "Saved as PNG" : "Copy plate"}
+            </button>
+            <a
+              href={discord.invite}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-[#5865F2] px-6 text-[15.5px] font-bold text-white shadow-[0_14px_40px_-12px_rgb(88_101_242/0.9)] transition-[transform,background-color] duration-300 hover:scale-[1.03] hover:bg-[#6b77f5] active:scale-95"
+            >
+              <DiscordIcon className="size-5" /> Join the Discord
+              <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </a>
+          </div>
+          {/* Channel links only open for members, so newcomers join first. */}
           <a
-            href={discord.invite}
+            href={PLATE_CHANNEL}
             target="_blank"
             rel="noopener noreferrer"
-            className="group inline-flex h-14 items-center justify-center gap-2.5 rounded-full bg-[#5865F2] px-6 text-[15.5px] font-bold text-white shadow-[0_14px_40px_-12px_rgb(88_101_242/0.9)] transition-[transform,background-color] duration-300 hover:scale-[1.03] hover:bg-[#6b77f5] active:scale-95"
+            className="text-[13.5px] font-semibold text-white/60 underline-offset-4 transition-colors hover:text-white hover:underline"
           >
-            <DiscordIcon className="size-5" /> Join the Discord
-            <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            Already in? Open the plate channel →
           </a>
         </div>
       </div>

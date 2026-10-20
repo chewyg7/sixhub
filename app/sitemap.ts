@@ -26,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const profiles = listUsers().filter((x) => !x.disabled && getProfileSettings(x.id).visible);
 
   return [
-    ...["/", "/news", "/media", "/viewer", "/info", "/timeline", "/collections", "/tools", "/team", "/discord", "/faq", "/about", "/contact", "/privacy"].map((p) => u(p)),
+    ...["/", "/news", "/media", "/viewer", "/wiki", "/timeline", "/collections", "/tools", "/team", "/discord", "/faq", "/about", "/contact", "/privacy"].map((p) => u(p)),
     ...TOOLS.map((t) => u(t.href)),
     ...categories.map((c) => u(`/media/${c.slug}`)),
     ...flattenTree(folders).map((f) => u(`/media/folder/${f.path.join("/")}`)),
@@ -53,8 +53,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       };
     }),
     ...collections.map((c) => u(`/collections/${c.slug}`)),
-    ...[...new Set([...sections.map((s) => s.slug), ...WIKI_SECTIONS.map((s) => s.slug)])].map((slug) => u(`/info/${slug}`)),
-    ...entries.map((e) => u(`/info/${e.section}/${e.slug}`, e.lastReviewed)),
+    ...[...new Set([...sections.map((s) => s.slug), ...WIKI_SECTIONS.map((s) => s.slug)])].map((slug) => u(`/wiki/${slug}`)),
+    ...entries.map((e) => u(`/wiki/${e.section}/${e.slug}`, e.lastReviewed)),
     ...listPages({ published: true }).map((p) => u(`/p/${p.slug}`, p.updatedAt)),
     ...profiles.map((x) => u(`/@${x.username}`)),
   ];

@@ -28,12 +28,12 @@ async function getSection(slug: string) {
   return { slug, title: db?.title ?? wiki!.title, description: db?.description ?? wiki!.description, db, wiki };
 }
 
-export async function generateMetadata({ params }: PageProps<"/info/[section]">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/wiki/[section]">): Promise<Metadata> {
   const s = await getSection((await params).section);
-  return s ? { title: `${s.title} in GTA 6`, description: s.description, alternates: { canonical: `/info/${s.slug}` } } : {};
+  return s ? { title: `${s.title} in GTA 6`, description: s.description, alternates: { canonical: `/wiki/${s.slug}` } } : {};
 }
 
-export default async function InfoSectionPage({ params }: PageProps<"/info/[section]">) {
+export default async function InfoSectionPage({ params }: PageProps<"/wiki/[section]">) {
   const section = await getSection((await params).section);
   if (!section) notFound();
   const [entries, media] = await Promise.all([getInfoEntries(section.slug as InfoSectionSlug), getAllMedia()]);
@@ -48,19 +48,19 @@ export default async function InfoSectionPage({ params }: PageProps<"/info/[sect
     const cards: WikiCard[] = [
       ...members.map((m) => {
         const n = own.has(m.slug) ? count(m.slug) : 0;
-        return { title: displayName(m.title), href: `/info/${section.slug}/${m.slug}`, image: m.image ? imageUrl(m.image, section.wiki!.shape === "portrait" ? 480 : 640) : undefined, note: n ? pluralize(n, "media item") : undefined };
+        return { title: displayName(m.title), href: `/wiki/${section.slug}/${m.slug}`, image: m.image ? imageUrl(m.image, section.wiki!.shape === "portrait" ? 480 : 640) : undefined, note: n ? pluralize(n, "media item") : undefined };
       }),
       ...entries
         .filter((e) => !listed.has(e.slug) && !listed.has(wikiSlug(e.name)))
         .map((e) => {
           const img = e.imageSlug ? bySlug.get(e.imageSlug) : undefined;
-          return { title: e.name, href: `/info/${section.slug}/${e.slug}`, image: img ? smallestVariant(img, 480)?.url : undefined, note: count(e.slug) ? pluralize(count(e.slug), "media item") : undefined };
+          return { title: e.name, href: `/wiki/${section.slug}/${e.slug}`, image: img ? smallestVariant(img, 480)?.url : undefined, note: count(e.slug) ? pluralize(count(e.slug), "media item") : undefined };
         }),
     ].sort((a, b) => a.title.localeCompare(b.title));
 
     return (
       <Container>
-        <PageHeader compact crumbs={[{ href: "/info", label: "Information" }, { label: section.title }]} title={section.title} lede={section.description} />
+        <PageHeader compact crumbs={[{ href: "/wiki", label: "Wiki" }, { label: section.title }]} title={section.title} lede={section.description} />
         {cards.length ? (
           <WikiGrid items={cards} shape={section.wiki.shape} noun={section.wiki.plural} />
         ) : (
@@ -80,7 +80,7 @@ export default async function InfoSectionPage({ params }: PageProps<"/info/[sect
   const db = section.db!;
   return (
     <Container>
-      <PageHeader compact crumbs={[{ href: "/info", label: "Information" }, { label: section.title }]} title={section.title} lede={section.description} />
+      <PageHeader compact crumbs={[{ href: "/wiki", label: "Wiki" }, { label: section.title }]} title={section.title} lede={section.description} />
       {entries.length === 0 ? (
         <EmptyState
           title={`No verified ${db.entryNoun} entries yet`}

@@ -5,7 +5,7 @@ import { MediaThumb } from "@/components/media/media-thumb";
 
 /** Card for a database entry. Uses the entry's image when one exists, otherwise a typographic tile. */
 export function EntryCard({ entry, image, layout = "profile", mediaCount }: { entry: InfoEntry; image?: MediaItem; layout?: "profile" | "place" | "row"; mediaCount?: number }) {
-  const href = `/info/${entry.section}/${entry.slug}`;
+  const href = `/wiki/${entry.section}/${entry.slug}`;
   if (layout === "row") {
     return (
       <Link href={href} className="group flex items-start justify-between gap-6 border-b border-divider py-5">

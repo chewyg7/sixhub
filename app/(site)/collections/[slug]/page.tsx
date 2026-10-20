@@ -89,7 +89,7 @@ export default async function CollectionPage({ params }: PageProps<"/collections
                 {characters.map((s) => (
                   <Link
                     key={s}
-                    href={`/info/characters/${s}`}
+                    href={`/wiki/characters/${s}`}
                     className="inline-flex h-7 items-center rounded-md border border-border bg-bg/40 px-2.5 text-[12.5px] hover:bg-surface-hover"
                   >
                     {labels.characters[s] ?? s}
@@ -98,7 +98,7 @@ export default async function CollectionPage({ params }: PageProps<"/collections
                 {locations.map((s) => (
                   <Link
                     key={s}
-                    href={`/info/locations/${s}`}
+                    href={`/wiki/locations/${s}`}
                     className="inline-flex h-7 items-center rounded-md border border-border bg-bg/40 px-2.5 text-[12.5px] text-muted hover:bg-surface-hover hover:text-text"
                   >
                     {labels.locations[s] ?? s}

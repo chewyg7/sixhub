@@ -16,7 +16,7 @@ export function RegionRow({ regions }: { regions: RegionCard[] }) {
       {regions.map(({ entry, image, count }) => (
         <li key={entry.slug} className="w-[78vw] shrink-0 snap-start sm:w-auto">
           <Link
-            href={`/info/locations/${entry.slug}`}
+            href={`/wiki/locations/${entry.slug}`}
             data-cursor="view"
             data-cursor-label="Explore"
             className="group relative block aspect-[16/10] overflow-hidden rounded-3xl bg-surface-2"

@@ -23,7 +23,7 @@ function linkTarget(href: string, links: WikiLinks): { internal?: string; extern
   const title = decodeURIComponent(m[1]).replace(/_/g, " ");
   if (/^(File|Category|Template|Special|User|GTA Wiki|Help|Talk|User talk|Module):/i.test(title)) return null;
   const ours = links.get(title);
-  return ours ? { internal: `/info/${ours.section}/${ours.slug}` } : { external: articleUrl(title) };
+  return ours ? { internal: `/wiki/${ours.section}/${ours.slug}` } : { external: articleUrl(title) };
 }
 
 function Img({ el, width }: { el: WElement; width: number }) {

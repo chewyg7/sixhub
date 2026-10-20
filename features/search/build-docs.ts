@@ -9,7 +9,7 @@ const PAGES: SearchDoc[] = [
   { id: "page:news", type: "page", title: "News", href: "/news", text: "latest articles rockstarintel stories" },
   { id: "page:media", type: "page", title: "Media Archive", href: "/media", text: "all media browse archive gallery" },
   { id: "page:viewer", type: "page", title: "Media Viewer", href: "/viewer", text: "analyze frame by frame compare crop zoom capture tool" },
-  { id: "page:info", type: "page", title: "Information Database", href: "/info", text: "wiki database facts" },
+  { id: "page:info", type: "page", title: "Wiki", href: "/wiki", text: "wiki database information facts characters locations vehicles weapons" },
   { id: "page:timeline", type: "page", title: "Timeline", href: "/timeline", text: "history events announcements dates" },
   { id: "page:collections", type: "page", title: "Collections", href: "/collections", text: "releases sets batches" },
   { id: "page:library", type: "page", title: "Your Library", href: "/library", text: "favorites saved collections recently viewed history" },
@@ -72,13 +72,13 @@ export async function buildSearchDocs(): Promise<SearchDoc[]> {
       type,
       title: e.name,
       subtitle: type === "info" ? sectionTitle[e.section] : e.subtitle,
-      href: `/info/${e.section}/${e.slug}`,
+      href: `/wiki/${e.section}/${e.slug}`,
       text: `${e.summary} ${e.facts.map((f) => f.value).join(" ")}`,
       thumb: e.imageSlug ? smallestVariant(media.find((m) => m.slug === e.imageSlug) ?? { variants: [] }, 200)?.url : undefined,
     });
   }
   for (const s of sections) {
-    docs.push({ id: `section:${s.slug}`, type: "info", title: s.title, subtitle: "Information", href: `/info/${s.slug}`, text: s.description });
+    docs.push({ id: `section:${s.slug}`, type: "info", title: s.title, subtitle: "Wiki", href: `/wiki/${s.slug}`, text: s.description });
   }
   for (const c of collections) {
     const cover = media.find((m) => m.slug === c.coverSlug);

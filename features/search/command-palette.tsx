@@ -79,7 +79,7 @@ const QUICK_LINKS: SearchDoc[] = [
   { id: "q:viewer", type: "page", title: "Open Media Viewer", href: "/viewer" },
   { id: "q:media", type: "page", title: "Browse the media archive", href: "/media" },
   { id: "q:news", type: "page", title: "Latest news", href: "/news" },
-  { id: "q:characters", type: "page", title: "Characters", href: "/info/characters" },
+  { id: "q:characters", type: "page", title: "Characters", href: "/wiki/characters" },
   { id: "q:timeline", type: "page", title: "Timeline", href: "/timeline" },
 ];
 

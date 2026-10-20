@@ -142,6 +142,83 @@ FIXUPS.push({
   },
 });
 
+FIXUPS.push({
+  // Milestones from late September to the Launch Trailer. Only adds what isn't there yet.
+  key: "fixup:timeline-to-launch-trailer",
+  run(db: Database.Database) {
+    const events = [
+      {
+        id: "2026-09-24-vice-city-collection",
+        date: "2026-09-24",
+        datePrecision: "day",
+        type: "marketing",
+        title: "The Goodtime State – Vice City Collection revealed",
+        summary:
+          "Rockstar announced The Goodtime State – Vice City Collection, a $400 box of collectibles and merchandise that takes the place of a collector's edition. The game itself isn't included.",
+        sources: [
+          {
+            label: "RockstarINTEL",
+            url: "https://rockstarintel.com/gta-6-collectors-edition-and-merchandise-revealed/",
+          },
+        ],
+        newsQuery: "vice city collection",
+        verification: "reported",
+      },
+      {
+        id: "2026-09-29-screenshots",
+        date: "2026-09-29",
+        datePrecision: "day",
+        type: "screenshots",
+        title: "12 new screenshots",
+        summary: "Rockstar released a dozen new screenshots, separate from the 20-plus that came with An Extended Look in August.",
+        sources: [
+          {
+            label: "RockstarINTEL",
+            url: "https://rockstarintel.com/12-new-gta-6-screenshots-released/",
+          },
+        ],
+        newsQuery: "screenshots",
+        verification: "reported",
+      },
+      {
+        id: "2026-10-08-music-and-radio",
+        date: "2026-10-08",
+        datePrecision: "day",
+        type: "announcement",
+        title: "Music and radio revealed",
+        summary:
+          "A new page on Rockstar's site detailed the game's music and radio stations, confirmed Bad Bunny and Lana Del Rey among the radio hosts, and came with three new screenshots.",
+        sources: [
+          {
+            label: "RockstarINTEL",
+            url: "https://rockstarintel.com/bad-bunny-lana-del-rey-and-more-confirmed-as-gta-6-radio-hosts-confirms-music-features/",
+          },
+        ],
+        newsQuery: "radio",
+        verification: "reported",
+      },
+      {
+        id: "2026-10-15-launch-trailer",
+        date: "2026-10-15",
+        datePrecision: "day",
+        type: "trailer",
+        title: "Launch Trailer released",
+        summary: "Rockstar released the Grand Theft Auto VI Launch Trailer, the game's third trailer, along with a new screenshot and artwork, five weeks before release.",
+        sources: [
+          {
+            label: "RockstarINTEL",
+            url: "https://rockstarintel.com/gta-6-launch-trailer-released/",
+          },
+        ],
+        newsQuery: "launch trailer",
+        verification: "reported",
+      },
+    ];
+    const add = db.prepare("INSERT OR IGNORE INTO timeline (id, date, data) VALUES (?, ?, ?)");
+    for (const e of events) add.run(e.id, e.date, JSON.stringify(e));
+  },
+});
+
 export function runFixups(db: Database.Database) {
   const done = db.prepare("SELECT 1 FROM meta WHERE key = ?");
   for (const f of FIXUPS) {

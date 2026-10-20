@@ -31,9 +31,9 @@ const PREVIEW_FOR: Record<string, string> = {
   "/news": "news",
   "/media": "media",
   "/viewer": "viewer",
-  "/info/characters": "characters",
-  "/info": "locations",
-  "/info/locations": "locations",
+  "/wiki/characters": "characters",
+  "/wiki": "locations",
+  "/wiki/locations": "locations",
   "/timeline": "timeline",
   "/tools": "characters",
 };

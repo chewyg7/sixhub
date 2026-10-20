@@ -6,28 +6,41 @@ import { Stagger } from "@/components/motion/reveal";
 export interface CastMember {
   entry: InfoEntry;
   image?: MediaItem;
+  /** The character's GTA Wiki portrait, used when there is one. */
+  portrait?: string;
 }
 
 /** Portrait cards for the cast: artwork, name and role, nothing else. */
 export function CastGrid({ cast }: { cast: CastMember[] }) {
   return (
     <Stagger as="ul" className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0">
-      {cast.map(({ entry, image }) => (
+      {cast.map(({ entry, image, portrait }) => (
         <li key={entry.slug} className="w-[62vw] shrink-0 snap-start sm:w-auto">
           <Link
-            href={`/info/characters/${entry.slug}`}
+            href={`/wiki/characters/${entry.slug}`}
             data-cursor="view"
             data-cursor-label="Profile"
             className="group relative block aspect-[4/5] overflow-hidden rounded-3xl bg-surface-2"
             style={{ backgroundColor: image?.dominantColor ?? undefined }}
           >
-            {image && (
-              <ResponsiveImage
-                item={image}
-                sizes="(min-width: 640px) 25vw, 62vw"
+            {portrait ? (
+              // eslint-disable-next-line @next/next/no-img-element -- served by the wiki's image server
+              <img
+                src={portrait}
                 alt=""
-                className="transition-transform duration-[1.2s] ease-[var(--ease-out)] group-hover:scale-[1.06]"
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 size-full object-cover object-top transition-transform duration-[1.2s] ease-[var(--ease-out)] group-hover:scale-[1.06]"
               />
+            ) : (
+              image && (
+                <ResponsiveImage
+                  item={image}
+                  sizes="(min-width: 640px) 25vw, 62vw"
+                  alt=""
+                  className="transition-transform duration-[1.2s] ease-[var(--ease-out)] group-hover:scale-[1.06]"
+                />
+              )
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/5 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-5">

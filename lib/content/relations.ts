@@ -36,9 +36,9 @@ export function mediaTags(item: MediaItem, labels: LabelLookups): TagRef[] {
 export function tagHref(tag: TagRef): string {
   switch (tag.type) {
     case "character":
-      return `/info/characters/${tag.value}`;
+      return `/wiki/characters/${tag.value}`;
     case "location":
-      return `/info/locations/${tag.value}`;
+      return `/wiki/locations/${tag.value}`;
     case "collection":
       return `/collections/${tag.value}`;
     case "source":

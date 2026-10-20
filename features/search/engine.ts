@@ -32,7 +32,7 @@ export const GROUP_LABEL: Record<SearchDocType, string> = {
   news: "News",
   character: "Characters",
   location: "Locations",
-  info: "Information",
+  info: "Wiki",
   collection: "Collections",
   timeline: "Timeline",
   page: "Pages",

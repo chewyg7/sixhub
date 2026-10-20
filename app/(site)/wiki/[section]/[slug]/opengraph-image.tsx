@@ -11,12 +11,12 @@ export const revalidate = 86400;
 export default async function Image({ params }: { params: Promise<{ section: string; slug: string }> }) {
   const { section, slug } = await params;
   const [entry, sections] = await Promise.all([getInfoEntry(section, slug), getInfoSections()]);
-  const kicker = sections.find((s) => s.slug === section)?.title ?? wikiSection(section)?.title ?? "Information";
+  const kicker = sections.find((s) => s.slug === section)?.title ?? wikiSection(section)?.title ?? "Wiki";
   const member = wikiSection(section) ? await memberBySlug(section, slug) : null;
   const article = member ? await getWikiArticle(member.title) : null;
   const own = entry?.imageSlug ? mediaPicture(await getMediaBySlug(entry.imageSlug)) : undefined;
   const wikiImage = article?.image ? imageUrl(article.image.file, 1280, article.image.width) : undefined;
-  if (!entry && !member) return ogImage({ title: "Information", image: "/hero/bg-2000.webp" });
+  if (!entry && !member) return ogImage({ title: "Wiki", image: "/hero/bg-2000.webp" });
   return ogImage({
     kicker,
     title: entry?.name ?? displayName(member!.title),

@@ -31,9 +31,10 @@ function loadFonts() {
   return fonts;
 }
 
-/** A site image: a public file, an uploaded file (/files/…) or a full URL. */
+/** A site image: a public file, an uploaded file (/files/…), a full URL or a data: URI. */
 async function readImage(src: string): Promise<Buffer | null> {
   try {
+    if (src.startsWith("data:")) return Buffer.from(src.slice(src.indexOf(",") + 1), "base64");
     if (/^https?:\/\//.test(src)) {
       const res = await fetch(src, { signal: AbortSignal.timeout(5000) });
       return res.ok ? Buffer.from(await res.arrayBuffer()) : null;

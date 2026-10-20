@@ -19,5 +19,5 @@ export default async function Image({ params }: { params: Promise<{ section: str
     const withImage = (await getInfoEntries(section)).find((e) => e.imageSlug);
     image = mediaPicture(withImage?.imageSlug ? await getMediaBySlug(withImage.imageSlug) : null);
   }
-  return ogImage({ kicker: "Information", title: s?.title ?? wiki?.title ?? "Information", lede: s?.description ?? wiki?.description, image: image ?? "/hero/bg-2000.webp" });
+  return ogImage({ kicker: "Wiki", title: s?.title ?? wiki?.title ?? "Wiki", lede: s?.description ?? wiki?.description, image: image ?? "/hero/bg-2000.webp" });
 }

@@ -19,9 +19,9 @@ const COLUMNS = [
   {
     title: "Database",
     links: [
-      { href: "/info", label: "Information" },
-      { href: "/info/characters", label: "Characters" },
-      { href: "/info/locations", label: "Locations" },
+      { href: "/wiki", label: "Wiki" },
+      { href: "/wiki/characters", label: "Characters" },
+      { href: "/wiki/locations", label: "Locations" },
       { href: "/timeline", label: "Timeline" },
     ],
   },
@@ -49,11 +49,7 @@ export async function Footer() {
         aria-hidden
         className="pointer-events-none absolute -bottom-40 left-1/2 h-[420px] w-[1200px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(255_79_163/0.22),transparent)]"
       />
-      {/* Every page ends with an invite to the Discord. */}
-      <div className="relative mx-auto max-w-[1600px] px-5 pt-10 sm:px-8 lg:px-12">
-        <DiscordStrip />
-      </div>
-      <div className="relative mx-auto flex max-w-[1600px] flex-col gap-8 px-5 pt-16 sm:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-12">
+      <div className="relative mx-auto flex max-w-[1600px] flex-col gap-8 px-5 pt-20 sm:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-12">
         <div>
           <p className="kicker mb-4">Out {label}</p>
           <SplitReveal by="chars" className="display-xl text-[17vw] sm:text-[120px] lg:text-[150px]">
@@ -70,7 +66,11 @@ export async function Footer() {
           </Link>
         </Magnetic>
       </div>
-      <div className="relative mx-auto grid max-w-[1600px] gap-10 px-5 pt-20 pb-12 sm:px-8 md:grid-cols-[1.4fr_repeat(3,1fr)] lg:px-12">
+      {/* Every page ends with an invite to the Discord, between the sign-off and the links. */}
+      <div className="relative mx-auto max-w-[1600px] px-5 pt-14 sm:px-8 lg:px-12">
+        <DiscordStrip />
+      </div>
+      <div className="relative mx-auto grid max-w-[1600px] gap-10 px-5 pt-16 pb-12 sm:px-8 md:grid-cols-[1.4fr_repeat(3,1fr)] lg:px-12">
         <div>
           <Link href="/" aria-label={`${SITE.name} home`} className="inline-block">
             {/* eslint-disable-next-line @next/next/no-img-element -- brand mark */}

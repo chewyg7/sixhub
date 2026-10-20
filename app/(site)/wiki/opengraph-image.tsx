@@ -10,7 +10,7 @@ export default async function Image() {
   const withImage = (await getInfoEntries("characters")).find((e) => e.imageSlug);
   const image = withImage?.imageSlug ? await getMediaBySlug(withImage.imageSlug) : null;
   return ogImage({
-    title: "Information",
+    title: "Wiki",
     lede: "The characters, places, trailers and release details of GTA VI, linked to the media they appear in.",
     image: mediaPicture(image) ?? "/hero/bg-2000.webp",
   });

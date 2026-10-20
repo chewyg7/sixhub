@@ -20,7 +20,12 @@ const nextConfig: NextConfig = {
   },
   // One address for search engines: www.gtasixhub.com sends visitors to gtasixhub.com.
   async redirects() {
-    return [{ source: "/:path*", has: [{ type: "host", value: "www.gtasixhub.com" }], destination: "https://gtasixhub.com/:path*", permanent: true }];
+    return [
+      { source: "/:path*", has: [{ type: "host", value: "www.gtasixhub.com" }], destination: "https://gtasixhub.com/:path*", permanent: true },
+      // Information is now the Wiki; old links (and search results) follow.
+      { source: "/info", destination: "/wiki", permanent: true },
+      { source: "/info/:path*", destination: "/wiki/:path*", permanent: true },
+    ];
   },
   // Team profiles live at /@username (an "@" folder would be a parallel route, so it maps to /u/).
   async rewrites() {

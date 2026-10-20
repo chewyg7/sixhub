@@ -15,7 +15,7 @@ export default async function TimelinePage() {
   return (
     <Container className="max-w-[1100px]">
       <PageHeader
-        crumbs={[{ href: "/info", label: "Information" }, { label: "Timeline" }]}
+        crumbs={[{ href: "/wiki", label: "Wiki" }, { label: "Timeline" }]}
         title="Timeline"
         lede="Official milestones with links to the announcement, the media released with it and related coverage."
       />

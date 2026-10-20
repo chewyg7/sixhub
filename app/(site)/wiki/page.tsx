@@ -7,9 +7,9 @@ import { pluralize } from "@/lib/format";
 import { WIKI_LICENSE, WIKI_SECTIONS, displayName, imageUrl, isViFile, sectionMembers } from "@/lib/wiki/api";
 
 export const metadata: Metadata = {
-  title: "Information",
+  title: "Wiki",
   description: "A database of Grand Theft Auto VI characters, locations, vehicles, weapons, businesses and more, with every screenshot, trailer and story they appear in.",
-  alternates: { canonical: "/info" },
+  alternates: { canonical: "/wiki" },
 };
 
 /** Who leads the characters row, before everyone else A–Z. */
@@ -38,7 +38,7 @@ export default async function InfoIndexPage() {
       <PageHeader
         compact
         eyebrow="Database"
-        title="Information"
+        title="Wiki"
         lede="Everyone and everything in GTA VI: characters, places, vehicles, weapons, businesses and more, linked to the screenshots, trailers and news they appear in."
       />
 
@@ -51,7 +51,7 @@ export default async function InfoIndexPage() {
             </h2>
             <p className="mt-3 text-[15px] leading-relaxed text-muted">{overview.summary}</p>
             <Link
-              href="/info/overview/grand-theft-auto-vi"
+              href="/wiki/overview/grand-theft-auto-vi"
               className="mt-5 inline-flex items-center gap-1 text-[13.5px] font-medium text-text hover:underline hover:underline-offset-4"
             >
               Read the overview <ChevronRight className="size-4" />
@@ -70,11 +70,11 @@ export default async function InfoIndexPage() {
 
       {characters.length > 0 && (
         <section className="mt-16" aria-labelledby="chars-h">
-          <SectionHeading id="chars-h" title="Characters" href="/info/characters" linkLabel="All characters" />
+          <SectionHeading id="chars-h" title="Characters" href="/wiki/characters" linkLabel="All characters" />
           <ul className="grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-4 lg:grid-cols-6">
             {characters.map((c) => (
               <li key={c.slug}>
-                <Link href={`/info/characters/${c.slug}`} className="group block">
+                <Link href={`/wiki/characters/${c.slug}`} className="group block">
                   <span className="block aspect-[3/4] overflow-hidden rounded-2xl border border-white/8 bg-surface transition-[border-color] duration-300 group-hover:border-accent/40">
                     {/* eslint-disable-next-line @next/next/no-img-element -- served by the wiki's image server */}
                     <img src={imageUrl(c.image!, 480)} alt="" loading="lazy" referrerPolicy="no-referrer" className="size-full object-cover transition-transform duration-700 group-hover:scale-105" />
@@ -96,7 +96,7 @@ export default async function InfoIndexPage() {
             const cover = members.find((m) => m.image && isViFile(m.image));
             return (
               <li key={section.slug}>
-                <Link href={`/info/${section.slug}`} className="group relative flex aspect-[16/10] flex-col justify-end overflow-hidden rounded-[24px] border border-white/10 bg-surface p-5">
+                <Link href={`/wiki/${section.slug}`} className="group relative flex aspect-[16/10] flex-col justify-end overflow-hidden rounded-[24px] border border-white/10 bg-surface p-5">
                   {cover?.image && (
                     // eslint-disable-next-line @next/next/no-img-element -- served by the wiki's image server
                     <img
@@ -125,7 +125,7 @@ export default async function InfoIndexPage() {
         <ul className="mt-4 grid gap-px overflow-hidden rounded-[24px] border border-divider bg-divider sm:grid-cols-2 lg:grid-cols-3">
           {own.map((s) => (
             <li key={s.slug} className="bg-bg">
-              <Link href={`/info/${s.slug}`} className="group flex h-full flex-col justify-between gap-6 p-5 transition-colors hover:bg-surface">
+              <Link href={`/wiki/${s.slug}`} className="group flex h-full flex-col justify-between gap-6 p-5 transition-colors hover:bg-surface">
                 <div>
                   <p className="text-[16px] font-semibold">{s.title}</p>
                   <p className="mt-1 text-[13.5px] leading-relaxed text-muted">{s.description}</p>

@@ -58,7 +58,7 @@ export default async function ContentPage() {
             key: e.id,
             title: e.name,
             badge: sections.find((s) => s.slug === e.section)?.title,
-            subtitle: `/info/${e.section}/${e.slug}`,
+            subtitle: `/wiki/${e.section}/${e.slug}`,
             values: {
               section: e.section,
               name: e.name,
@@ -162,7 +162,7 @@ export default async function ContentPage() {
           items={sections.map((s) => ({
             key: s.slug,
             title: s.title,
-            subtitle: `/info/${s.slug} · ${s.layout}`,
+            subtitle: `/wiki/${s.slug} · ${s.layout}`,
             values: { slug: s.slug, title: s.title, description: s.description, layout: s.layout, entryNoun: s.entryNoun, newsQuery: s.newsQuery ?? "", order: String(s.order) },
           }))}
           fields={[

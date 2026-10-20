@@ -19,6 +19,7 @@ import { getAllMedia, getCollection, getFaq, getInfoEntries, getSettings, getTim
 import { byNewest } from "@/lib/content/relations";
 import { fetchRockstarIntel } from "@/lib/news/rockstarintel";
 import { formatDate } from "@/lib/format";
+import { imageUrl, isViFile, sectionMembers, wikiSlug } from "@/lib/wiki/api";
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
@@ -44,6 +45,10 @@ export default async function HomePage() {
     getCollection(home.galleryCollection),
     getFaq(),
   ]);
+  // GTA Wiki portraits for the cast (falls back to the archive's own picture).
+  const wikiPortraits = new Map(
+    (await sectionMembers("characters").catch(() => [])).filter((m) => m.image && isViFile(m.image)).map((m) => [m.slug, imageUrl(m.image!, 640)]),
+  );
   const bySlug = new Map(all.map((m) => [m.slug, m]));
   const images = all.filter((m) => m.kind === "image" && !m.original.hasAlpha);
   const tagged = (key: "characters" | "locations", slug: string) => all.filter((m) => m[key].includes(slug));
@@ -52,7 +57,7 @@ export default async function HomePage() {
     .filter((e) => e.section === "characters")
     .map((entry) => {
       const image: MediaItem | undefined = (entry.imageSlug && bySlug.get(entry.imageSlug)) || images.filter((m) => m.characters.includes(entry.slug)).sort(byNewest)[0];
-      return { entry, image };
+      return { entry, image, portrait: wikiPortraits.get(entry.slug) ?? wikiPortraits.get(wikiSlug(entry.name)) };
     });
 
   const regions = entries
@@ -90,13 +95,13 @@ export default async function HomePage() {
     ),
     cast: () => (
       <Container wide className="mt-28 sm:mt-40">
-        <SectionHeading kicker={heading("cast").kicker} title={heading("cast").title} href="/info/characters" linkLabel="All characters" />
+        <SectionHeading kicker={heading("cast").kicker} title={heading("cast").title} href="/wiki/characters" linkLabel="All characters" />
         <CastGrid cast={characters} />
       </Container>
     ),
     regions: () => (
       <Container wide className="mt-28 sm:mt-40">
-        <SectionHeading kicker={heading("regions").kicker} title={heading("regions").title} href="/info/locations" linkLabel="All locations" />
+        <SectionHeading kicker={heading("regions").kicker} title={heading("regions").title} href="/wiki/locations" linkLabel="All locations" />
         <RegionRow regions={regions} />
       </Container>
     ),

@@ -430,6 +430,12 @@ export function getSettings(): SiteSettings {
   } as SiteSettings;
 }
 
+/** Info became Wiki (/info → /wiki); saved menu links follow. */
+function toWiki<T extends { label: string; href: string }>(l: T): T {
+  if (!/^\/info(\/|$|\?|#)/.test(l.href)) return l;
+  return { ...l, href: l.href.replace(/^\/info/, "/wiki"), label: /^info(rmation)?$/i.test(l.label.trim()) ? "Wiki" : l.label };
+}
+
 /** Fills gaps in stored site content and keeps every home section exactly once. */
 function normalizeSite(s: Partial<SiteSettings["site"]> | null): SiteSettings["site"] {
   const d = DEFAULT_SETTINGS.site;
@@ -448,8 +454,8 @@ function normalizeSite(s: Partial<SiteSettings["site"]> | null): SiteSettings["s
     ...s,
     footer: { ...d.footer, ...s?.footer },
     sections: [...stored, ...d.sections.filter((x) => !seen.has(x.id))],
-    nav: s?.nav?.length ? s.nav : d.nav,
-    menu: s?.menu?.length ? s.menu : d.menu,
+    nav: s?.nav?.length ? s.nav.map(toWiki) : d.nav,
+    menu: s?.menu?.length ? s.menu.map(toWiki) : d.menu,
     marquee: s?.marquee?.length ? s.marquee : d.marquee,
   };
 }

@@ -32,25 +32,25 @@ async function resolve(section: string, slug: string) {
   return { entry, member };
 }
 
-export async function generateMetadata({ params }: PageProps<"/info/[section]/[slug]">): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps<"/wiki/[section]/[slug]">): Promise<Metadata> {
   const { section, slug } = await params;
   const { entry, member } = await resolve(section, slug);
-  if (entry) return { title: entry.name, description: entry.summary, alternates: { canonical: `/info/${section}/${slug}` } };
+  if (entry) return { title: entry.name, description: entry.summary, alternates: { canonical: `/wiki/${section}/${slug}` } };
   if (!member) return {};
   const article = await getWikiArticle(member.title);
-  return { title: `${displayName(member.title)} in GTA 6`, description: article?.summary.slice(0, 300) || undefined, alternates: { canonical: `/info/${section}/${slug}` } };
+  return { title: `${displayName(member.title)} in GTA 6`, description: article?.summary.slice(0, 300) || undefined, alternates: { canonical: `/wiki/${section}/${slug}` } };
 }
 
 const VERIFY_LABEL = { official: "Official", reported: "Reported", community: "Community" } as const;
 
-export default async function InfoEntryPage({ params }: PageProps<"/info/[section]/[slug]">) {
+export default async function InfoEntryPage({ params }: PageProps<"/wiki/[section]/[slug]">) {
   const { section: sectionSlug, slug } = await params;
   const { entry, member } = await resolve(sectionSlug, slug);
   if (!entry && !member) notFound();
   const [sections, article, links] = await Promise.all([getInfoSections(), member ? getWikiArticle(member.title) : null, member ? wikiIndex() : null]);
   const sectionTitle = sections.find((s) => s.slug === sectionSlug)?.title ?? wikiSection(sectionSlug)?.title ?? sectionSlug;
   const name = entry?.name ?? displayName(member!.title);
-  const crumbs = [{ href: "/info", label: "Information" }, { href: `/info/${sectionSlug}`, label: sectionTitle }, { label: name }];
+  const crumbs = [{ href: "/wiki", label: "Wiki" }, { href: `/wiki/${sectionSlug}`, label: sectionTitle }, { label: name }];
 
   if (!article || !links) {
     if (entry) return <DbEntry entry={entry} crumbs={crumbs} />;

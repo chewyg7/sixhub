@@ -122,6 +122,73 @@ Run the Certbot line once the DNS records point at the server. It adds the
 HTTPS certificate to that site only (other sites are untouched) and renews it
 automatically.
 
+## 5c. Cloudflare (DDoS protection, caching, hiding the server)
+
+Do this before sharing the site widely. Cloudflare sits in front of the
+server: it absorbs floods and bots, caches images and scripts around the
+world, and visitors never talk to the server directly. The free plan is enough.
+
+**1. Add the site.** In Cloudflare, *Add a site* → `gtasixhub.com` → Free.
+If the domain's DNS isn't on Cloudflare yet, it imports the existing records
+and asks you to switch the nameservers at your registrar. Check the imported
+list against your current DNS first: the Zoho mail records (MX, SPF, DKIM)
+must come across unchanged and stay **DNS only** (grey cloud).
+
+**2. Proxy the website records.** In *DNS*, set `gtasixhub.com` and `www`
+(A records to the server's IP) to **Proxied** (orange cloud). Leave every
+other record as it is.
+
+**3. HTTPS between Cloudflare and the server.**
+- *SSL/TLS → Overview*: mode **Full (strict)**.
+- *SSL/TLS → Origin Server → Create Certificate*: RSA, hostnames
+  `gtasixhub.com` and `*.gtasixhub.com`, 15 years. Save both parts on the server:
+
+```bash
+mkdir -p /etc/ssl/cloudflare
+nano /etc/ssl/cloudflare/gtasixhub.com.pem   # paste the Origin Certificate
+nano /etc/ssl/cloudflare/gtasixhub.com.key   # paste the Private Key
+chmod 600 /etc/ssl/cloudflare/gtasixhub.com.key
+```
+
+- *SSL/TLS → Edge Certificates*: **Always Use HTTPS** on.
+
+**4. Install the nginx config** (after the deploy that brought this file):
+
+```bash
+sudo bash /srv/gtasixhub/deploy/cloudflare-setup.sh
+```
+
+It writes Cloudflare's address list for nginx (so rate limits and the admin
+login throttle see visitors' real IPs), serves images and build files straight
+from disk with long cache times, adds per-visitor rate limits, and makes nginx
+refuse gtasixhub.com requests that didn't come through Cloudflare. It backs up
+the old site file and puts it back if nginx rejects the new one. Check it:
+
+```bash
+curl -sI https://gtasixhub.com | grep -i -E 'server|cf-ray'   # should show "server: cloudflare" and a cf-ray
+```
+
+Re-run the script every few months; it refreshes Cloudflare's address list.
+
+**5. Security settings in Cloudflare** (all free):
+- *Security → Bots*: **Bot Fight Mode** on.
+- *Security → Settings*: Security level **Medium**, **Browser Integrity Check** on.
+- If the site is ever under attack: *Overview → Under Attack Mode* on (visitors
+  see a short check first), off again once it's over.
+
+**6. Optional: close the server to everything but Cloudflare.**
+`sudo bash /srv/gtasixhub/deploy/cloudflare-setup.sh --firewall` limits ports
+80/443 to Cloudflare in the firewall. This applies to **every site on the
+server**, so only do it if they're all behind Cloudflare too. (Without it,
+nginx already turns away direct visits to gtasixhub.com.)
+
+**Uploads:** Cloudflare refuses requests over 100 MB, so the admin panel sends
+big files in 48 MB pieces and the server joins them; nothing changes when
+uploading.
+
+**Undo:** set the records back to *DNS only*, and restore the backed-up site
+file (`/etc/nginx/sites-available/gtasixhub.bak-…`), then `nginx -t && systemctl reload nginx`.
+
 ## 6. Create the owner accounts
 
 Passwords are typed at a hidden prompt; they never go into a file or your shell

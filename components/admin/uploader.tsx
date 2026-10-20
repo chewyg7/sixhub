@@ -48,26 +48,56 @@ async function walk(entry: FileSystemEntry, dir: string[], out: Picked[]) {
   }
 }
 
-/** Sends one file as the raw request body so the server can stream it to disk; XHR gives upload progress. */
-function send(file: File, meta: object, onProgress: (p: number) => void, onUploaded: () => void): Promise<{ slug?: string; status?: string; error?: string }> {
+type UploadResult = { slug?: string; status?: string; error?: string; retry?: boolean };
+
+/** One raw-body POST with upload progress (XHR, since fetch can't report it). */
+function post(url: string, body: Blob | null, headers: Record<string, string>, onProgress?: (loaded: number) => void, onUploaded?: () => void): Promise<UploadResult> {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/chewy/api/upload");
+    xhr.open("POST", url);
     xhr.setRequestHeader("x-chewy", "1");
-    xhr.setRequestHeader("x-upload-meta", encodeURIComponent(JSON.stringify(meta)));
     xhr.setRequestHeader("content-type", "application/octet-stream");
-    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
-    xhr.upload.onload = onUploaded;
+    for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
+    if (onProgress) xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded);
+    if (onUploaded) xhr.upload.onload = onUploaded;
     xhr.onload = () => {
       try {
         resolve(JSON.parse(xhr.responseText));
       } catch {
-        resolve({ error: `Upload failed (${xhr.status}).` });
+        // Proxies answer 413/5xx with HTML; those are worth one more try for a chunk.
+        resolve({ error: `Upload failed (${xhr.status}).`, retry: xhr.status >= 500 || xhr.status === 0 });
       }
     };
-    xhr.onerror = () => resolve({ error: "Network error. Check your connection and try again." });
-    xhr.send(file);
+    xhr.onerror = () => resolve({ error: "Network error. Check your connection and try again.", retry: true });
+    xhr.send(body);
   });
+}
+
+/**
+ * Requests through Cloudflare are capped at 100 MB, so bigger files go up in
+ * 48 MB pieces (each retried a few times if the connection drops) and are put
+ * back together on the server.
+ */
+const CHUNK = 48 * 1024 * 1024;
+
+/** Sends one file as the raw request body so the server can stream it to disk. */
+async function send(file: File, meta: object, onProgress: (p: number) => void, onUploaded: () => void): Promise<UploadResult> {
+  const metaHeader = { "x-upload-meta": encodeURIComponent(JSON.stringify(meta)) };
+  if (file.size <= CHUNK) return post("/chewy/api/upload", file, metaHeader, (loaded) => onProgress(loaded / file.size), onUploaded);
+
+  const id = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+  for (let offset = 0; offset < file.size; offset += CHUNK) {
+    const piece = file.slice(offset, offset + CHUNK);
+    let r: UploadResult = {};
+    for (let attempt = 0; attempt < 4; attempt++) {
+      r = await post("/chewy/api/upload/chunk", piece, { "x-upload-id": id, "x-upload-offset": String(offset) }, (loaded) => onProgress((offset + loaded) / file.size));
+      if (!r.error || !r.retry) break;
+      await new Promise((res) => setTimeout(res, 1500 * (attempt + 1)));
+    }
+    if (r.error) return r;
+  }
+  onUploaded();
+  return post("/chewy/api/upload", null, { ...metaHeader, "x-upload-id": id });
 }
 
 export function Uploader({

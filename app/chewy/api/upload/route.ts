@@ -13,14 +13,17 @@ import { audit } from "@/lib/auth/audit";
 import { getUserById, updateProfile } from "@/lib/auth/users";
 import { UPLOAD_DIR } from "@/lib/db";
 import { fileFont, getFolder, listCategories, listSources, mediaSlugExists, upsertMedia, type StoredMedia } from "@/lib/db/content";
+import { assemble, checkUploadId } from "@/lib/media/chunks";
 import { ingestFile } from "@/lib/media/ingest";
 import { MAX_BYTES, sniff } from "@/lib/media/sniff";
 import { titleFromFilename, uniqueSlug } from "@/lib/slug";
 
 /**
  * POST /chewy/api/upload — one file per request, raw body (so large videos
- * stream to disk with progress). Metadata travels in the `x-upload-meta`
- * header as URI-encoded JSON. Owners publish immediately; admins' uploads
+ * stream to disk with progress). Files over Cloudflare's 100 MB request limit
+ * arrive first in pieces (./chunk); this request then carries no body, just
+ * the `x-upload-id` to put them together. Metadata travels in the
+ * `x-upload-meta` header as URI-encoded JSON. Owners publish immediately; admins' uploads
  * wait in the review queue until an owner approves them.
  */
 export const maxDuration = 900;
@@ -129,7 +132,8 @@ export async function POST(request: NextRequest) {
     if (rawMeta.length > 16_000) throw new Error("Too much metadata.");
     const meta = MetaSchema.parse(JSON.parse(decodeURIComponent(rawMeta || "%7B%7D")));
 
-    const received = await receive(request);
+    const uploadId = request.headers.get("x-upload-id");
+    const received = uploadId ? await assemble(user.id, checkUploadId(uploadId), HARD_MAX) : await receive(request);
     tmp = received.file;
     const kind = sniff(await head(tmp));
     if (!kind) throw new Error("That file type isn't supported. Upload JPEG, PNG, WebP, GIF, AVIF, MP4, MOV, WebM, MP3, M4A, WAV, OGG, FLAC, TTF, OTF, WOFF or WOFF2.");

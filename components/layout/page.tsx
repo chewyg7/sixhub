@@ -36,7 +36,10 @@ export function Breadcrumbs({ items, className }: { items: Crumb[]; className?: 
   );
 }
 
-/** Page header: kicker, big sunset title, lede and actions. */
+/**
+ * Page header: kicker, big sunset title, lede and actions.
+ * `compact` is for tools, where the tool itself should be in view as the page opens.
+ */
 export function PageHeader({
   eyebrow,
   title,
@@ -44,6 +47,7 @@ export function PageHeader({
   crumbs,
   actions,
   className,
+  compact,
 }: {
   eyebrow?: ReactNode;
   title: ReactNode;
@@ -51,22 +55,23 @@ export function PageHeader({
   crumbs?: Crumb[];
   actions?: ReactNode;
   className?: string;
+  compact?: boolean;
 }) {
   return (
-    <header className={cn("relative pt-10 pb-10 sm:pt-16", className)}>
+    <header className={cn("relative", compact ? "pt-5 pb-6 sm:pt-8 sm:pb-7" : "pt-10 pb-10 sm:pt-16", className)}>
       {/* soft dusk glow behind the title */}
       <div
         aria-hidden
         className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-[420px] w-[min(900px,100vw)] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(244_162_197/0.14),transparent)] blur-2xl"
       />
-      {crumbs && <Breadcrumbs items={crumbs} className="mb-6" />}
+      {crumbs && <Breadcrumbs items={crumbs} className={compact ? "mb-3" : "mb-6"} />}
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div className="max-w-4xl">
           {eyebrow && <p className="kicker mb-4">{eyebrow}</p>}
-          <SplitReveal as="h1" by="chars" when="intro" className="display-xl text-[64px] sm:text-[120px]">
+          <SplitReveal as="h1" by="chars" when="intro" className={cn("display-xl", compact ? "text-[40px] sm:text-[60px]" : "text-[64px] sm:text-[120px]")}>
             {title}
           </SplitReveal>
-          {lede && <p className="mt-5 max-w-2xl text-[16px] leading-relaxed text-muted sm:text-[17px]">{lede}</p>}
+          {lede && <p className={cn("max-w-2xl leading-relaxed text-muted", compact ? "mt-2 text-[14.5px] sm:text-[15px]" : "mt-5 text-[16px] sm:text-[17px]")}>{lede}</p>}
         </div>
         {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
       </div>

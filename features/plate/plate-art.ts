@@ -98,10 +98,10 @@ const LEONIDA_NUMBER = { cap: 0.47, baseline: 0.735, halfGap: 0.1135 };
 const GLORIANA_NUMBER = { cap: 0.44, baseline: 0.72, halfGap: 0.13 };
 
 export const LOOKS: Record<Variation, Look> = {
-  // The game art's fruit sits further right in its image, so it's nudged left to look centred.
-  real: { plate: "leonida", header: "LEONIDA", footer: "GOODTIME STATE", artName: "oranges", art: "orange", artX: 0.535, gapX: 0.5315, artY: 0.5, artW: 0.46, number: LEONIDA_NUMBER },
+  // Both sets of fruit are centred under LEONIDA; the game art's sits further right in its image, so it's nudged left.
+  real: { plate: "leonida", header: "LEONIDA", footer: "GOODTIME STATE", artName: "oranges", art: "orange", artX: 0.5, gapX: 0.5, artY: 0.5, artW: 0.46, number: LEONIDA_NUMBER },
   game: { plate: "leonida", header: "LEONIDA", footer: "GOODTIME STATE", artName: "oranges", art: "orangeGame", artX: 0.518, gapX: 0.5145, artY: 0.5, artW: 0.4, number: LEONIDA_NUMBER },
-  vintage: { plate: "gloriana", header: "Gloriana", footer: "UNITED STATES", artName: "dolphin", art: "dolphinVintage", artX: 0.4835, gapX: 0.5, artY: 0.549, artW: 0.318, number: GLORIANA_NUMBER },
+  vintage: { plate: "gloriana", header: "Gloriana", footer: "UNITED STATES", artName: "dolphin", art: "dolphinVintage", artX: 0.4835, gapX: 0.5, artY: 0.547, artW: 0.318, number: GLORIANA_NUMBER },
   modern: { plate: "gloriana", header: "GLORIANA", footer: "AMERICA", artName: "dolphin", art: "dolphin", artX: 0.485, gapX: 0.5, artY: 0.52, artW: 0.29, number: GLORIANA_NUMBER },
 };
 
@@ -122,7 +122,8 @@ const GAME_COLORS: Record<string, TextColors> = {
 };
 /** The official Gloriana inks. */
 const GLORIANA_COLORS: Partial<Record<Variation, TextColors>> = {
-  vintage: { header: "#02714e", number: "#02714e", footer: "#02714e" },
+  // The number is a darker tone of the same green, so it reads first.
+  vintage: { header: "#02714e", number: "#014d35", footer: "#02714e" },
   modern: { header: "#c8302b", number: "#151515", footer: "#c8302b" },
 };
 
@@ -377,7 +378,7 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art
     ctx.fillStyle = colors.header;
     drawTracked(ctx, look.header, FONT.leonida, { cx: W / 2, baseline: 0.215 * H, cap: 0.112 * H, tracking: -0.035, maxWidth: 0.44 * W }, fill);
     ctx.fillStyle = colors.footer;
-    drawTracked(ctx, look.footer, FONT.leonida, { cx: W / 2, baseline: 0.915 * H, cap: 0.08 * H, tracking: -0.04, maxWidth: 0.49 * W }, fill);
+    drawTracked(ctx, look.footer, FONT.leonida, { cx: W / 2, baseline: 0.915 * H, cap: 0.074 * H, tracking: -0.04, maxWidth: 0.49 * W }, fill);
     sticker(ctx, W, H, { x: 0.885, y: 0.135, w: 0.075, h: 0.125, bg: "#3d4450", ink: "#e9ecef" });
   } else {
     // Red serif GLORIANA over AMERICA.
@@ -503,6 +504,35 @@ function sticker(ctx: CanvasRenderingContext2D, W: number, H: number, s: { x: nu
   ctx.restore();
 }
 
+/**
+ * Light and shade for the flat (2D) plate, worked out from the height map so
+ * the stamped characters and rim look raised: lit from the top left, like the
+ * 3D studio. Transparent where the plate is flat. Half size is plenty.
+ */
+export function drawPlateShading(target: HTMLCanvasElement, height: HTMLCanvasElement) {
+  const W = target.width;
+  const H = target.height;
+  const ctx = target.getContext("2d", { willReadFrequently: true })!;
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(height, 0, 0, W, H);
+  const src = ctx.getImageData(0, 0, W, H).data;
+  const out = ctx.createImageData(W, H);
+  const h = (x: number, y: number) => src[(Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))) << 2] / 255;
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      // Slopes facing left or up catch the light; facing right or down fall into shade.
+      const dx = h(x + 1, y - 1) + 2 * h(x + 1, y) + h(x + 1, y + 1) - h(x - 1, y - 1) - 2 * h(x - 1, y) - h(x - 1, y + 1);
+      const dy = h(x - 1, y + 1) + 2 * h(x, y + 1) + h(x + 1, y + 1) - h(x - 1, y - 1) - 2 * h(x, y - 1) - h(x + 1, y - 1);
+      const s = (dx + dy) * 0.9;
+      if (Math.abs(s) < 0.02) continue;
+      const i = (y * W + x) << 2;
+      const v = s > 0 ? 255 : 0;
+      out.data[i] = out.data[i + 1] = out.data[i + 2] = v;
+      out.data[i + 3] = Math.min(s > 0 ? 150 : 100, Math.abs(s) * 255);
+    }
+  ctx.putImageData(out, 0, 0);
+}
+
 /* ---------- 2D frame (PNG export and 2D view) ---------- */
 
 const FRAME_COLORS: Record<Exclude<FrameKind, "none">, [string, string, string]> = {
@@ -512,7 +542,7 @@ const FRAME_COLORS: Record<Exclude<FrameKind, "none">, [string, string, string]>
 };
 
 /** A finished picture: the plate with its frame and holes, on a transparent background. */
-export function drawPlatePicture(ctx: CanvasRenderingContext2D, face: HTMLCanvasElement, frame: FrameKind, W: number, H: number) {
+export function drawPlatePicture(ctx: CanvasRenderingContext2D, face: HTMLCanvasElement, frame: FrameKind, W: number, H: number, shading?: HTMLCanvasElement | null) {
   ctx.clearRect(0, 0, W, H);
   const pad = frame === "none" ? 0 : 0.06 * H;
   const pw = W - pad * 2;
@@ -547,6 +577,7 @@ export function drawPlatePicture(ctx: CanvasRenderingContext2D, face: HTMLCanvas
     }
   }
   ctx.drawImage(face, pad, py, pw, ph);
+  if (shading) ctx.drawImage(shading, pad, py, pw, ph);
   // Holes and slots (dark, like the car behind them).
   ctx.fillStyle = "#1b1d1f";
   for (const h of HOLES.round) {

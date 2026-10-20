@@ -13,6 +13,7 @@ import {
   STYLES,
   cleanPlateText,
   drawPlateBump,
+  drawPlateShading,
   drawPlateFace,
   drawPlatePicture,
   loadPlateAssets,
@@ -56,6 +57,8 @@ export interface PlateInitial {
   variation?: string;
   split?: string;
   rounded?: string;
+  /** "1" shades the 2D plate so its lettering looks raised. */
+  emboss?: string;
   /** "rrggbb,rrggbb,rrggbb" for LEONIDA, the number and GOODTIME STATE. */
   colors?: string;
   linked?: string;
@@ -215,6 +218,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
   const [variation, setVariation] = useState<Variation>(() => (initial.variation && initial.variation in LOOKS ? (initial.variation as Variation) : "real"));
   const [split, setSplit] = useState(initial.split !== "0");
   const [rounded, setRounded] = useState(initial.rounded === "1");
+  const [emboss, setEmboss] = useState(initial.emboss === "1");
   const [linked, setLinked] = useState(initial.linked !== "0");
   /** Custom text colours; null means the style's own. */
   const [custom, setCustom] = useState<TextColors | null>(() => parseColors(initial.colors));
@@ -244,6 +248,8 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
   const setColor = (key: keyof TextColors, value: string) => setCustom(linked ? { header: value, number: value, footer: value } : { ...colors, [key]: value });
   const face = useRef<HTMLCanvasElement | null>(null);
   const bump = useRef<HTMLCanvasElement | null>(null);
+  /** Light and shade for the embossed 2D plate (half size). */
+  const shading = useRef<HTMLCanvasElement | null>(null);
   const picture = useRef<HTMLCanvasElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const studio = useRef<PlateStudio | null>(null);
@@ -257,6 +263,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
       art.current = loaded;
       face.current = Object.assign(document.createElement("canvas"), { width: PLATE_W, height: PLATE_H });
       bump.current = Object.assign(document.createElement("canvas"), { width: PLATE_W, height: PLATE_H });
+      shading.current = Object.assign(document.createElement("canvas"), { width: PLATE_W / 2, height: PLATE_H / 2 });
       const t: Record<string, string> = {};
       const c = Object.assign(document.createElement("canvas"), { width: 512, height: 256 });
       const thumb = (variation: Variation, s: (typeof STYLES)[number]) => {
@@ -281,9 +288,10 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
     drawPlateFace(face.current.getContext("2d")!, design, art.current);
     drawPlateBump(bump.current.getContext("2d")!, design);
     const pic = picture.current;
-    if (pic) drawPlatePicture(pic.getContext("2d")!, face.current, frame, pic.width, pic.height);
+    if (emboss && shading.current) drawPlateShading(shading.current, bump.current);
+    if (pic) drawPlatePicture(pic.getContext("2d")!, face.current, frame, pic.width, pic.height, emboss ? shading.current : null);
     studio.current?.updatePlate();
-  }, [ready, shown, style, colors, variation, split, rounded, layout, frame]);
+  }, [ready, shown, style, colors, variation, split, rounded, layout, frame, emboss]);
 
   // The 3D studio is only built the first time 3D is opened.
   const openStudio = useCallback(async () => {
@@ -330,6 +338,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
   useEffect(() => {
     const t = window.setTimeout(() => {
       const p = new URLSearchParams({ text, style: styleId, variation, frame, paint, split: split ? "1" : "0", rounded: rounded ? "1" : "0", linked: linked ? "1" : "0" });
+      if (emboss) p.set("emboss", "1");
       if (custom) p.set("colors", [custom.header, custom.number, custom.footer].map((c) => c.slice(1)).join(","));
       if (layout.splitAt !== null) p.set("at", String(layout.splitAt));
       if (layout.gap !== DEFAULT_LAYOUT.gap) p.set("gap", layout.gap.toFixed(3));
@@ -338,7 +347,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
       history.replaceState(history.state, "", `${location.pathname}?${p}`);
     }, 400);
     return () => window.clearTimeout(t);
-  }, [text, styleId, variation, frame, paint, split, rounded, linked, custom, layout]);
+  }, [text, styleId, variation, frame, paint, split, rounded, emboss, linked, custom, layout]);
 
   const download = (blob: Blob | null, name: string) => {
     if (!blob) return;
@@ -352,7 +361,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
   const savePng = () => {
     if (!face.current) return;
     const c = Object.assign(document.createElement("canvas"), { width: 2400, height: frame === "none" ? 1200 : 1380 });
-    drawPlatePicture(c.getContext("2d")!, face.current, frame, c.width, c.height);
+    drawPlatePicture(c.getContext("2d")!, face.current, frame, c.width, c.height, emboss ? shading.current : null);
     c.toBlob((b) => download(b, `${fileBase}.png`), "image/png");
   };
   const saveShot = async () => download((await studio.current?.snapshot()) ?? null, `${fileBase}-${view}.png`);
@@ -464,8 +473,12 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
 
       {/* Controls */}
       <div className="grid gap-4">
+        {/* Styles: the plate, its variation and colour style. */}
         <Panel>
-          <Segmented<PlateKind> label="Plate" value={plate.id} onChange={changePlate} options={PLATES.map((p) => ({ id: p.id, label: p.name }))} className="mb-4" />
+          <div className="mb-4 grid gap-2 xl:grid-cols-2">
+            <Segmented<PlateKind> label="Plate" value={plate.id} onChange={changePlate} options={PLATES.map((p) => ({ id: p.id, label: p.name }))} />
+            <Segmented<Variation> label="Variation" value={variation} onChange={setVariation} options={plate.variations.map((v) => ({ id: v.id, label: v.name }))} />
+          </div>
           <div role="radiogroup" aria-label="Plate style" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
             {STYLES.map((s) => ({ id: s.id, name: styleName(s, plate.id), thumb: `${variation}:${s.id}`, active: s.id === styleId, pick: () => setStyleId(s.id) })).map((t) => (
               <button
@@ -487,15 +500,16 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
               </button>
             ))}
           </div>
-          <div className="mt-3 divide-y divide-white/8 border-t border-white/8">
-            <div className="flex items-center justify-between gap-4 py-3">
-              <span className="text-[13px] font-bold tracking-[0.14em] text-white/70 uppercase">Variation</span>
-              <Segmented<Variation> label="Variation" value={variation} onChange={setVariation} options={plate.variations.map((v) => ({ id: v.id, label: v.name }))} className="w-[200px]" />
-            </div>
+        </Panel>
+
+        {/* Lettering */}
+        <section className={cn(GLASS, "px-4 py-1 sm:px-5")}>
+          <div className="divide-y divide-white/8">
             <Toggle label="Rounded characters" checked={rounded} onChange={setRounded} />
             <Toggle label={`Split around the ${look.artName}`} checked={split} onChange={setSplit} />
+            <Toggle label="Embossed 2D" hint="Raised lettering on the flat plate (3D always is)" checked={emboss} onChange={setEmboss} />
           </div>
-        </Panel>
+        </section>
 
         <Collapsible title="Spacing" summary={customLayout ? "Custom" : "Auto"}>
           {split && (

@@ -11,7 +11,12 @@ export const metadata: Metadata = {
 export default function TextGeneratorPage() {
   return (
     <Container wide>
-      <PageHeader crumbs={[{ href: "/tools", label: "Tools" }, { label: "VI Text Generator" }]} title="VI Text Generator" lede="Type anything and get it in the GTA VI title lettering. Pick a style and a background, then download it as a PNG." />
+      <PageHeader
+        compact
+        crumbs={[{ href: "/tools", label: "Tools" }, { label: "VI Text Generator" }]}
+        title="VI Text Generator"
+        lede="Type anything and get it in the GTA VI title lettering. Pick a style and a background, then download it as a PNG."
+      />
       <TextGenerator />
       <p className="mt-12 text-[13px] text-white/35">
         Lettering engine based on the{" "}

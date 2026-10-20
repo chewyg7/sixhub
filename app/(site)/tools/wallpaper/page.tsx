@@ -33,6 +33,7 @@ export default async function WallpaperPage() {
   return (
     <Container wide>
       <PageHeader
+        compact
         crumbs={[{ href: "/tools", label: "Tools" }, { label: "Wallpaper Maker" }]}
         title="Wallpaper Maker"
         lede="Pick a screen size and a piece of official art, drag to frame it, layer anything on top, and save it at full resolution."

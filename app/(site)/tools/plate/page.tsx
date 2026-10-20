@@ -15,6 +15,7 @@ export default async function PlatePage({ searchParams }: PageProps<"/tools/plat
   return (
     <Container wide>
       <PageHeader
+        compact
         crumbs={[{ href: "/tools", label: "Tools" }, { label: "Leonida Plate Creator" }]}
         title="Leonida Plate Creator"
         lede="Make it yours in the Goodtime State, or next door in Gloriana. Type your plate, pick a style, then flip to 3D to turn it in your hands or see it bolted to your ride."
@@ -28,6 +29,7 @@ export default async function PlatePage({ searchParams }: PageProps<"/tools/plat
           variation: one(sp.variation),
           split: one(sp.split),
           rounded: one(sp.rounded),
+          emboss: one(sp.emboss),
           colors: one(sp.colors),
           linked: one(sp.linked),
           at: one(sp.at),

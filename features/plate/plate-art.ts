@@ -377,14 +377,14 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art
     ctx.fillStyle = colors.header;
     drawTracked(ctx, look.header, FONT.leonida, { cx: W / 2, baseline: 0.215 * H, cap: 0.112 * H, tracking: 0.015, maxWidth: 0.44 * W }, fill);
     ctx.fillStyle = colors.footer;
-    drawTracked(ctx, look.footer, FONT.leonida, { cx: W / 2, baseline: 0.925 * H, cap: 0.058 * H, tracking: 0.14, maxWidth: 0.4 * W }, fill);
+    drawTracked(ctx, look.footer, FONT.leonida, { cx: W / 2, baseline: 0.9 * H, cap: 0.08 * H, tracking: 0.02, maxWidth: 0.49 * W }, fill);
     sticker(ctx, W, H, { x: 0.885, y: 0.135, w: 0.075, h: 0.125, bg: "#3d4450", ink: "#e9ecef" });
   } else {
     // Red serif GLORIANA over AMERICA.
     ctx.fillStyle = colors.header;
     drawTracked(ctx, look.header, FONT.matisse, { cx: W / 2, baseline: 0.215 * H, cap: 0.125 * H, tracking: 0.035, maxWidth: 0.5 * W }, fill);
     ctx.fillStyle = colors.footer;
-    drawTracked(ctx, look.footer, FONT.matisse, { cx: W / 2, baseline: 0.92 * H, cap: 0.095 * H, tracking: 0.07, maxWidth: 0.42 * W }, fill);
+    drawTracked(ctx, look.footer, FONT.matisse, { cx: W / 2, baseline: 0.92 * H, cap: 0.115 * H, tracking: 0.07, maxWidth: 0.47 * W }, fill);
     sticker(ctx, W, H, { x: 0.9, y: 0.835, w: 0.07, h: 0.115, bg: "#f2b330", ink: "#1d1a14" });
   }
 

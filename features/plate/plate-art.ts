@@ -101,7 +101,7 @@ export const LOOKS: Record<Variation, Look> = {
   // The game art's fruit sits further right in its image, so it's nudged left to look centred.
   real: { plate: "leonida", header: "LEONIDA", footer: "GOODTIME STATE", artName: "oranges", art: "orange", artX: 0.535, gapX: 0.5315, artY: 0.5, artW: 0.46, number: LEONIDA_NUMBER },
   game: { plate: "leonida", header: "LEONIDA", footer: "GOODTIME STATE", artName: "oranges", art: "orangeGame", artX: 0.518, gapX: 0.5145, artY: 0.5, artW: 0.4, number: LEONIDA_NUMBER },
-  vintage: { plate: "gloriana", header: "Gloriana", footer: "UNITED STATES", artName: "dolphin", art: "dolphinVintage", artX: 0.5, gapX: 0.5, artY: 0.53, artW: 0.285, number: GLORIANA_NUMBER },
+  vintage: { plate: "gloriana", header: "Gloriana", footer: "UNITED STATES", artName: "dolphin", art: "dolphinVintage", artX: 0.4835, gapX: 0.5, artY: 0.502, artW: 0.318, number: GLORIANA_NUMBER },
   modern: { plate: "gloriana", header: "GLORIANA", footer: "AMERICA", artName: "dolphin", art: "dolphin", artX: 0.485, gapX: 0.5, artY: 0.52, artW: 0.29, number: GLORIANA_NUMBER },
 };
 

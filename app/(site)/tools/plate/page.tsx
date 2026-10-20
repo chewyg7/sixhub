@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Container, PageHeader } from "@/components/layout/page";
 import { PlateCreator } from "@/features/plate/plate-creator";
+import { getDiscordInvite } from "@/lib/discord";
 
 export const metadata: Metadata = {
   title: "Leonida Plate Creator",
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v.slice(0, 40) : undefined);
 
 export default async function PlatePage({ searchParams }: PageProps<"/tools/plate">) {
-  const sp = await searchParams;
+  const [sp, discord] = await Promise.all([searchParams, getDiscordInvite()]);
   return (
     <Container wide>
       <PageHeader
@@ -21,6 +22,7 @@ export default async function PlatePage({ searchParams }: PageProps<"/tools/plat
         lede="Make it yours in the Goodtime State, or next door in Gloriana. Type your plate, pick a style, then flip to 3D to turn it in your hands or see it bolted to your ride."
       />
       <PlateCreator
+        discord={discord ? { invite: discord.invite, members: discord.server?.members ?? null } : null}
         initial={{
           text: one(sp.text),
           style: one(sp.style),

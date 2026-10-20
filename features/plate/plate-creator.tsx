@@ -28,6 +28,7 @@ import {
   type Variation,
 } from "./plate-art";
 import type { PlateStudio, StudioView } from "./plate-studio";
+import { DiscordShare, type DiscordInvite } from "./discord-share";
 
 const FRAMES: { id: FrameKind; name: string; swatch: string }[] = [
   { id: "none", name: "None", swatch: "transparent" },
@@ -211,7 +212,7 @@ function Segmented<T extends string>({ value, options, onChange, label, classNam
   );
 }
 
-export function PlateCreator({ initial }: { initial: PlateInitial }) {
+export function PlateCreator({ initial, discord }: { initial: PlateInitial; discord?: DiscordInvite | null }) {
   const [text, setText] = useState(() => cleanPlateText(initial.text ?? "VCECTY") || "VCECTY");
   const [styleId, setStyleId] = useState(() => (STYLES.some((s) => s.id === initial.style) ? initial.style! : STYLES[0].id));
   const [frame, setFrame] = useState<FrameKind>(() => (FRAMES.some((f) => f.id === initial.frame) ? (initial.frame as FrameKind) : "none"));
@@ -358,12 +359,17 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
   const fileBase = `${plate.id}-plate-${(text || "blank").toLowerCase()}`;
-  const savePng = () => {
-    if (!face.current) return;
-    const c = Object.assign(document.createElement("canvas"), { width: 2400, height: frame === "none" ? 1200 : 1380 });
-    drawPlatePicture(c.getContext("2d")!, face.current, frame, c.width, c.height, emboss ? shading.current : null);
-    c.toBlob((b) => download(b, `${fileBase}.png`), "image/png");
-  };
+  /** The flat plate as a PNG, at full size. */
+  const platePng = () =>
+    new Promise<Blob | null>((resolve) => {
+      if (!face.current) return resolve(null);
+      const c = Object.assign(document.createElement("canvas"), { width: 2400, height: frame === "none" ? 1200 : 1380 });
+      drawPlatePicture(c.getContext("2d")!, face.current, frame, c.width, c.height, emboss ? shading.current : null);
+      c.toBlob(resolve, "image/png");
+    });
+  const savePng = async () => download(await platePng(), `${fileBase}.png`);
+  /** What's on screen: the 3D shot when in 3D, else the flat plate. */
+  const currentImage = async () => (dim === "3d" && studioState === "ready" && studio.current ? studio.current.snapshot() : platePng());
   const saveShot = async () => download((await studio.current?.snapshot()) ?? null, `${fileBase}-${view}.png`);
   const copyLink = async () => {
     try {
@@ -636,6 +642,9 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
           <p className="mt-3 text-[12.5px] text-white/40">Picking a colour takes you to Car view.</p>
         </Collapsible>
       </div>
+
+      {/* Full width, under both columns. */}
+      {discord && <DiscordShare discord={discord} getImage={currentImage} fileName={`${fileBase}.png`} className="lg:col-span-2" />}
     </div>
   );
 }

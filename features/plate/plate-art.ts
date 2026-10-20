@@ -86,6 +86,8 @@ interface Look {
   artX: number;
   artY: number;
   artW: number;
+  /** Centre of the gap the split characters leave for the artwork (plate fraction). */
+  gapX: number;
   /** The plate number: cap height, baseline and half the gap left for the artwork (plate fractions). */
   number: { cap: number; baseline: number; halfGap: number };
 }
@@ -95,10 +97,10 @@ const GLORIANA_NUMBER = { cap: 0.44, baseline: 0.72, halfGap: 0.13 };
 
 export const LOOKS: Record<Variation, Look> = {
   // The game art's fruit sits further right in its image, so it's nudged left to look centred.
-  real: { plate: "leonida", header: "LEONIDA", footer: "GOODTIME STATE", artName: "oranges", art: "orange", artX: 0.535, artY: 0.5, artW: 0.46, number: LEONIDA_NUMBER },
-  game: { plate: "leonida", header: "LEONIDA", footer: "GOODTIME STATE", artName: "oranges", art: "orangeGame", artX: 0.518, artY: 0.5, artW: 0.4, number: LEONIDA_NUMBER },
-  vintage: { plate: "gloriana", header: "Gloriana", footer: "UNITED STATES", artName: "dolphin", art: "dolphin", artX: 0.5, artY: 0.53, artW: 0.25, number: GLORIANA_NUMBER },
-  modern: { plate: "gloriana", header: "GLORIANA", footer: "AMERICA", artName: "dolphin", art: "dolphin", artX: 0.5, artY: 0.52, artW: 0.29, number: GLORIANA_NUMBER },
+  real: { plate: "leonida", header: "LEONIDA", footer: "GOODTIME STATE", artName: "oranges", art: "orange", artX: 0.535, gapX: 0.5315, artY: 0.5, artW: 0.46, number: LEONIDA_NUMBER },
+  game: { plate: "leonida", header: "LEONIDA", footer: "GOODTIME STATE", artName: "oranges", art: "orangeGame", artX: 0.518, gapX: 0.5145, artY: 0.5, artW: 0.4, number: LEONIDA_NUMBER },
+  vintage: { plate: "gloriana", header: "Gloriana", footer: "UNITED STATES", artName: "dolphin", art: "dolphin", artX: 0.5, gapX: 0.5, artY: 0.53, artW: 0.25, number: GLORIANA_NUMBER },
+  modern: { plate: "gloriana", header: "GLORIANA", footer: "AMERICA", artName: "dolphin", art: "dolphin", artX: 0.485, gapX: 0.5, artY: 0.52, artW: 0.29, number: GLORIANA_NUMBER },
 };
 
 export const plateOf = (v: Variation) => PLATES.find((p) => p.id === LOOKS[v].plate)!;
@@ -118,7 +120,7 @@ const GAME_COLORS: Record<string, TextColors> = {
 };
 /** Gloriana plates have one look each, so they ignore the style. */
 const GLORIANA_COLORS: Partial<Record<Variation, TextColors>> = {
-  vintage: { header: "#27324a", number: "#1e2331", footer: "#3b2410" },
+  vintage: { header: "#02714e", number: "#02714e", footer: "#02714e" },
   modern: { header: "#c8302b", number: "#151515", footer: "#c8302b" },
 };
 
@@ -177,7 +179,7 @@ export function loadPlateAssets(): Promise<PlateAssets> {
   const fonts = [
     new FontFace(FONT.leonida, "url(/tools/plate/leonida.otf)"),
     new FontFace(FONT.goodtime, "url(/tools/plate/goodtime.woff)"),
-    new FontFace(FONT.matisse, "url(/tools/plate/matisse.otf)"),
+    new FontFace(FONT.matisse, "url(/tools/plate/matisse-bold.otf)"),
     new FontFace(FONT.number, "url(/tools/plate/number.woff)"),
     new FontFace(FONT.numberRounded, "url(/tools/plate/number-rounded.woff)"),
   ];
@@ -285,7 +287,7 @@ function eachCharacter(ctx: CanvasRenderingContext2D, W: number, H: number, d: C
   const leftN = d.layout.splitAt === null ? Math.floor(n / 2) : Math.max(0, Math.min(n, d.layout.splitAt));
   const left = d.text.slice(0, leftN);
   const right = d.text.slice(leftN);
-  const centre = look.artX - (look.plate === "leonida" ? 0.0035 : 0) + shift;
+  const centre = look.gapX + shift;
   const leftEnd = centre - look.number.halfGap - gap;
   const rightStart = centre + look.number.halfGap + gap;
   if (left) drawTracked(ctx, left, family, { ...common, cx: leftEnd * W, maxWidth: Math.max(0.05, leftEnd - minX) * W, align: "right" }, paint);
@@ -299,9 +301,9 @@ const GLORIANA_BG: Partial<Record<Variation, [number, string][]>> = {
   // White, warming into the sunset band along the bottom.
   vintage: [
     [0, "#fbfbf7"],
-    [0.66, "#f6f3ea"],
-    [0.79, "#f4dc93"],
-    [0.89, "#eaa944"],
+    [0.56, "#f6f3ea"],
+    [0.72, "#f4dc93"],
+    [0.86, "#eaa944"],
     [1, "#cf7a28"],
   ],
   modern: [
@@ -353,27 +355,18 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art
     ctx.fillStyle = colors.footer;
     drawTracked(ctx, look.footer, FONT.goodtime, { cx: W / 2, baseline: 0.9 * H, cap: 0.088 * H, tracking: 0.02, maxWidth: 0.47 * W }, fill);
   } else if (d.variation === "vintage") {
-    // "Gloriana" between two stars, and ★ UNITED STATES ★ on the sunset band.
+    // "Gloriana" over UNITED STATES on the sunset band.
     ctx.fillStyle = colors.header;
-    const head = drawTracked(ctx, look.header, FONT.leonida, { cx: W / 2, baseline: 0.215 * H, cap: 0.112 * H, tracking: 0.015, maxWidth: 0.44 * W }, fill);
-    star(ctx, head.left - 0.05 * H, 0.165 * H, 0.032 * H);
-    star(ctx, head.right + 0.05 * H, 0.165 * H, 0.032 * H);
+    drawTracked(ctx, look.header, FONT.leonida, { cx: W / 2, baseline: 0.215 * H, cap: 0.112 * H, tracking: 0.015, maxWidth: 0.44 * W }, fill);
     ctx.fillStyle = colors.footer;
-    const foot = drawTracked(ctx, look.footer, FONT.leonida, { cx: W / 2, baseline: 0.925 * H, cap: 0.058 * H, tracking: 0.14, maxWidth: 0.4 * W }, fill);
-    star(ctx, foot.left - 0.045 * H, 0.896 * H, 0.022 * H);
-    star(ctx, foot.right + 0.045 * H, 0.896 * H, 0.022 * H);
+    drawTracked(ctx, look.footer, FONT.leonida, { cx: W / 2, baseline: 0.925 * H, cap: 0.058 * H, tracking: 0.14, maxWidth: 0.4 * W }, fill);
     sticker(ctx, W, H, { x: 0.885, y: 0.135, w: 0.075, h: 0.125, bg: "#3d4450", ink: "#e9ecef" });
   } else {
-    // Red serif GLORIANA over • AMERICA •.
+    // Red serif GLORIANA over AMERICA.
     ctx.fillStyle = colors.header;
     drawTracked(ctx, look.header, FONT.matisse, { cx: W / 2, baseline: 0.205 * H, cap: 0.105 * H, tracking: 0.09, maxWidth: 0.48 * W }, fill);
     ctx.fillStyle = colors.footer;
-    const foot = drawTracked(ctx, look.footer, FONT.matisse, { cx: W / 2, baseline: 0.915 * H, cap: 0.08 * H, tracking: 0.16, maxWidth: 0.4 * W }, fill);
-    for (const x of [foot.left - 0.06 * H, foot.right + 0.06 * H]) {
-      ctx.beginPath();
-      ctx.arc(x, 0.875 * H, 0.014 * H, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    drawTracked(ctx, look.footer, FONT.matisse, { cx: W / 2, baseline: 0.915 * H, cap: 0.08 * H, tracking: 0.16, maxWidth: 0.4 * W }, fill);
     sticker(ctx, W, H, { x: 0.9, y: 0.835, w: 0.07, h: 0.115, bg: "#f2b330", ink: "#1d1a14" });
   }
 
@@ -473,18 +466,6 @@ export function drawPlateNormals(target: HTMLCanvasElement, height: HTMLCanvasEl
       out.data[i + 3] = 255;
     }
   ctx.putImageData(out, 0, 0);
-}
-
-/** A small five-pointed star in the current colour. */
-function star(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
-  ctx.beginPath();
-  for (let i = 0; i < 10; i++) {
-    const a = -Math.PI / 2 + (i * Math.PI) / 5;
-    const rr = i % 2 ? r * 0.42 : r;
-    ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
-  }
-  ctx.closePath();
-  ctx.fill();
 }
 
 /** A registration sticker: a little rounded label with the state and the year. */

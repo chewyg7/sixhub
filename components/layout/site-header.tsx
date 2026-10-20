@@ -214,9 +214,16 @@ function ToolsMenu({ children, path }: { children: React.ReactNode; path: string
               aria-current={path === t.href ? "page" : undefined}
               className="group/tool flex items-center gap-3 rounded-2xl p-2.5 transition-colors hover:bg-white/[0.07] aria-[current=page]:bg-white/[0.07]"
             >
-              <span className="block size-12 shrink-0 overflow-hidden rounded-xl bg-black/40">
+              <span className="ios-squircle block size-12 shrink-0 bg-[linear-gradient(160deg,#2a2033,#120e18)]">
                 {/* eslint-disable-next-line @next/next/no-img-element -- tool preview */}
-                <img src={t.image} alt="" className="size-full object-cover transition-transform duration-500 group-hover/tool:scale-110" />
+                <img
+                  src={t.icon ?? t.image}
+                  alt=""
+                  className={cn(
+                    "size-full transition-transform duration-500 group-hover/tool:scale-110",
+                    t.iconFit === "contain" ? "object-contain p-[7px]" : "object-cover",
+                  )}
+                />
               </span>
               <span className="min-w-0">
                 <span className="block text-[14.5px] font-bold text-white">{t.name}</span>

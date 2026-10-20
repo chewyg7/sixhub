@@ -431,6 +431,172 @@
     color: var(--text);
   }
 
+  /* GTA Wiki articles in the Information database (components/info/wiki-content.tsx) */
+  .wiki-prose {
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--text-muted);
+  }
+  .wiki-prose > * + * {
+    margin-top: 0.9em;
+  }
+  .wiki-prose p + p {
+    margin-top: 0.9em;
+  }
+  .wiki-prose strong,
+  .wiki-prose b {
+    color: var(--text);
+  }
+  .wiki-prose h4 {
+    margin-top: 1.6em;
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .wiki-prose ul,
+  .wiki-prose ol {
+    padding-left: 1.3em;
+  }
+  .wiki-prose ul {
+    list-style: disc;
+  }
+  .wiki-prose ol {
+    list-style: decimal;
+  }
+  .wiki-prose li + li {
+    margin-top: 0.35em;
+  }
+  .wiki-prose li > ul,
+  .wiki-prose li > ol {
+    margin-top: 0.35em;
+  }
+  .wiki-prose blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 1em;
+    color: var(--text);
+    font-style: italic;
+  }
+  .wiki-quote {
+    font-style: normal !important;
+  }
+  .wiki-quote-text {
+    font-size: 1.15em;
+    font-style: italic;
+  }
+  .wiki-quote footer {
+    margin-top: 0.3em;
+    color: var(--text-muted);
+    font-size: 0.85em;
+    font-style: normal;
+  }
+  .wiki-prose dl dt {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .wiki-link {
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: rgb(255 79 163 / 0.45);
+    text-underline-offset: 3px;
+    transition: color 0.2s, text-decoration-color 0.2s;
+  }
+  .wiki-link:hover {
+    color: var(--accent-text);
+    text-decoration-color: currentColor;
+  }
+  .wiki-link-out {
+    text-decoration-style: dotted;
+  }
+  .wiki-img {
+    display: inline-block;
+    max-width: 100%;
+    height: auto;
+    vertical-align: middle;
+  }
+  .wiki-figure {
+    margin-block: 1.2em;
+    overflow: hidden;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .wiki-figure .wiki-img {
+    display: block;
+    width: 100%;
+  }
+  .wiki-figure figcaption {
+    padding: 0.7em 1em;
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+  @media (min-width: 768px) {
+    .wiki-figure-side {
+      float: right;
+      clear: right;
+      width: min(320px, 45%);
+      margin: 0.3em 0 1em 1.5em;
+    }
+  }
+  .wiki-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    padding: 0 !important;
+    list-style: none !important;
+    clear: both;
+  }
+  .wiki-gallery li {
+    margin: 0 !important;
+  }
+  .wiki-gallery-link {
+    display: block;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-radius: 14px;
+    background: var(--surface-2);
+  }
+  .wiki-gallery-link .wiki-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s var(--ease-out, ease);
+  }
+  .wiki-gallery-link:hover .wiki-img {
+    transform: scale(1.05);
+  }
+  .wiki-gallery-caption {
+    display: block;
+    margin-top: 0.45em;
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .wiki-table-wrap {
+    overflow-x: auto;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    clear: both;
+  }
+  .wiki-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .wiki-table th,
+  .wiki-table td {
+    padding: 0.6em 0.9em;
+    border-bottom: 1px solid var(--divider);
+    text-align: left;
+    vertical-align: top;
+  }
+  .wiki-table th {
+    color: var(--text);
+    background: var(--surface);
+    font-weight: 700;
+  }
+  .wiki-table tr:last-child td {
+    border-bottom: 0;
+  }
+
   /* Pages written in the admin panel (Markdown) */
   .prose-page {
     font-size: 17px;

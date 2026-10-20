@@ -6,6 +6,7 @@ import { listPages } from "@/lib/db/extras";
 import { getProfileSettings } from "@/lib/profiles";
 import { absolute, mediaImage, mediaSeoDescription, mediaSeoTitle } from "@/lib/seo";
 import { flattenTree, getAllMedia, getCategories, getCollections, getFolderTree, getInfoEntries, getInfoSections, getLabelLookups } from "@/lib/content";
+import { WIKI_SECTIONS } from "@/lib/wiki/api";
 
 // Lists media and profiles added from the admin panel, so it's built on request.
 export const dynamic = "force-dynamic";
@@ -52,7 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       };
     }),
     ...collections.map((c) => u(`/collections/${c.slug}`)),
-    ...sections.map((s) => u(`/info/${s.slug}`)),
+    ...[...new Set([...sections.map((s) => s.slug), ...WIKI_SECTIONS.map((s) => s.slug)])].map((slug) => u(`/info/${slug}`)),
     ...entries.map((e) => u(`/info/${e.section}/${e.slug}`, e.lastReviewed)),
     ...listPages({ published: true }).map((p) => u(`/p/${p.slug}`, p.updatedAt)),
     ...profiles.map((x) => u(`/@${x.username}`)),

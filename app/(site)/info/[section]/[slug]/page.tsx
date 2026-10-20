@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { Container, Breadcrumbs, SectionHeading } from "@/components/layout/page";
 import { EntryCard } from "@/components/info/entry-card";
+import { WikiCredit, WikiInfoboxCard, WikiSections } from "@/components/info/wiki-article";
+import { WikiContent } from "@/components/info/wiki-content";
 import { MediaGrid } from "@/components/media/media-grid";
 import { MediaThumb } from "@/components/media/media-thumb";
 import { LightboxTrigger } from "@/components/media/lightbox-trigger";
@@ -12,51 +14,90 @@ import { RelatedNews } from "@/features/news/related-news";
 import { getAllMedia, getCollections, getInfoEntries, getInfoEntry, getInfoSections } from "@/lib/content";
 import { byNewest } from "@/lib/content/relations";
 import { formatDate, pluralize } from "@/lib/format";
-import type { InfoSectionSlug } from "@/types/content";
+import { displayName, memberBySlug, wikiIndex, wikiSection, wikiSlug } from "@/lib/wiki/api";
+import { getWikiArticle } from "@/lib/wiki/article";
+import type { InfoEntry, InfoSectionSlug } from "@/types/content";
 
 export async function generateStaticParams() {
   return (await getInfoEntries()).map((e) => ({ section: e.section, slug: e.slug }));
 }
-// Pages for entries added in the admin panel render on first visit. (With `false`, Next.js
-// 404s every path here after an admin save revalidates the site.)
+// Entries added in the admin panel and every GTA Wiki article render on first visit,
+// then stay cached. (With `false`, Next.js 404s every path here after an admin save.)
 export const dynamicParams = true;
+
+/** The admin panel's entry and/or the wiki article behind a URL. */
+async function resolve(section: string, slug: string) {
+  const entry = await getInfoEntry(section as InfoSectionSlug, slug);
+  const member = wikiSection(section) ? ((await memberBySlug(section, slug)) ?? (entry ? await memberBySlug(section, wikiSlug(entry.name)) : null)) : null;
+  return { entry, member };
+}
 
 export async function generateMetadata({ params }: PageProps<"/info/[section]/[slug]">): Promise<Metadata> {
   const { section, slug } = await params;
-  const e = await getInfoEntry(section as InfoSectionSlug, slug);
-  return e ? { title: e.name, description: e.summary, alternates: { canonical: `/info/${section}/${slug}` } } : {};
+  const { entry, member } = await resolve(section, slug);
+  if (entry) return { title: entry.name, description: entry.summary, alternates: { canonical: `/info/${section}/${slug}` } };
+  if (!member) return {};
+  const article = await getWikiArticle(member.title);
+  return { title: `${displayName(member.title)} in GTA 6`, description: article?.summary.slice(0, 300) || undefined, alternates: { canonical: `/info/${section}/${slug}` } };
 }
 
 const VERIFY_LABEL = { official: "Official", reported: "Reported", community: "Community" } as const;
 
 export default async function InfoEntryPage({ params }: PageProps<"/info/[section]/[slug]">) {
   const { section: sectionSlug, slug } = await params;
-  const entry = await getInfoEntry(sectionSlug as InfoSectionSlug, slug);
-  if (!entry) notFound();
-  const [sections, entries, media, collections] = await Promise.all([getInfoSections(), getInfoEntries(), getAllMedia(), getCollections()]);
-  const section = sections.find((s) => s.slug === entry.section)!;
-  const bySlug = new Map(media.map((m) => [m.slug, m]));
-  const image = entry.imageSlug ? bySlug.get(entry.imageSlug) : undefined;
+  const { entry, member } = await resolve(sectionSlug, slug);
+  if (!entry && !member) notFound();
+  const [sections, article, links] = await Promise.all([getInfoSections(), member ? getWikiArticle(member.title) : null, member ? wikiIndex() : null]);
+  const sectionTitle = sections.find((s) => s.slug === sectionSlug)?.title ?? wikiSection(sectionSlug)?.title ?? sectionSlug;
+  const name = entry?.name ?? displayName(member!.title);
+  const crumbs = [{ href: "/info", label: "Information" }, { href: `/info/${sectionSlug}`, label: sectionTitle }, { label: name }];
 
-  // Everything connected to this entry through the tag system.
-  const tagged = media
-    .filter(
-      (m) =>
-        (entry.section === "characters" && m.characters.includes(entry.slug)) ||
-        (entry.section === "locations" && m.locations.includes(entry.slug)) ||
-        entry.relatedCollections.some((c) => m.collections.includes(c)),
-    )
-    .sort(byNewest);
-  const stills = tagged.filter((m) => m.kind === "image");
-  const videos = tagged.filter((m) => m.kind === "video");
-  const appearances = collections.filter((c) => entry.relatedCollections.includes(c.slug) || tagged.some((m) => m.collections.includes(c.slug)));
-  const relatedChars = entries.filter((e) => e.section === "characters" && entry.relatedCharacters.includes(e.slug));
-  const relatedPlaces = entries.filter((e) => e.section === "locations" && entry.relatedLocations.includes(e.slug));
-  const filterKey = entry.section === "characters" ? "character" : entry.section === "locations" ? "location" : null;
+  if (!article || !links) {
+    if (entry) return <DbEntry entry={entry} crumbs={crumbs} />;
+    return (
+      <Container className="pt-6">
+        <Breadcrumbs items={crumbs} />
+        <h1 className="display-tight mt-8 text-[56px] sm:text-[80px]">{name}</h1>
+        <p className="mt-4 max-w-xl text-[16px] text-muted">This article comes from GTA Wiki, which didn’t answer just now. Try again in a minute.</p>
+      </Container>
+    );
+  }
+
+  // Pages about several games often lose their (other-game) infobox picture; use the GTA VI one from the listing.
+  const box = member?.image && !article.infobox?.image ? { kind: article.infobox?.kind, groups: article.infobox?.groups ?? [], image: { file: member.image } } : article.infobox;
 
   return (
     <Container className="pt-6">
-      <Breadcrumbs items={[{ href: "/info", label: "Information" }, { href: `/info/${section.slug}`, label: section.title }, { label: entry.name }]} />
+      <Breadcrumbs items={crumbs} />
+      <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-14">
+        <div className="min-w-0">
+          {box?.kind && <Badge>{box.kind.toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}</Badge>}
+          <h1 className="display-tight mt-4 text-[52px] sm:text-[76px]">{name}</h1>
+          <WikiContent nodes={article.lead} links={links} className="mt-6 max-w-3xl text-[17px]!" />
+          <div className="mt-14 max-w-3xl">
+            <WikiSections article={article} links={links} />
+          </div>
+        </div>
+        {box && (
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <WikiInfoboxCard box={box} title={name} links={links} />
+          </div>
+        )}
+      </div>
+
+      {entry && <EntryArchive entry={entry} />}
+      <WikiCredit url={article.url} title={article.title} />
+    </Container>
+  );
+}
+
+/** An entry written in the admin panel, with no wiki article behind it. */
+async function DbEntry({ entry, crumbs }: { entry: InfoEntry; crumbs: { href?: string; label: string }[] }) {
+  const media = await getAllMedia();
+  const image = entry.imageSlug ? media.find((m) => m.slug === entry.imageSlug) : undefined;
+  return (
+    <Container className="pt-6">
+      <Breadcrumbs items={crumbs} />
 
       <header className={image ? "mt-8 grid gap-8 md:grid-cols-[minmax(0,340px)_1fr] lg:gap-12" : "mt-8"}>
         {image && (
@@ -114,6 +155,33 @@ export default async function InfoEntryPage({ params }: PageProps<"/info/[sectio
         </div>
       </header>
 
+      <EntryArchive entry={entry} />
+    </Container>
+  );
+}
+
+/** What the site's own archive has for an entry: its media, collections, connections and news. */
+async function EntryArchive({ entry }: { entry: InfoEntry }) {
+  const [entries, media, collections] = await Promise.all([getInfoEntries(), getAllMedia(), getCollections()]);
+  const bySlug = new Map(media.map((m) => [m.slug, m]));
+  // Everything connected to this entry through the tag system.
+  const tagged = media
+    .filter(
+      (m) =>
+        (entry.section === "characters" && m.characters.includes(entry.slug)) ||
+        (entry.section === "locations" && m.locations.includes(entry.slug)) ||
+        entry.relatedCollections.some((c) => m.collections.includes(c)),
+    )
+    .sort(byNewest);
+  const stills = tagged.filter((m) => m.kind === "image");
+  const videos = tagged.filter((m) => m.kind === "video");
+  const appearances = collections.filter((c) => entry.relatedCollections.includes(c.slug) || tagged.some((m) => m.collections.includes(c.slug)));
+  const relatedChars = entries.filter((e) => e.section === "characters" && entry.relatedCharacters.includes(e.slug));
+  const relatedPlaces = entries.filter((e) => e.section === "locations" && entry.relatedLocations.includes(e.slug));
+  const filterKey = entry.section === "characters" ? "character" : entry.section === "locations" ? "location" : null;
+
+  return (
+    <>
       {appearances.length > 0 && (
         <section className="mt-16" aria-labelledby="appear-h">
           <h2 id="appear-h" className="eyebrow mb-3">
@@ -152,12 +220,6 @@ export default async function InfoEntryPage({ params }: PageProps<"/info/[sectio
         </section>
       )}
 
-      {tagged.length === 0 && (entry.section === "characters" || entry.section === "locations") && (
-        <p className="mt-14 rounded-xl border border-dashed border-border-strong px-5 py-8 text-center text-[13.5px] text-muted">
-          No media in the archive is tagged with {entry.name} yet.
-        </p>
-      )}
-
       {(relatedChars.length > 0 || relatedPlaces.length > 0) && (
         <section className="mt-16" aria-labelledby="rel-h">
           <h2 id="rel-h" className="display mb-5 text-[28px]">
@@ -183,6 +245,6 @@ export default async function InfoEntryPage({ params }: PageProps<"/info/[sectio
           <RelatedNews query={entry.newsQuery} limit={4} />
         </section>
       )}
-    </Container>
+    </>
   );
 }

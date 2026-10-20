@@ -200,7 +200,7 @@ function ToolsMenu({ children, path }: { children: React.ReactNode; path: string
               aria-current={path === t.href ? "page" : undefined}
               className="group/tool flex items-center gap-3 rounded-2xl p-2.5 transition-colors hover:bg-white/[0.07] aria-[current=page]:bg-white/[0.07]"
             >
-              <span className="size-12 shrink-0 overflow-hidden rounded-xl bg-black/40">
+              <span className="block size-12 shrink-0 overflow-hidden rounded-xl bg-black/40">
                 {/* eslint-disable-next-line @next/next/no-img-element -- tool preview */}
                 <img src={t.image} alt="" className="size-full object-cover transition-transform duration-500 group-hover/tool:scale-110" />
               </span>

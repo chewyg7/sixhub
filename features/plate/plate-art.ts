@@ -364,9 +364,9 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art
   } else {
     // Red serif GLORIANA over AMERICA.
     ctx.fillStyle = colors.header;
-    drawTracked(ctx, look.header, FONT.matisse, { cx: W / 2, baseline: 0.205 * H, cap: 0.105 * H, tracking: 0.09, maxWidth: 0.48 * W }, fill);
+    drawTracked(ctx, look.header, FONT.matisse, { cx: W / 2, baseline: 0.215 * H, cap: 0.125 * H, tracking: 0.035, maxWidth: 0.5 * W }, fill);
     ctx.fillStyle = colors.footer;
-    drawTracked(ctx, look.footer, FONT.matisse, { cx: W / 2, baseline: 0.915 * H, cap: 0.08 * H, tracking: 0.16, maxWidth: 0.4 * W }, fill);
+    drawTracked(ctx, look.footer, FONT.matisse, { cx: W / 2, baseline: 0.92 * H, cap: 0.095 * H, tracking: 0.07, maxWidth: 0.42 * W }, fill);
     sticker(ctx, W, H, { x: 0.9, y: 0.835, w: 0.07, h: 0.115, bg: "#f2b330", ink: "#1d1a14" });
   }
 

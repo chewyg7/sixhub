@@ -77,9 +77,10 @@ export default async function HomePage() {
   const blocks: Record<HomeSectionId, () => React.ReactNode> = {
     // Straight under the hero by default: the community is the thing to join.
     discord: () => (
-      <Container wide className="mt-16 sm:mt-24">
+      // Full width, edge to edge, opening straight out of the hero.
+      <div>
         <DiscordBand />
-      </Container>
+      </div>
     ),
     news: () => (
       <Container wide className="mt-24 sm:mt-32">

@@ -309,9 +309,9 @@ const GLORIANA_BG: Partial<Record<Variation, [number, string][]>> = {
   // White, with a short fade into a vintage-yellow band along the bottom.
   vintage: [
     [0, "#fbfbf7"],
-    [0.755, "#f6f3ea"],
-    [0.8, "#e2ab45"],
-    [0.9, "#d99a35"],
+    [0.775, "#f6f3ea"],
+    [0.82, "#e2ab45"],
+    [0.91, "#d99a35"],
     [1, "#c9852a"],
   ],
   modern: [
@@ -377,7 +377,7 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art
     ctx.fillStyle = colors.header;
     drawTracked(ctx, look.header, FONT.leonida, { cx: W / 2, baseline: 0.215 * H, cap: 0.112 * H, tracking: -0.035, maxWidth: 0.44 * W }, fill);
     ctx.fillStyle = colors.footer;
-    drawTracked(ctx, look.footer, FONT.leonida, { cx: W / 2, baseline: 0.9 * H, cap: 0.08 * H, tracking: -0.04, maxWidth: 0.49 * W }, fill);
+    drawTracked(ctx, look.footer, FONT.leonida, { cx: W / 2, baseline: 0.915 * H, cap: 0.08 * H, tracking: -0.04, maxWidth: 0.49 * W }, fill);
     sticker(ctx, W, H, { x: 0.885, y: 0.135, w: 0.075, h: 0.125, bg: "#3d4450", ink: "#e9ecef" });
   } else {
     // Red serif GLORIANA over AMERICA.

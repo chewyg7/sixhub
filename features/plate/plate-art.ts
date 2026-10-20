@@ -309,7 +309,7 @@ const GLORIANA_BG: Partial<Record<Variation, [number, string][]>> = {
   // White, with a short fade into a vintage-yellow band along the bottom.
   vintage: [
     [0, "#fbfbf7"],
-    [0.775, "#f6f3ea"],
+    [0.765, "#f6f3ea"],
     [0.82, "#e2ab45"],
     [0.91, "#d99a35"],
     [1, "#c9852a"],

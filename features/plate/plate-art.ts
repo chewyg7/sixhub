@@ -23,14 +23,16 @@ export interface PlateStyle {
   orangeAlpha: number;
   /** Swatch for the picker. */
   swatch: [string, string];
+  /** The vintage Gloriana plate's band along the bottom, top → bottom. */
+  band: [string, string];
 }
 
 export const STYLES: PlateStyle[] = [
-  { id: "goodtime", name: "Goodtime State", bg: ["#fbfbf8", "#ecebe6"], text: "#239b98", print: "#1d918e", orangeAlpha: 1, swatch: ["#ffffff", "#1d9592"] },
-  { id: "midnight", name: "Midnight", bg: ["#16191b", "#0b0d0e"], text: "#5fd6cb", print: "#49c2b8", orangeAlpha: 0.95, swatch: ["#111416", "#5fd6cb"] },
-  { id: "sunset", name: "Vice Sunset", bg: ["#ffd9c4", "#ff9bb3"], text: "#253558", print: "#2c3e66", orangeAlpha: 0.95, swatch: ["#ffb6b9", "#253558"] },
-  { id: "keys", name: "Leonida Keys", bg: ["#eefcf9", "#bfeee6"], text: "#0f5d66", print: "#127079", orangeAlpha: 1, swatch: ["#cff3ee", "#0f5d66"] },
-  { id: "heritage", name: "Heritage", bg: ["#f5ebd3", "#e7d6b0"], text: "#2f5a3b", print: "#355f42", orangeAlpha: 0.9, swatch: ["#efe2c2", "#2f5a3b"] },
+  { id: "goodtime", name: "Goodtime State", bg: ["#fbfbf8", "#ecebe6"], text: "#239b98", print: "#1d918e", orangeAlpha: 1, swatch: ["#ffffff", "#1d9592"], band: ["#eaa944", "#cf7a28"] },
+  { id: "midnight", name: "Midnight", bg: ["#16191b", "#0b0d0e"], text: "#5fd6cb", print: "#49c2b8", orangeAlpha: 0.95, swatch: ["#111416", "#5fd6cb"], band: ["#16514d", "#0f7d74"] },
+  { id: "sunset", name: "Vice Sunset", bg: ["#ffd9c4", "#ff9bb3"], text: "#253558", print: "#2c3e66", orangeAlpha: 0.95, swatch: ["#ffb6b9", "#253558"], band: ["#ff6f91", "#d9437a"] },
+  { id: "keys", name: "Leonida Keys", bg: ["#eefcf9", "#bfeee6"], text: "#0f5d66", print: "#127079", orangeAlpha: 1, swatch: ["#cff3ee", "#0f5d66"], band: ["#9be2d8", "#62c2b8"] },
+  { id: "heritage", name: "Heritage", bg: ["#f5ebd3", "#e7d6b0"], text: "#2f5a3b", print: "#355f42", orangeAlpha: 0.9, swatch: ["#efe2c2", "#2f5a3b"], band: ["#cfae6c", "#a8823d"] },
 ];
 
 export type FrameKind = "none" | "chrome" | "black" | "gold";
@@ -118,15 +120,21 @@ export interface TextColors {
 const GAME_COLORS: Record<string, TextColors> = {
   goodtime: { header: "#26302c", number: "#1b231f", footer: "#2f6b5c" },
 };
-/** Gloriana plates have one look each, so they ignore the style. */
+/** The official Gloriana inks. */
 const GLORIANA_COLORS: Partial<Record<Variation, TextColors>> = {
   vintage: { header: "#02714e", number: "#02714e", footer: "#02714e" },
   modern: { header: "#c8302b", number: "#151515", footer: "#c8302b" },
 };
 
+/** The first style is each plate's official look: Goodtime State on Leonida, the real plate's inks on Gloriana. */
+const officialLook = (style: PlateStyle, variation: Variation) => style.id === STYLES[0].id && LOOKS[variation].plate === "gloriana";
+
+export const styleName = (style: PlateStyle, plate: PlateKind) => (plate === "gloriana" && style.id === STYLES[0].id ? "Official" : style.name);
+
 /** A style's own colours (what "Reset" goes back to). */
 export function styleColors(style: PlateStyle, variation: Variation): TextColors {
-  return GLORIANA_COLORS[variation] ?? ((variation === "game" && GAME_COLORS[style.id]) || { header: style.print, number: style.text, footer: style.print });
+  if (officialLook(style, variation)) return GLORIANA_COLORS[variation]!;
+  return (variation === "game" && GAME_COLORS[style.id]) || { header: style.print, number: style.text, footer: style.print };
 }
 
 export interface PlateDesign {
@@ -323,10 +331,20 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art
 
   // Reflective sheeting: soft vertical gradient, a faint sheen and fine grain.
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  const stops: [number, string][] = GLORIANA_BG[d.variation] ?? [
-    [0, style.bg[0]],
-    [1, style.bg[1]],
-  ];
+  const stops: [number, string][] = officialLook(style, d.variation)
+    ? GLORIANA_BG[d.variation]!
+    : d.variation === "vintage"
+      ? // The style's sheeting, deepening into its own band along the bottom.
+        [
+          [0, style.bg[0]],
+          [0.56, style.bg[1]],
+          [0.8, style.band[0]],
+          [1, style.band[1]],
+        ]
+      : [
+          [0, style.bg[0]],
+          [1, style.bg[1]],
+        ];
   for (const [at, c] of stops) g.addColorStop(at, c);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);

@@ -18,6 +18,7 @@ import {
   loadPlateAssets,
   plateOf,
   styleColors,
+  styleName,
   type FrameKind,
   type PlateAssets,
   type PlateKind,
@@ -258,15 +259,12 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
       bump.current = Object.assign(document.createElement("canvas"), { width: PLATE_W, height: PLATE_H });
       const t: Record<string, string> = {};
       const c = Object.assign(document.createElement("canvas"), { width: 512, height: 256 });
-      const thumb = (variation: Variation, s = STYLES[0]) => {
+      const thumb = (variation: Variation, s: (typeof STYLES)[number]) => {
         drawPlateFace(c.getContext("2d")!, { text: "ABC1234", style: s, colors: styleColors(s, variation), variation, split: true, rounded: false, layout: DEFAULT_LAYOUT }, loaded, 512, 256);
         return c.toDataURL("image/webp", 0.9);
       };
       for (const p of PLATES)
-        for (const v of p.variations) {
-          if (p.id === "leonida") for (const s of STYLES) t[`${v.id}:${s.id}`] = thumb(v.id, s);
-          else t[v.id] = thumb(v.id);
-        }
+        for (const v of p.variations) for (const s of STYLES) t[`${v.id}:${s.id}`] = thumb(v.id, s);
       setThumbs(t);
       setReady(true);
     });
@@ -468,12 +466,8 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
       <div className="grid gap-4">
         <Panel>
           <Segmented<PlateKind> label="Plate" value={plate.id} onChange={changePlate} options={PLATES.map((p) => ({ id: p.id, label: p.name }))} className="mb-4" />
-          {/* Leonida comes in colour styles; each Gloriana variation is a look of its own. */}
-          <div role="radiogroup" aria-label={plate.id === "leonida" ? "Plate style" : "Variation"} className={cn("grid gap-2", plate.id === "leonida" ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3" : "grid-cols-2")}>
-            {(plate.id === "leonida"
-              ? STYLES.map((s) => ({ id: s.id, name: s.name, thumb: `${variation}:${s.id}`, active: s.id === styleId, pick: () => setStyleId(s.id) }))
-              : plate.variations.map((v) => ({ id: v.id, name: v.name, thumb: v.id, active: v.id === variation, pick: () => setVariation(v.id) }))
-            ).map((t) => (
+          <div role="radiogroup" aria-label="Plate style" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
+            {STYLES.map((s) => ({ id: s.id, name: styleName(s, plate.id), thumb: `${variation}:${s.id}`, active: s.id === styleId, pick: () => setStyleId(s.id) })).map((t) => (
               <button
                 key={t.id}
                 type="button"
@@ -494,12 +488,10 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
             ))}
           </div>
           <div className="mt-3 divide-y divide-white/8 border-t border-white/8">
-            {plate.id === "leonida" && (
-              <div className="flex items-center justify-between gap-4 py-3">
-                <span className="text-[13px] font-bold tracking-[0.14em] text-white/70 uppercase">Variation</span>
-                <Segmented<Variation> label="Variation" value={variation} onChange={setVariation} options={plate.variations.map((v) => ({ id: v.id, label: v.name }))} className="w-[180px]" />
-              </div>
-            )}
+            <div className="flex items-center justify-between gap-4 py-3">
+              <span className="text-[13px] font-bold tracking-[0.14em] text-white/70 uppercase">Variation</span>
+              <Segmented<Variation> label="Variation" value={variation} onChange={setVariation} options={plate.variations.map((v) => ({ id: v.id, label: v.name }))} className="w-[200px]" />
+            </div>
             <Toggle label="Rounded characters" checked={rounded} onChange={setRounded} />
             <Toggle label={`Split around the ${look.artName}`} checked={split} onChange={setSplit} />
           </div>

@@ -8,16 +8,19 @@ import {
   PLATE_H,
   PLATE_W,
   DEFAULT_LAYOUT,
+  LOOKS,
+  PLATES,
   STYLES,
-  VARIATIONS,
   cleanPlateText,
   drawPlateBump,
   drawPlateFace,
   drawPlatePicture,
   loadPlateAssets,
+  plateOf,
   styleColors,
   type FrameKind,
   type PlateAssets,
+  type PlateKind,
   type PlateLayout,
   type TextColors,
   type Variation,
@@ -208,7 +211,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
   const [text, setText] = useState(() => cleanPlateText(initial.text ?? "VCECTY") || "VCECTY");
   const [styleId, setStyleId] = useState(() => (STYLES.some((s) => s.id === initial.style) ? initial.style! : STYLES[0].id));
   const [frame, setFrame] = useState<FrameKind>(() => (FRAMES.some((f) => f.id === initial.frame) ? (initial.frame as FrameKind) : "none"));
-  const [variation, setVariation] = useState<Variation>(() => (initial.variation === "game" ? "game" : "real"));
+  const [variation, setVariation] = useState<Variation>(() => (initial.variation && initial.variation in LOOKS ? (initial.variation as Variation) : "real"));
   const [split, setSplit] = useState(initial.split !== "0");
   const [rounded, setRounded] = useState(initial.rounded === "1");
   const [linked, setLinked] = useState(initial.linked !== "0");
@@ -227,6 +230,14 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
   const [copied, setCopied] = useState(false);
 
   const style = STYLES.find((s) => s.id === styleId) ?? STYLES[0];
+  const look = LOOKS[variation];
+  const plate = plateOf(variation);
+  /** Switching plates resets the text colours, which belong to each plate's look. */
+  const changePlate = (id: PlateKind) => {
+    if (id === plate.id) return;
+    setVariation(PLATES.find((p) => p.id === id)!.variations[0].id);
+    setCustom(null);
+  };
   const defaults = useMemo(() => styleColors(style, variation), [style, variation]);
   const colors = custom ?? defaults;
   const setColor = (key: keyof TextColors, value: string) => setCustom(linked ? { header: value, number: value, footer: value } : { ...colors, [key]: value });
@@ -247,10 +258,14 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
       bump.current = Object.assign(document.createElement("canvas"), { width: PLATE_W, height: PLATE_H });
       const t: Record<string, string> = {};
       const c = Object.assign(document.createElement("canvas"), { width: 512, height: 256 });
-      for (const v of VARIATIONS)
-        for (const s of STYLES) {
-          drawPlateFace(c.getContext("2d")!, { text: "ABC1234", style: s, colors: styleColors(s, v.id), variation: v.id, split: true, rounded: false, layout: DEFAULT_LAYOUT }, loaded, 512, 256);
-          t[`${v.id}:${s.id}`] = c.toDataURL("image/webp", 0.9);
+      const thumb = (variation: Variation, s = STYLES[0]) => {
+        drawPlateFace(c.getContext("2d")!, { text: "ABC1234", style: s, colors: styleColors(s, variation), variation, split: true, rounded: false, layout: DEFAULT_LAYOUT }, loaded, 512, 256);
+        return c.toDataURL("image/webp", 0.9);
+      };
+      for (const p of PLATES)
+        for (const v of p.variations) {
+          if (p.id === "leonida") for (const s of STYLES) t[`${v.id}:${s.id}`] = thumb(v.id, s);
+          else t[v.id] = thumb(v.id);
         }
       setThumbs(t);
       setReady(true);
@@ -335,7 +350,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
-  const fileBase = `leonida-plate-${(text || "blank").toLowerCase()}`;
+  const fileBase = `${plate.id}-plate-${(text || "blank").toLowerCase()}`;
   const savePng = () => {
     if (!face.current) return;
     const c = Object.assign(document.createElement("canvas"), { width: 2400, height: frame === "none" ? 1200 : 1380 });
@@ -362,7 +377,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
         >
           {/* 2D */}
           <div className={cn("absolute inset-0 flex items-center justify-center p-[7%] transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]", dim === "2d" ? "opacity-100" : "pointer-events-none scale-95 opacity-0")}>
-            <canvas ref={picture} width={1600} height={920} aria-label={`Leonida plate reading ${text || "nothing yet"}`} role="img" className="h-auto max-h-full w-full max-w-[920px] drop-shadow-[0_40px_60px_rgb(0_0_0/0.65)]" />
+            <canvas ref={picture} width={1600} height={920} aria-label={`${plate.name} plate reading ${text || "nothing yet"}`} role="img" className="h-auto max-h-full w-full max-w-[920px] drop-shadow-[0_40px_60px_rgb(0_0_0/0.65)]" />
             {!ready && (
               <span className="absolute inset-0 flex items-center justify-center text-white/50">
                 <Loader2 className="size-6 animate-spin" />
@@ -452,37 +467,41 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
       {/* Controls */}
       <div className="grid gap-4">
         <Panel>
-          <div role="radiogroup" aria-label="Plate style" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
-            {STYLES.map((s) => {
-              const active = s.id === styleId;
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => setStyleId(s.id)}
-                  className={cn(
-                    "flex flex-col items-center gap-2 rounded-2xl border p-2 pb-2.5 transition-[border-color,background-color,opacity]",
-                    active ? "border-accent bg-accent/10" : "border-white/10 opacity-60 hover:border-white/25 hover:opacity-100",
-                  )}
-                >
-                  <span className="block w-full overflow-hidden rounded-[7px] shadow-[0_6px_16px_-6px_rgb(0_0_0/0.8)]" style={{ aspectRatio: "2 / 1", background: s.swatch[0] }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element -- generated preview */}
-                    {thumbs[`${variation}:${s.id}`] && <img src={thumbs[`${variation}:${s.id}`]} alt="" className="block size-full" />}
-                  </span>
-                  <span className="text-[12px] font-bold">{s.name}</span>
-                </button>
-              );
-            })}
+          <Segmented<PlateKind> label="Plate" value={plate.id} onChange={changePlate} options={PLATES.map((p) => ({ id: p.id, label: p.name }))} className="mb-4" />
+          {/* Leonida comes in colour styles; each Gloriana variation is a look of its own. */}
+          <div role="radiogroup" aria-label={plate.id === "leonida" ? "Plate style" : "Variation"} className={cn("grid gap-2", plate.id === "leonida" ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3" : "grid-cols-2")}>
+            {(plate.id === "leonida"
+              ? STYLES.map((s) => ({ id: s.id, name: s.name, thumb: `${variation}:${s.id}`, active: s.id === styleId, pick: () => setStyleId(s.id) }))
+              : plate.variations.map((v) => ({ id: v.id, name: v.name, thumb: v.id, active: v.id === variation, pick: () => setVariation(v.id) }))
+            ).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="radio"
+                aria-checked={t.active}
+                onClick={t.pick}
+                className={cn(
+                  "flex flex-col items-center gap-2 rounded-2xl border p-2 pb-2.5 transition-[border-color,background-color,opacity]",
+                  t.active ? "border-accent bg-accent/10" : "border-white/10 opacity-60 hover:border-white/25 hover:opacity-100",
+                )}
+              >
+                <span className="block w-full overflow-hidden rounded-[7px] bg-white/10 shadow-[0_6px_16px_-6px_rgb(0_0_0/0.8)]" style={{ aspectRatio: "2 / 1" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- generated preview */}
+                  {thumbs[t.thumb] && <img src={thumbs[t.thumb]} alt="" className="block size-full" />}
+                </span>
+                <span className="text-[12px] font-bold">{t.name}</span>
+              </button>
+            ))}
           </div>
           <div className="mt-3 divide-y divide-white/8 border-t border-white/8">
-            <div className="flex items-center justify-between gap-4 py-3">
-              <span className="text-[13px] font-bold tracking-[0.14em] text-white/70 uppercase">Variation</span>
-              <Segmented<Variation> label="Variation" value={variation} onChange={setVariation} options={VARIATIONS.map((v) => ({ id: v.id, label: v.name }))} className="w-[180px]" />
-            </div>
+            {plate.id === "leonida" && (
+              <div className="flex items-center justify-between gap-4 py-3">
+                <span className="text-[13px] font-bold tracking-[0.14em] text-white/70 uppercase">Variation</span>
+                <Segmented<Variation> label="Variation" value={variation} onChange={setVariation} options={plate.variations.map((v) => ({ id: v.id, label: v.name }))} className="w-[180px]" />
+              </div>
+            )}
             <Toggle label="Rounded characters" checked={rounded} onChange={setRounded} />
-            <Toggle label="Split around the oranges" checked={split} onChange={setSplit} />
+            <Toggle label={`Split around the ${look.artName}`} checked={split} onChange={setSplit} />
           </div>
         </Panel>
 
@@ -499,7 +518,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
                 onChange={(v) => patchLayout({ splitAt: v < 0 ? null : v })}
               />
               <Slider
-                label="Gap around the oranges"
+                label={`Gap around the ${look.artName}`}
                 value={layout.gap}
                 display={`${layout.gap > 0 ? "+" : ""}${Math.round(layout.gap * 1000) / 10}%`}
                 min={LIMITS.gap[0]}
@@ -553,9 +572,9 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
               <ColorField label="All text" value={colors.number} onChange={(v) => setColor("number", v)} />
             ) : (
               <>
-                <ColorField label="LEONIDA" value={colors.header} onChange={(v) => setColor("header", v)} />
+                <ColorField label={look.header.toUpperCase()} value={colors.header} onChange={(v) => setColor("header", v)} />
                 <ColorField label="Plate number" value={colors.number} onChange={(v) => setColor("number", v)} />
-                <ColorField label="GOODTIME STATE" value={colors.footer} onChange={(v) => setColor("footer", v)} />
+                <ColorField label={look.footer} value={colors.footer} onChange={(v) => setColor("footer", v)} />
               </>
             )}
           </div>

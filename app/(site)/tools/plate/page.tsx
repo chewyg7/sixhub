@@ -4,7 +4,7 @@ import { PlateCreator } from "@/features/plate/plate-creator";
 
 export const metadata: Metadata = {
   title: "Leonida Plate Creator",
-  description: "Design your own Leonida licence plate from GTA VI: type your text, pick a style and frame, then see it stamped in 3D and bolted to a car.",
+  description: "Design your own Leonida or Gloriana licence plate from GTA VI: type your text, pick a style and frame, then see it stamped in 3D and bolted to a car.",
   alternates: { canonical: "/tools/plate" },
 };
 
@@ -17,7 +17,7 @@ export default async function PlatePage({ searchParams }: PageProps<"/tools/plat
       <PageHeader
         crumbs={[{ href: "/tools", label: "Tools" }, { label: "Leonida Plate Creator" }]}
         title="Leonida Plate Creator"
-        lede="Make it yours in the Goodtime State. Type your plate, pick a style, then flip to 3D to turn it in your hands or see it bolted to your ride."
+        lede="Make it yours in the Goodtime State, or next door in Gloriana. Type your plate, pick a style, then flip to 3D to turn it in your hands or see it bolted to your ride."
       />
       <PlateCreator
         initial={{

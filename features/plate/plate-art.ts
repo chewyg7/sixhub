@@ -1,8 +1,9 @@
 /**
- * The Leonida plate, drawn on a canvas: the face (colours, type, oranges) and
- * a matching height map that makes the stamped parts (characters, rim) stand
- * up under 3D lighting. Proportions follow a real 12" × 6" US plate and the
- * official GTA VI Leonida plate.
+ * The plates, drawn on a canvas: the face (colours, type, artwork) and a
+ * matching height map that makes the stamped parts (characters, rim) stand
+ * up under 3D lighting. Proportions follow a real 12" × 6" US plate; the
+ * Leonida plate follows the official GTA VI one, Gloriana the vintage and
+ * modern plates seen in GTA VI.
  */
 
 export const PLATE_W = 2048;
@@ -43,30 +44,87 @@ export const cleanPlateText = (s: string) =>
 
 /* ---------- Design ---------- */
 
-/** "Real" follows the real-world plate photo; "Game" the plate as seen in GTA VI, with its own oranges. */
-export type Variation = "real" | "game";
-export const VARIATIONS: { id: Variation; name: string }[] = [
-  { id: "real", name: "Real" },
-  { id: "game", name: "Game" },
+export type PlateKind = "leonida" | "gloriana";
+
+/**
+ * Leonida: "Real" follows the real-world plate photo, "Game" the plate as seen in GTA VI with its own oranges.
+ * Gloriana: "Vintage" is the older dolphin plate, "Modern" the current one.
+ */
+export type Variation = "real" | "game" | "vintage" | "modern";
+
+export const PLATES: { id: PlateKind; name: string; variations: { id: Variation; name: string }[] }[] = [
+  {
+    id: "leonida",
+    name: "Leonida",
+    variations: [
+      { id: "real", name: "Real" },
+      { id: "game", name: "Game" },
+    ],
+  },
+  {
+    id: "gloriana",
+    name: "Gloriana",
+    variations: [
+      { id: "vintage", name: "Vintage" },
+      { id: "modern", name: "Modern" },
+    ],
+  },
 ];
 
+type ArtKey = "orange" | "orangeGame" | "dolphin";
+
+/** What changes from one variation to the next. */
+interface Look {
+  plate: PlateKind;
+  /** Names of the printed lines, for the colour pickers. */
+  header: string;
+  footer: string;
+  /** What the characters split around. */
+  artName: string;
+  art: ArtKey;
+  /** Centre (plate fractions) and width (fraction of the plate's width) of the artwork. */
+  artX: number;
+  artY: number;
+  artW: number;
+  /** The plate number: cap height, baseline and half the gap left for the artwork (plate fractions). */
+  number: { cap: number; baseline: number; halfGap: number };
+}
+
+const LEONIDA_NUMBER = { cap: 0.47, baseline: 0.735, halfGap: 0.1135 };
+const GLORIANA_NUMBER = { cap: 0.44, baseline: 0.72, halfGap: 0.13 };
+
+export const LOOKS: Record<Variation, Look> = {
+  // The game art's fruit sits further right in its image, so it's nudged left to look centred.
+  real: { plate: "leonida", header: "LEONIDA", footer: "GOODTIME STATE", artName: "oranges", art: "orange", artX: 0.535, artY: 0.5, artW: 0.46, number: LEONIDA_NUMBER },
+  game: { plate: "leonida", header: "LEONIDA", footer: "GOODTIME STATE", artName: "oranges", art: "orangeGame", artX: 0.518, artY: 0.5, artW: 0.4, number: LEONIDA_NUMBER },
+  vintage: { plate: "gloriana", header: "Gloriana", footer: "UNITED STATES", artName: "dolphin", art: "dolphin", artX: 0.5, artY: 0.53, artW: 0.25, number: GLORIANA_NUMBER },
+  modern: { plate: "gloriana", header: "GLORIANA", footer: "AMERICA", artName: "dolphin", art: "dolphin", artX: 0.5, artY: 0.52, artW: 0.29, number: GLORIANA_NUMBER },
+};
+
+export const plateOf = (v: Variation) => PLATES.find((p) => p.id === LOOKS[v].plate)!;
+
 export interface TextColors {
-  /** LEONIDA */
+  /** LEONIDA / Gloriana */
   header: string;
   /** The plate number. */
   number: string;
-  /** GOODTIME STATE */
+  /** GOODTIME STATE / UNITED STATES / AMERICA */
   footer: string;
 }
 
-/** The in-game official plate uses dark lettering instead of teal. */
+/** The in-game official Leonida plate uses dark lettering instead of teal. */
 const GAME_COLORS: Record<string, TextColors> = {
   goodtime: { header: "#26302c", number: "#1b231f", footer: "#2f6b5c" },
+};
+/** Gloriana plates have one look each, so they ignore the style. */
+const GLORIANA_COLORS: Partial<Record<Variation, TextColors>> = {
+  vintage: { header: "#27324a", number: "#1e2331", footer: "#3b2410" },
+  modern: { header: "#c8302b", number: "#151515", footer: "#c8302b" },
 };
 
 /** A style's own colours (what "Reset" goes back to). */
 export function styleColors(style: PlateStyle, variation: Variation): TextColors {
-  return (variation === "game" && GAME_COLORS[style.id]) || { header: style.print, number: style.text, footer: style.print };
+  return GLORIANA_COLORS[variation] ?? ((variation === "game" && GAME_COLORS[style.id]) || { header: style.print, number: style.text, footer: style.print });
 }
 
 export interface PlateDesign {
@@ -95,15 +153,12 @@ export interface PlateLayout {
 
 export const DEFAULT_LAYOUT: PlateLayout = { splitAt: null, gap: 0, tracking: 0.04, shift: 0 };
 
-/** Where each variation's oranges are centred across the plate (the art isn't symmetric). */
-export const ORANGE_X: Record<Variation, number> = { real: 0.535, game: 0.518 };
-
 /* ---------- Assets ---------- */
 
-const FONT = { leonida: "PlateLeonida", goodtime: "PlateGoodtime", number: "PlateNumber", numberRounded: "PlateNumberRounded" } as const;
-const ORANGES: Record<Variation, string> = { real: "/tools/plate/orange.webp", game: "/tools/plate/orange-game.webp" };
+const FONT = { leonida: "PlateLeonida", goodtime: "PlateGoodtime", matisse: "PlateMatisse", number: "PlateNumber", numberRounded: "PlateNumberRounded" } as const;
+const ART: Record<ArtKey, string> = { orange: "/tools/plate/orange.webp", orangeGame: "/tools/plate/orange-game.webp", dolphin: "/tools/plate/dolphin.webp" };
 
-export type PlateAssets = Record<Variation, HTMLImageElement>;
+export type PlateAssets = Record<ArtKey, HTMLImageElement>;
 let assets: Promise<PlateAssets> | null = null;
 
 function image(src: string) {
@@ -116,19 +171,20 @@ function image(src: string) {
   });
 }
 
-/** Loads the plate fonts and both sets of oranges once. */
+/** Loads the plate fonts and artwork once. */
 export function loadPlateAssets(): Promise<PlateAssets> {
   if (assets) return assets;
   const fonts = [
     new FontFace(FONT.leonida, "url(/tools/plate/leonida.otf)"),
     new FontFace(FONT.goodtime, "url(/tools/plate/goodtime.woff)"),
+    new FontFace(FONT.matisse, "url(/tools/plate/matisse.otf)"),
     new FontFace(FONT.number, "url(/tools/plate/number.woff)"),
     new FontFace(FONT.numberRounded, "url(/tools/plate/number-rounded.woff)"),
   ];
-  assets = Promise.all([...fonts.map((f) => f.load().then((ff) => document.fonts.add(ff))), image(ORANGES.real), image(ORANGES.game)]).then((r) => ({
-    real: r[r.length - 2] as HTMLImageElement,
-    game: r[r.length - 1] as HTMLImageElement,
-  }));
+  const keys = Object.keys(ART) as ArtKey[];
+  assets = Promise.all([Promise.all(fonts.map((f) => f.load().then((ff) => document.fonts.add(ff)))), Promise.all(keys.map((k) => image(ART[k])))]).then(
+    ([, images]) => Object.fromEntries(keys.map((k, i) => [k, images[i]])) as PlateAssets,
+  );
   assets.catch(() => (assets = null));
   return assets;
 }
@@ -168,7 +224,7 @@ function drawTracked(
   family: string,
   opts: { cx: number; baseline: number; cap: number; tracking: number; maxWidth: number; align?: "center" | "left" | "right"; arc?: number },
   paint: (ch: string, x: number, y: number) => void,
-) {
+): { left: number; right: number } {
   // Size the font so the capitals are exactly `cap` tall.
   ctx.font = `100px ${family}`;
   const capAt100 = ctx.measureText("H").actualBoundingBoxAscent || 72;
@@ -203,17 +259,20 @@ function drawTracked(
     x += (widths[i] + track) * sx;
   });
   ctx.restore();
+  const left = align === "center" ? opts.cx - total / 2 : align === "left" ? opts.cx : opts.cx - total;
+  return { left, right: left + total };
 }
 
-/** The plate number: cap height, baseline, half the gap left for the oranges, and the side margins (plate fractions). */
-const NUMBER = { cap: 0.47, baseline: 0.735, halfGap: 0.1135, leftMin: 0.055, rightMax: 0.945 };
+/** Side margins for the plate number (plate fractions). */
+const NUMBER = { leftMin: 0.055, rightMax: 0.945 };
 
 type CharacterDesign = Pick<PlateDesign, "text" | "split" | "rounded" | "variation" | "layout">;
 
 function eachCharacter(ctx: CanvasRenderingContext2D, W: number, H: number, d: CharacterDesign, paint: (ch: string, x: number, y: number) => void) {
   const family = d.rounded ? FONT.numberRounded : FONT.number;
   const { gap, tracking, shift } = d.layout;
-  const common = { cap: NUMBER.cap * H, baseline: NUMBER.baseline * H, tracking };
+  const look = LOOKS[d.variation];
+  const common = { cap: look.number.cap * H, baseline: look.number.baseline * H, tracking };
   const minX = NUMBER.leftMin + Math.min(0, shift);
   const maxX = NUMBER.rightMax + Math.max(0, shift);
   if (!d.split) {
@@ -221,22 +280,40 @@ function eachCharacter(ctx: CanvasRenderingContext2D, W: number, H: number, d: C
     drawTracked(ctx, d.text, family, { ...common, cx: (0.5 + shift) * W, maxWidth: (NUMBER.rightMax - NUMBER.leftMin) * W }, paint);
     return;
   }
-  // Split either side of the oranges, like "VCE 🍊 CTY", hugging them with an even gap.
+  // Split either side of the artwork, like "VCE 🍊 CTY", hugging it with an even gap.
   const n = d.text.length;
   const leftN = d.layout.splitAt === null ? Math.floor(n / 2) : Math.max(0, Math.min(n, d.layout.splitAt));
   const left = d.text.slice(0, leftN);
   const right = d.text.slice(leftN);
-  const centre = ORANGE_X[d.variation] - 0.0035 + shift;
-  const leftEnd = centre - NUMBER.halfGap - gap;
-  const rightStart = centre + NUMBER.halfGap + gap;
+  const centre = look.artX - (look.plate === "leonida" ? 0.0035 : 0) + shift;
+  const leftEnd = centre - look.number.halfGap - gap;
+  const rightStart = centre + look.number.halfGap + gap;
   if (left) drawTracked(ctx, left, family, { ...common, cx: leftEnd * W, maxWidth: Math.max(0.05, leftEnd - minX) * W, align: "right" }, paint);
   if (right) drawTracked(ctx, right, family, { ...common, cx: rightStart * W, maxWidth: Math.max(0.05, maxX - rightStart) * W, align: "left" }, paint);
 }
 
 /* ---------- Face ---------- */
 
+/** Sheeting colours for the Gloriana plates, top → bottom. */
+const GLORIANA_BG: Partial<Record<Variation, [number, string][]>> = {
+  // White, warming into the sunset band along the bottom.
+  vintage: [
+    [0, "#fbfbf7"],
+    [0.66, "#f6f3ea"],
+    [0.79, "#f4dc93"],
+    [0.89, "#eaa944"],
+    [1, "#cf7a28"],
+  ],
+  modern: [
+    [0, "#fbfaf4"],
+    [1, "#ece8dc"],
+  ],
+};
+
 export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art: PlateAssets, W = PLATE_W, H = PLATE_H) {
   const { style, colors } = d;
+  const look = LOOKS[d.variation];
+  const leonida = look.plate === "leonida";
   ctx.clearRect(0, 0, W, H);
   ctx.save();
   roundRect(ctx, 0, 0, W, H, CORNER * H);
@@ -244,8 +321,11 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art
 
   // Reflective sheeting: soft vertical gradient, a faint sheen and fine grain.
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, style.bg[0]);
-  g.addColorStop(1, style.bg[1]);
+  const stops: [number, string][] = GLORIANA_BG[d.variation] ?? [
+    [0, style.bg[0]],
+    [1, style.bg[1]],
+  ];
+  for (const [at, c] of stops) g.addColorStop(at, c);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
   const sheen = ctx.createLinearGradient(0, 0, W, H);
@@ -256,21 +336,46 @@ export function drawPlateFace(ctx: CanvasRenderingContext2D, d: PlateDesign, art
   ctx.fillRect(0, 0, W, H);
   grain(ctx, W, H);
 
-  // The oranges sit behind the characters.
-  const orange = art[d.variation];
-  const ow = (d.variation === "game" ? 0.4 : 0.46) * W;
-  const oh = (ow * orange.naturalHeight) / orange.naturalWidth;
-  ctx.globalAlpha = style.orangeAlpha;
-  // The game art's fruit sits further right in its image, so it's nudged left to look centred.
-  const ox = ORANGE_X[d.variation];
-  ctx.drawImage(orange, ox * W - ow / 2, 0.5 * H - oh / 2, ow, oh);
+  // The artwork (oranges or dolphin) sits behind the characters.
+  const pic = art[look.art];
+  const ow = look.artW * W;
+  const oh = (ow * pic.naturalHeight) / pic.naturalWidth;
+  ctx.globalAlpha = leonida ? style.orangeAlpha : 1;
+  ctx.drawImage(pic, look.artX * W - ow / 2, look.artY * H - oh / 2, ow, oh);
   ctx.globalAlpha = 1;
 
-  // LEONIDA (gently arched) and GOODTIME STATE are screen printed (flat).
-  ctx.fillStyle = colors.header;
-  drawTracked(ctx, "LEONIDA", FONT.leonida, { cx: W / 2, baseline: 0.225 * H, cap: 0.125 * H, tracking: 0.05, maxWidth: 0.5 * W, arc: 2.3 * W }, (c, x, y) => ctx.fillText(c, x, y));
-  ctx.fillStyle = colors.footer;
-  drawTracked(ctx, "GOODTIME STATE", FONT.goodtime, { cx: W / 2, baseline: 0.9 * H, cap: 0.088 * H, tracking: 0.02, maxWidth: 0.47 * W }, (c, x, y) => ctx.fillText(c, x, y));
+  // The state name and motto are screen printed (flat).
+  const fill = (c: string, x: number, y: number) => ctx.fillText(c, x, y);
+  if (leonida) {
+    // LEONIDA, gently arched, over GOODTIME STATE.
+    ctx.fillStyle = colors.header;
+    drawTracked(ctx, look.header, FONT.leonida, { cx: W / 2, baseline: 0.225 * H, cap: 0.125 * H, tracking: 0.05, maxWidth: 0.5 * W, arc: 2.3 * W }, fill);
+    ctx.fillStyle = colors.footer;
+    drawTracked(ctx, look.footer, FONT.goodtime, { cx: W / 2, baseline: 0.9 * H, cap: 0.088 * H, tracking: 0.02, maxWidth: 0.47 * W }, fill);
+  } else if (d.variation === "vintage") {
+    // "Gloriana" between two stars, and ★ UNITED STATES ★ on the sunset band.
+    ctx.fillStyle = colors.header;
+    const head = drawTracked(ctx, look.header, FONT.leonida, { cx: W / 2, baseline: 0.215 * H, cap: 0.112 * H, tracking: 0.015, maxWidth: 0.44 * W }, fill);
+    star(ctx, head.left - 0.05 * H, 0.165 * H, 0.032 * H);
+    star(ctx, head.right + 0.05 * H, 0.165 * H, 0.032 * H);
+    ctx.fillStyle = colors.footer;
+    const foot = drawTracked(ctx, look.footer, FONT.leonida, { cx: W / 2, baseline: 0.925 * H, cap: 0.058 * H, tracking: 0.14, maxWidth: 0.4 * W }, fill);
+    star(ctx, foot.left - 0.045 * H, 0.896 * H, 0.022 * H);
+    star(ctx, foot.right + 0.045 * H, 0.896 * H, 0.022 * H);
+    sticker(ctx, W, H, { x: 0.885, y: 0.135, w: 0.075, h: 0.125, bg: "#3d4450", ink: "#e9ecef" });
+  } else {
+    // Red serif GLORIANA over • AMERICA •.
+    ctx.fillStyle = colors.header;
+    drawTracked(ctx, look.header, FONT.matisse, { cx: W / 2, baseline: 0.205 * H, cap: 0.105 * H, tracking: 0.09, maxWidth: 0.48 * W }, fill);
+    ctx.fillStyle = colors.footer;
+    const foot = drawTracked(ctx, look.footer, FONT.matisse, { cx: W / 2, baseline: 0.915 * H, cap: 0.08 * H, tracking: 0.16, maxWidth: 0.4 * W }, fill);
+    for (const x of [foot.left - 0.06 * H, foot.right + 0.06 * H]) {
+      ctx.beginPath();
+      ctx.arc(x, 0.875 * H, 0.014 * H, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    sticker(ctx, W, H, { x: 0.9, y: 0.835, w: 0.07, h: 0.115, bg: "#f2b330", ink: "#1d1a14" });
+  }
 
   // Stamped characters, with a whisper of shadow so they read as raised in 2D too.
   ctx.fillStyle = colors.number;
@@ -354,7 +459,7 @@ export function drawPlateNormals(target: HTMLCanvasElement, height: HTMLCanvasEl
   ctx.drawImage(height, 0, 0, W, H);
   const src = ctx.getImageData(0, 0, W, H).data;
   const out = ctx.createImageData(W, H);
-  const h = (x: number, y: number) => src[((Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))) << 2)] / 255;
+  const h = (x: number, y: number) => src[(Math.min(H - 1, Math.max(0, y)) * W + Math.min(W - 1, Math.max(0, x))) << 2] / 255;
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
       // Sobel slope, x to the right and y up (normal maps use OpenGL's convention).
@@ -368,6 +473,35 @@ export function drawPlateNormals(target: HTMLCanvasElement, height: HTMLCanvasEl
       out.data[i + 3] = 255;
     }
   ctx.putImageData(out, 0, 0);
+}
+
+/** A small five-pointed star in the current colour. */
+function star(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 ? r * 0.42 : r;
+    ctx.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+/** A registration sticker: a little rounded label with the state and the year. */
+function sticker(ctx: CanvasRenderingContext2D, W: number, H: number, s: { x: number; y: number; w: number; h: number; bg: string; ink: string }) {
+  const w = s.w * W;
+  const h = s.h * H;
+  const x = s.x * W - w / 2;
+  const y = s.y * H - h / 2;
+  const fill = (c: string, px: number, py: number) => ctx.fillText(c, px, py);
+  ctx.save();
+  ctx.fillStyle = s.bg;
+  roundRect(ctx, x, y, w, h, 0.012 * H);
+  ctx.fill();
+  ctx.fillStyle = s.ink;
+  drawTracked(ctx, "GLA", FONT.goodtime, { cx: x + w / 2, baseline: y + h * 0.36, cap: h * 0.2, tracking: 0.12, maxWidth: w * 0.8 }, fill);
+  drawTracked(ctx, "26", FONT.number, { cx: x + w / 2, baseline: y + h * 0.86, cap: h * 0.42, tracking: 0.04, maxWidth: w * 0.8 }, fill);
+  ctx.restore();
 }
 
 /* ---------- 2D frame (PNG export and 2D view) ---------- */

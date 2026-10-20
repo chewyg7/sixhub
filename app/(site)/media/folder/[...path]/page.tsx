@@ -25,6 +25,7 @@ export async function generateMetadata({ params }: PageProps<"/media/folder/[...
     title: trail.map((t) => t.name).join(" · "),
     description: folder.description || `${pluralize(folder.total, "official GTA VI media item")} in ${folder.name}.`,
     alternates: { canonical: `/media/folder/${path.join("/")}` },
+    openGraph: { images: [{ url: `/og/folder?path=${encodeURIComponent(path.join("/"))}`, width: 1200, height: 630, alt: folder.name }] },
   };
 }
 

@@ -42,7 +42,8 @@ export async function generateMetadata(): Promise<Metadata> {
     applicationName: SITE.name,
     // Pages set their own canonical URL (the homepage's is on app/(site)/page.tsx), so none inherits "/".
     openGraph: { type: "website", siteName: SITE.name, url: SITE.url, title: site.title, description: site.description, images: [{ url: "/brand/logo-1200.webp", alt: SITE.name }] },
-    twitter: { card: "summary_large_image", title: site.title, description: site.description, images: ["/brand/logo-1200.webp"] },
+    // No twitter:image, so X uses each page's og:image card (see lib/og.tsx).
+    twitter: { card: "summary_large_image", title: site.title, description: site.description },
     // Installed to the home screen: full screen, status bar over the page.
     appleWebApp: { capable: true, title: "GTA 6 Hub", statusBarStyle: "black-translucent" },
     // Older iPhones (iOS 16 and below) only go full screen with the Apple-specific tag.

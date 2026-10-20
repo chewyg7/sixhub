@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: PageProps<"/u/[username]">): 
     title: `${user.displayName} (@${user.username})`,
     description,
     alternates: { canonical: `/@${user.username}` },
-    openGraph: { title: `${user.displayName} · GTA 6 Hub`, description, images: user.avatarUrl ? [{ url: user.avatarUrl }] : undefined },
+    openGraph: { title: `${user.displayName} · GTA 6 Hub`, description },
   };
 }
 

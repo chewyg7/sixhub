@@ -7,7 +7,7 @@ import { TOOLS } from "@/lib/tools";
 
 export const metadata: Metadata = {
   title: "Tools",
-  description: "Free GTA VI fan tools: a VI text generator and a wallpaper maker.",
+  description: "Free GTA VI fan tools: a licence plate creator, a VI text generator and a wallpaper maker.",
   alternates: { canonical: "/tools" },
 };
 

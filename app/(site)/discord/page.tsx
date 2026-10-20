@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { ArrowUpRight, Gamepad2, MessagesSquare, Sparkles } from "lucide-react";
+import { Gamepad2, MessagesSquare, Sparkles } from "lucide-react";
 import { Container } from "@/components/layout/page";
 import { DiscordIcon } from "@/components/layout/social-links";
-import { Magnetic, SplitReveal, Stagger } from "@/components/motion/reveal";
+import { SplitReveal, Stagger } from "@/components/motion/reveal";
+import { JoinButton } from "@/components/discord/join-button";
 import { getSettings } from "@/lib/content";
 import { getDiscordServer, inviteCode } from "@/lib/discord";
 
@@ -22,25 +23,6 @@ const REASONS = [
   { icon: Sparkles, title: "All things Rockstar", body: "GTA, Red Dead and the rest of Rockstar’s worlds. If it’s Rockstar, it’s on topic." },
   { icon: MessagesSquare, title: "And everything else", body: "Gaming, memes and plain chatting. Plenty happens outside the GTA channels too." },
 ];
-
-function JoinButton({ href, members }: { href: string; members: number | null }) {
-  return (
-    <Magnetic>
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        data-cursor="view"
-        data-cursor-label="Join"
-        className="group inline-flex h-16 items-center gap-3 rounded-full bg-[#5865F2] pr-7 pl-5 text-[18px] font-bold text-white shadow-[0_18px_50px_-12px_rgb(88_101_242/0.85)] transition-[transform,background-color] duration-500 hover:scale-[1.04] hover:bg-[#6b77f5] active:scale-[0.97]"
-      >
-        <DiscordIcon className="size-7 transition-transform duration-500 group-hover:-rotate-12" />
-        Join{members ? ` ${fmt(members)} members` : " the server"}
-        <ArrowUpRight className="size-5 transition-transform duration-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-      </a>
-    </Magnetic>
-  );
-}
 
 export default async function DiscordPage() {
   const { socials } = await getSettings();

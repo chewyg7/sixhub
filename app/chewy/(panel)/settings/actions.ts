@@ -51,8 +51,6 @@ export async function saveHome(_: ActionState, f: FormData): Promise<ActionState
     const home = {
       playSlug: must(str(f, "playSlug"), "Hero trailer"),
       galleryCollection: str(f, "galleryCollection"),
-      viewerStill: must(str(f, "viewerStill"), "Viewer still"),
-      viewerPicks: lines(f, "viewerPicks").map((s) => must(s, "Viewer picks")),
     };
     repo.saveSettings("home", home);
     await audit(user, "settings.home", null, home);

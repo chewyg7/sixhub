@@ -433,7 +433,15 @@ export function getSettings(): SiteSettings {
 /** Fills gaps in stored site content and keeps every home section exactly once. */
 function normalizeSite(s: Partial<SiteSettings["site"]> | null): SiteSettings["site"] {
   const d = DEFAULT_SETTINGS.site;
-  const stored = (s?.sections ?? []).filter((x) => d.sections.some((y) => y.id === x.id));
+  // The old Media Viewer promo became the fan tools section.
+  const renamed = (s?.sections ?? []).map((x) => ((x.id as string) === "viewer" ? { ...d.sections.find((y) => y.id === "tools")!, enabled: x.enabled } : x));
+  const stored = renamed.filter((x, i) => d.sections.some((y) => y.id === x.id) && renamed.findIndex((y) => y.id === x.id) === i);
+  // Sections added in later versions slot in where they sit by default (after the one before them).
+  for (const [i, def] of d.sections.entries()) {
+    if (stored.some((x) => x.id === def.id)) continue;
+    const after = i === 0 ? -1 : stored.findIndex((x) => x.id === d.sections[i - 1].id);
+    stored.splice(after + 1, 0, def);
+  }
   const seen = new Set(stored.map((x) => x.id));
   return {
     ...d,

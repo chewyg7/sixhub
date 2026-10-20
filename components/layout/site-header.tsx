@@ -15,7 +15,7 @@ import { useSiteData } from "@/components/site-data";
 import { DEFAULT_SETTINGS } from "@/data/settings";
 import type { SiteLink } from "@/types/content";
 import { TOOLS } from "@/lib/tools";
-import { SocialLinks } from "./social-links";
+import { DiscordIcon, SocialLinks } from "./social-links";
 import { NavLogo } from "./nav-logo";
 import { TabBar } from "./tab-bar";
 import { SettingsPanel } from "./menu-settings";
@@ -44,6 +44,7 @@ const isActive = (match: string[], path: string) => match.some((m) => path === m
 export function SiteHeader({ previews, nav: navLinks = DEFAULT_SETTINGS.site.nav, menu = DEFAULT_SETTINGS.site.menu }: { previews: Record<string, MenuPreview>; nav?: SiteLink[]; menu?: SiteLink[] }) {
   const path = usePathname();
   const { open: openSearch } = useCommandPalette();
+  const { socials } = useSiteData().settings;
   const [menuOpen, setMenuOpen] = useState(false);
   const bar = useRef<HTMLDivElement>(null);
   const nav = useRef<HTMLElement>(null);
@@ -138,6 +139,19 @@ export function SiteHeader({ previews, nav: navLinks = DEFAULT_SETTINGS.site.nav
             <div className="flex-1 lg:hidden" />
 
             <div className="flex shrink-0 items-center gap-1.5">
+              {socials.discord && (
+                <a
+                  href={socials.discord}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Join our Discord"
+                  title="Join our Discord"
+                  className="flex size-11 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-[#5865F2] hover:text-white xl:w-auto xl:gap-2 xl:bg-[#5865F2]/20 xl:px-4 xl:text-[14px] xl:font-bold xl:text-white"
+                >
+                  <DiscordIcon className="size-[19px]" />
+                  <span className="hidden xl:inline">Discord</span>
+                </a>
+              )}
               <button
                 type="button"
                 onClick={() => openSearch()}

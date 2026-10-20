@@ -94,12 +94,6 @@ export function SettingsForms({ settings: s, videos, collections }: { settings: 
             ))}
           </Select>
         </Field>
-        <Field label="Media Viewer still (media slug)">
-          <Input name="viewerStill" defaultValue={s.home.viewerStill} />
-        </Field>
-        <Field label="Viewer quick picks (one media slug per line)">
-          <Textarea name="viewerPicks" defaultValue={s.home.viewerPicks.join("\n")} className="font-mono text-[13px]" />
-        </Field>
       </Form>
     </div>
   );

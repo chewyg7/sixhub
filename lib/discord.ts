@@ -1,4 +1,5 @@
 import "server-only";
+import { getSettings } from "@/lib/content";
 
 /** Public info about a Discord server, from its invite (no bot or token needed). */
 export interface DiscordServer {
@@ -74,4 +75,12 @@ export async function getDiscordServer(code: string): Promise<DiscordServer | nu
   } catch {
     return null;
   }
+}
+
+/** The site's Discord invite (from settings) and its server, for the join prompts around the site. */
+export async function getDiscordInvite(): Promise<{ invite: string; server: DiscordServer | null } | null> {
+  const invite = (await getSettings()).socials.discord;
+  if (!invite) return null;
+  const code = inviteCode(invite);
+  return { invite, server: code ? await getDiscordServer(code) : null };
 }

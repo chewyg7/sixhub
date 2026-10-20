@@ -2,12 +2,13 @@ import type { HomeSection, SiteSettings } from "@/types/content";
 
 /** Home sections in their default order. Sections without a heading ignore kicker/title. */
 export const DEFAULT_SECTIONS: HomeSection[] = [
+  { id: "discord", enabled: true, kicker: "", title: "" },
   { id: "news", enabled: true, kicker: "RockstarINTEL", title: "Latest news" },
   { id: "cast", enabled: true, kicker: "The cast", title: "Meet the people" },
   { id: "regions", enabled: true, kicker: "Leonida", title: "Explore the state" },
   { id: "trailers", enabled: true, kicker: "Official trailers", title: "Watch it again" },
   { id: "gallery", enabled: true, kicker: "", title: "" },
-  { id: "viewer", enabled: true, kicker: "", title: "" },
+  { id: "tools", enabled: true, kicker: "Make something", title: "Fan tools" },
   { id: "timeline", enabled: true, kicker: "Milestones", title: "The road to release" },
   { id: "faq", enabled: true, kicker: "Questions", title: "Good to know" },
   { id: "marquee", enabled: true, kicker: "", title: "" },
@@ -15,12 +16,13 @@ export const DEFAULT_SECTIONS: HomeSection[] = [
 
 /** Which home sections have a heading the site editor can change. */
 export const SECTION_META: Record<HomeSection["id"], { label: string; heading: boolean }> = {
+  discord: { label: "Discord invite", heading: false },
   news: { label: "Latest news", heading: true },
   cast: { label: "Characters", heading: true },
   regions: { label: "Locations", heading: true },
   trailers: { label: "Trailers", heading: true },
   gallery: { label: "Gallery wall", heading: false },
-  viewer: { label: "Media Viewer promo", heading: false },
+  tools: { label: "Fan tools", heading: true },
   timeline: { label: "Timeline", heading: true },
   faq: { label: "FAQ teaser", heading: true },
   marquee: { label: "Scrolling band", heading: false },
@@ -39,8 +41,6 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   home: {
     playSlug: "gta-vi-trailer-2",
     galleryCollection: "screenshots-may-2025",
-    viewerStill: "gv-gta-vi-trailer-2-0244",
-    viewerPicks: ["gta-vi-trailer-2", "gv-gta-vi-trailer-1-0057", "gv-vice-city-hi-res-artwork", "gv-jason-and-lucia-motel-landscape"],
   },
   site: {
     title: "GTA 6 Hub",

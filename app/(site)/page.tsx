@@ -12,9 +12,10 @@ import { CastGrid } from "@/components/home/cast-grid";
 import { RegionRow } from "@/components/home/region-row";
 import { Trailers } from "@/components/home/trailers";
 import { GalleryColumns } from "@/components/home/gallery-columns";
-import { ViewerPromo } from "@/components/home/viewer-promo";
+import { ToolsShowcase } from "@/components/home/tools-showcase";
+import { DiscordBand } from "@/components/discord/discord-band";
 import { Stagger } from "@/components/motion/reveal";
-import { getAllMedia, getCollection, getFaq, getInfoEntries, getMediaBySlugs, getSettings, getTimeline } from "@/lib/content";
+import { getAllMedia, getCollection, getFaq, getInfoEntries, getSettings, getTimeline } from "@/lib/content";
 import { byNewest } from "@/lib/content/relations";
 import { fetchRockstarIntel } from "@/lib/news/rockstarintel";
 import { formatDate } from "@/lib/format";
@@ -35,11 +36,10 @@ export default async function HomePage() {
   const settings = await getSettings();
   const home = settings.home;
   const sections = settings.site.sections.filter((x) => x.enabled);
-  const [all, entries, timeline, picks, news, gallery, faq] = await Promise.all([
+  const [all, entries, timeline, news, gallery, faq] = await Promise.all([
     getAllMedia(),
     getInfoEntries(),
     getTimeline(),
-    getMediaBySlugs(home.viewerPicks),
     latestNews(),
     getCollection(home.galleryCollection),
     getFaq(),
@@ -66,7 +66,6 @@ export default async function HomePage() {
   const trailers = all.filter((m) => m.kind === "video" && m.source.origin === "trailer").sort(byNewest);
   const trailer = bySlug.get(home.playSlug) ?? trailers[0];
   const wall = (gallery?.mediaSlugs ?? []).flatMap((s) => bySlug.get(s) ?? []).slice(0, 24);
-  const still = bySlug.get(home.viewerStill);
   const featuredFaq = faq.filter((f) => f.featured).slice(0, 6);
   const launchLabel = new Date(`${settings.release.date}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
   const events = [...timeline].reverse().slice(0, 4);
@@ -76,6 +75,12 @@ export default async function HomePage() {
 
   // Each block knows its own spacing; the site editor decides which appear and in what order.
   const blocks: Record<HomeSectionId, () => React.ReactNode> = {
+    // Straight under the hero by default: the community is the thing to join.
+    discord: () => (
+      <Container wide className="mt-16 sm:mt-24">
+        <DiscordBand />
+      </Container>
+    ),
     news: () => (
       <Container wide className="mt-24 sm:mt-32">
         <SectionHeading kicker={heading("news").kicker} title={heading("news").title} href="/news" linkLabel="All news" />
@@ -106,13 +111,12 @@ export default async function HomePage() {
           <GalleryColumns items={wall} total={images.length} />
         </div>
       ),
-    viewer: () =>
-      still && (
-        // The Viewer promo is a desktop pitch (frame stepping, pixel zoom); phones get the tab bar's Viewer button.
-        <Container wide className="mt-20 hidden sm:mt-28 lg:block">
-          <ViewerPromo still={still} picks={picks} />
-        </Container>
-      ),
+    tools: () => (
+      <Container wide className="mt-28 sm:mt-40">
+        <SectionHeading kicker={heading("tools").kicker} title={heading("tools").title} href="/tools" linkLabel="All tools" />
+        <ToolsShowcase />
+      </Container>
+    ),
     timeline: () => (
       <Container wide className="mt-28 sm:mt-40">
         <SectionHeading kicker={heading("timeline").kicker} title={heading("timeline").title} href="/timeline" linkLabel="Full timeline" />
@@ -151,7 +155,7 @@ export default async function HomePage() {
     <>
       <Hero release={settings.release} launchMode={settings.launchMode} trailer={trailer} />
       {sections.map((sec) => (
-        <Fragment key={sec.id}>{blocks[sec.id]()}</Fragment>
+        <Fragment key={sec.id}>{blocks[sec.id]?.()}</Fragment>
       ))}
     </>
   );

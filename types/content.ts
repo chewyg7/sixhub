@@ -329,7 +329,7 @@ export interface SiteLink {
 }
 
 /** Home page blocks, in the order owners arrange them in the site editor. */
-export type HomeSectionId = "news" | "cast" | "regions" | "trailers" | "gallery" | "viewer" | "timeline" | "faq" | "marquee";
+export type HomeSectionId = "discord" | "news" | "cast" | "regions" | "trailers" | "gallery" | "tools" | "timeline" | "faq" | "marquee";
 export interface HomeSection {
   id: HomeSectionId;
   enabled: boolean;
@@ -366,8 +366,6 @@ export interface SiteSettings {
   home: {
     playSlug: string;
     galleryCollection: string;
-    viewerStill: string;
-    viewerPicks: string[];
   };
   site: SiteContent;
   /** Covers the public site with a message (signed-in staff still see the site). */

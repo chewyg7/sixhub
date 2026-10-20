@@ -475,10 +475,7 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
       <div className="grid gap-4">
         {/* Styles: the plate, its variation and colour style. */}
         <Panel>
-          <div className="mb-4 grid gap-2 xl:grid-cols-2">
-            <Segmented<PlateKind> label="Plate" value={plate.id} onChange={changePlate} options={PLATES.map((p) => ({ id: p.id, label: p.name }))} />
-            <Segmented<Variation> label="Variation" value={variation} onChange={setVariation} options={plate.variations.map((v) => ({ id: v.id, label: v.name }))} />
-          </div>
+          <Segmented<PlateKind> label="Plate" value={plate.id} onChange={changePlate} options={PLATES.map((p) => ({ id: p.id, label: p.name }))} className="mb-4" />
           <div role="radiogroup" aria-label="Plate style" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
             {STYLES.map((s) => ({ id: s.id, name: styleName(s, plate.id), thumb: `${variation}:${s.id}`, active: s.id === styleId, pick: () => setStyleId(s.id) })).map((t) => (
               <button
@@ -499,6 +496,10 @@ export function PlateCreator({ initial }: { initial: PlateInitial }) {
                 <span className="text-[12px] font-bold">{t.name}</span>
               </button>
             ))}
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-4 border-t border-white/8 pt-4">
+            <span className="text-[13px] font-bold tracking-[0.14em] text-white/70 uppercase">Variation</span>
+            <Segmented<Variation> label="Variation" value={variation} onChange={setVariation} options={plate.variations.map((v) => ({ id: v.id, label: v.name }))} className="w-[220px]" />
           </div>
         </Panel>
 
